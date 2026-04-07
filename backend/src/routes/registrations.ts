@@ -15,7 +15,7 @@ const registrationSchema = z.object({
   nickname: z.string().trim().min(2, "Nickname is required.").max(40),
   partnerName: z.string().trim().min(2, "Partner name is required.").max(40),
   troopCount: z.coerce.number().int().min(0).max(100000000),
-  troopLevel: z.coerce.number().int().min(1).max(100),
+  troopLevel: z.coerce.number().int().min(7, "Troop level must be 7 or higher.").max(100),
   comment: z
     .string()
     .trim()

@@ -21,8 +21,8 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 
 ### UX
 
-- [ ] Prevent troop level selection below 7
-- [ ] Add helper copy near troop inputs:
+- [x] Prevent troop level selection below 7
+- [x] Add helper copy near troop inputs:
   `Only count your strongest 2 troop tiers.`
 - [ ] Improve inline validation before submit
 - [ ] Add better loading states for partner refresh and CSV export

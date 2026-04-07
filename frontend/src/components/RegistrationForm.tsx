@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import type { Registration, RegistrationPayload } from "../types/registration";
 
+const MIN_TROOP_LEVEL = 7;
+
 interface RegistrationFormProps {
   editingRegistration: Registration | null;
   isSubmitting: boolean;
@@ -13,7 +15,7 @@ const initialState: RegistrationPayload = {
   nickname: "",
   partnerName: "",
   troopCount: 0,
-  troopLevel: 1,
+  troopLevel: MIN_TROOP_LEVEL,
   comment: "",
   isAvailable: true
 };
@@ -33,7 +35,7 @@ export function RegistrationForm({
         nickname: editingRegistration.nickname,
         partnerName: editingRegistration.partnerName,
         troopCount: editingRegistration.troopCount,
-        troopLevel: editingRegistration.troopLevel,
+        troopLevel: Math.max(editingRegistration.troopLevel, MIN_TROOP_LEVEL),
         comment: editingRegistration.comment ?? "",
         isAvailable: editingRegistration.isAvailable
       });
@@ -49,6 +51,11 @@ export function RegistrationForm({
 
     if (form.nickname.trim().length < 2 || form.partnerName.trim().length < 2) {
       setFormError("Nickname and partner name must be at least 2 characters long.");
+      return;
+    }
+
+    if (Number(form.troopLevel) < MIN_TROOP_LEVEL) {
+      setFormError(`Troop level must be ${MIN_TROOP_LEVEL} or higher.`);
       return;
     }
 
@@ -126,15 +133,22 @@ export function RegistrationForm({
           <span className="mb-2 block text-sm font-medium text-slate-300">Troop level</span>
           <input
             type="number"
-            min={1}
+            min={MIN_TROOP_LEVEL}
             max={100}
             value={form.troopLevel}
             onChange={(event) =>
-              setForm((current) => ({ ...current, troopLevel: Number(event.target.value) }))
+              setForm((current) => ({
+                ...current,
+                troopLevel: Math.max(MIN_TROOP_LEVEL, Number(event.target.value) || MIN_TROOP_LEVEL)
+              }))
             }
             required
           />
         </label>
+
+        <p className="md:col-span-2 rounded-2xl border border-amber-400/15 bg-amber-400/5 px-4 py-3 text-sm text-amber-100">
+          Only count your strongest 2 troop tiers. Troop level must be 7 or higher.
+        </p>
 
         <label className="md:col-span-2">
           <span className="mb-2 block text-sm font-medium text-slate-300">Optional comment</span>
