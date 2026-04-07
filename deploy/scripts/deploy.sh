@@ -10,7 +10,7 @@ BRANCH="${BRANCH:-main}"
 BACKEND_ENV_FILE="${BACKEND_ENV_FILE:-/etc/kingshot-vikings-planner/backend.env}"
 FRONTEND_ENV_FILE="${FRONTEND_ENV_FILE:-/etc/kingshot-vikings-planner/frontend.env}"
 HEALTHCHECK_URL="${HEALTHCHECK_URL:-http://127.0.0.1:4000/api/health}"
-STATE_DIR="${STATE_DIR:-$APP_DIR/.deploy-state}"
+STATE_DIR="${STATE_DIR:-/var/tmp/kingshot-vikings-planner-deploy-state}"
 
 log() {
   printf '[deploy] %s\n' "$*"

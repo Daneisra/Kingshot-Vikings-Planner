@@ -57,18 +57,18 @@ jobs:
             -o IdentitiesOnly=yes \
             -p "$VPS_PORT" \
             "$VPS_USER@$VPS_HOST" \
-            "set -euo pipefail && \
-            echo '[preflight] user='\"\$(whoami)\" && \
-            echo '[preflight] home='\"\$HOME\" && \
-            echo '[preflight] app_dir=$VPS_APP_DIR' && \
-            test -d '$VPS_APP_DIR' && \
-            test -d '$VPS_APP_DIR/.git' && \
-            command -v git && \
-            command -v npm && \
-            command -v pm2 && \
-            command -v rsync && \
-            git -C '$VPS_APP_DIR' remote -v && \
-            git -C '$VPS_APP_DIR' rev-parse --abbrev-ref HEAD"
+            "bash -lc 'set -euo pipefail && \
+            echo \"[preflight] user=\\$(whoami)\" && \
+            echo \"[preflight] home=\\$HOME\" && \
+            echo \"[preflight] app_dir=$VPS_APP_DIR\" && \
+            test -d \"$VPS_APP_DIR\" && \
+            test -d \"$VPS_APP_DIR/.git\" && \
+            echo \"[preflight] git=\\$(command -v git)\" && \
+            echo \"[preflight] npm=\\$(command -v npm)\" && \
+            echo \"[preflight] pm2=\\$(command -v pm2)\" && \
+            echo \"[preflight] rsync=\\$(command -v rsync)\" && \
+            git -C \"$VPS_APP_DIR\" remote -v && \
+            git -C \"$VPS_APP_DIR\" rev-parse --abbrev-ref HEAD'"
 
       - name: Deploy on VPS
         env:
@@ -83,10 +83,10 @@ jobs:
             -o IdentitiesOnly=yes \
             -p "$VPS_PORT" \
             "$VPS_USER@$VPS_HOST" \
-            "set -euo pipefail && \
-            test -d '$VPS_APP_DIR/.git' && \
-            cd '$VPS_APP_DIR' && \
+            "bash -lc 'set -euo pipefail && \
+            test -d \"$VPS_APP_DIR/.git\" && \
+            cd \"$VPS_APP_DIR\" && \
             git fetch origin main && \
             git reset --hard origin/main && \
             git clean -fd && \
-            APP_DIR='$VPS_APP_DIR' FRONTEND_DIR='$VPS_FRONTEND_DIR' BRANCH='main' bash -x '$VPS_APP_DIR/deploy/scripts/deploy.sh'"
+            APP_DIR=\"$VPS_APP_DIR\" FRONTEND_DIR=\"$VPS_FRONTEND_DIR\" BRANCH=main bash -x \"$VPS_APP_DIR/deploy/scripts/deploy.sh\"'"
