@@ -12,6 +12,20 @@ FRONTEND_ENV_FILE="${FRONTEND_ENV_FILE:-/etc/kingshot-vikings-planner/frontend.e
 HEALTHCHECK_URL="${HEALTHCHECK_URL:-http://127.0.0.1:4000/api/health}"
 STATE_DIR="${STATE_DIR:-/var/tmp/kingshot-vikings-planner-deploy-state}"
 
+bootstrap_runtime() {
+  export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
+
+  if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+    export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+
+    if [ -s "$NVM_DIR/nvm.sh" ]; then
+      # shellcheck disable=SC1090
+      . "$NVM_DIR/nvm.sh"
+      nvm use --silent default >/dev/null 2>&1 || true
+    fi
+  fi
+}
+
 log() {
   printf '[deploy] %s\n' "$*"
 }
@@ -136,7 +150,10 @@ restart_pm2() {
 main() {
   load_runtime_env
 
+  bootstrap_runtime
+
   require_command git
+  require_command node
   require_command npm
   require_command pm2
   require_command curl

@@ -20,6 +20,8 @@ Repository:
 - Add inline field validation feedback before submit.
 - Add loading states for partner filter refresh and CSV export.
 - Add optional dark/light theme tuning if a future visual refresh is needed.
+- Prevent troop level selection below 7 in the registration form.
+- Add helper copy near troop inputs such as: "Only count your strongest 2 troop tiers."
 
 ### Admin features
 
@@ -30,6 +32,7 @@ Repository:
 
 ### Data and reporting
 
+- Separate troop tiers from troop types in the data model and UI.
 - Add weekly archive snapshots instead of destructive reset-only workflow.
 - Add extra stats such as available-only totals and per-partner troop totals.
 - Add sorting options for the registration list.
