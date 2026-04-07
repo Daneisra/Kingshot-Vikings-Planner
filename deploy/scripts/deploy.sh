@@ -152,7 +152,19 @@ main() {
   restart_pm2
 
   log "Running API health check"
-  curl --fail --silent --show-error "$HEALTHCHECK_URL" >/dev/null
+  for i in {1..15}; do
+    if curl --fail --silent --show-error "$HEALTHCHECK_URL" >/dev/null; then
+      log "API health check passed"
+      break
+    fi
+
+    if [ "$i" -eq 15 ]; then
+      fail "API health check failed after multiple attempts"
+    fi
+
+    log "API not ready yet, retrying in 2 seconds... ($i/15)"
+    sleep 2
+  done
 
   log "Deployment completed successfully"
 }
