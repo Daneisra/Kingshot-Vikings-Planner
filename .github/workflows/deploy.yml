@@ -40,5 +40,10 @@ jobs:
             -o IdentitiesOnly=yes \
             -p "$VPS_PORT" \
             "$VPS_USER@$VPS_HOST" \
-            "APP_DIR='$VPS_APP_DIR' FRONTEND_DIR='$VPS_FRONTEND_DIR' BRANCH='main' bash '$VPS_APP_DIR/deploy/scripts/deploy.sh'"
-
+            "set -euo pipefail && \
+            test -d '$VPS_APP_DIR/.git' && \
+            cd '$VPS_APP_DIR' && \
+            git fetch origin main && \
+            git reset --hard origin/main && \
+            git clean -fd && \
+            APP_DIR='$VPS_APP_DIR' FRONTEND_DIR='$VPS_FRONTEND_DIR' BRANCH='main' bash '$VPS_APP_DIR/deploy/scripts/deploy.sh'"
