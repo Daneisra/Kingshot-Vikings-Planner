@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    font-family: "Segoe UI Variable", "Trebuchet MS", "Segoe UI", sans-serif;
+    background-color: #08111f;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    background:
+      radial-gradient(circle at top, rgba(245, 158, 11, 0.1), transparent 30%),
+      linear-gradient(180deg, #08111f 0%, #0d1728 52%, #07111e 100%);
+  }
+
+  input,
+  textarea,
+  select {
+    @apply w-full rounded-2xl border border-white/10 bg-slate-900/90 px-4 py-3 text-sm text-frost outline-none transition placeholder:text-slate-500 focus:border-amber-400/50 focus:ring-2 focus:ring-amber-400/15;
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  button {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60;
+  }
+}
+
+@layer components {
+  .primary-button {
+    @apply bg-amber-400 text-slate-950 hover:bg-amber-300;
+  }
+
+  .secondary-button {
+    @apply border border-white/10 bg-white/5 text-frost hover:bg-white/10;
+  }
+
+  .danger-button {
+    @apply bg-rose-500/15 text-rose-100 hover:bg-rose-500/25;
+  }
+}
