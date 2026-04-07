@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
+trap 'printf "[deploy] ERROR: command failed at line %s: %s\n" "$LINENO" "$BASH_COMMAND" >&2' ERR
 
 APP_DIR="${APP_DIR:-/opt/kingshot-vikings-planner}"
 FRONTEND_DIR="${FRONTEND_DIR:-/var/www/kingshot-vikings-planner}"
@@ -41,9 +42,7 @@ link_backend_env() {
 }
 
 compute_dep_hash() {
-  local dir="$1"
   shift
-
   cat "$@" | sha256sum | awk '{ print $1 }'
 }
 
@@ -159,4 +158,3 @@ main() {
 }
 
 main "$@"
-
