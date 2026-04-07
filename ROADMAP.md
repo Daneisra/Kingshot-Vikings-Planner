@@ -1,72 +1,81 @@
-# Kingshot Vikings Planner Roadmap
+# Roadmap
 
-Repository:
+Repository: `https://github.com/Daneisra/Kingshot-Vikings-Planner`
 
-- Main repo: `https://github.com/Daneisra/Kingshot-Vikings-Planner`
-- Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
+Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 
-## Current priorities
+## Status
 
-### Fixes
+- `[x]` done
+- `[ ]` planned
 
-- Verify the production API after the partner list SQL fix.
-- Add server-side request logging around failed API calls to speed up debugging.
-- Improve frontend error states so partial API failures are shown more clearly.
-- Add a safer empty-state flow after weekly reset.
+## Now
 
-### UX improvements
+### Stability
 
-- Add lightweight toast notifications instead of a single shared status banner.
-- Add inline field validation feedback before submit.
-- Add loading states for partner filter refresh and CSV export.
-- Add optional dark/light theme tuning if a future visual refresh is needed.
-- Prevent troop level selection below 7 in the registration form.
-- Add helper copy near troop inputs such as: "Only count your strongest 2 troop tiers."
+- [x] Fix the partner list query regression
+- [ ] Verify production behavior after the partner list fix
+- [ ] Improve API error diagnostics for failed frontend requests
+- [ ] Make partial API failures clearer in the UI
+- [ ] Review weekly reset behavior and empty-state safety
 
-### Admin features
+### UX
 
-- Add audit metadata for resets and deletions.
-- Add optional admin session timeout.
-- Add optional protected admin route with a real login instead of a single password header.
-- Add import support for bulk player registration updates.
+- [ ] Prevent troop level selection below 7
+- [ ] Add helper copy near troop inputs:
+  `Only count your strongest 2 troop tiers.`
+- [ ] Improve inline validation before submit
+- [ ] Add better loading states for partner refresh and CSV export
 
-### Data and reporting
+### Ops / Deployment
 
-- Separate troop tiers from troop types in the data model and UI.
-- Add weekly archive snapshots instead of destructive reset-only workflow.
-- Add extra stats such as available-only totals and per-partner troop totals.
-- Add sorting options for the registration list.
-- Add richer CSV export formatting and date range selection if archives are introduced.
+- [x] Ship SSH-based GitHub Actions deployment flow
+- [x] Improve deploy-time diagnostics and failure visibility
+- [x] Validate the deployment flow end to end in production
+- [ ] Add a production smoke test after deployment
 
-### Deployment and operations
+## Next
 
-- Add a production smoke-test step for the frontend homepage after deployment.
-- Add optional database backup automation on the VPS.
-- Add structured application logs and log rotation guidance.
-- Add CI checks for TypeScript build and lint before production deploy.
+### UX
 
-## Suggested next milestones
+- [ ] Replace the shared status banner with lightweight toast notifications
+- [ ] Add list sorting options
+- [ ] Refine mobile editing flow for faster updates
 
-### Milestone 1
+### Admin
 
-- Stabilize production behavior.
-- Add better diagnostics.
-- Validate the GitHub Actions deployment flow end-to-end.
+- [ ] Add audit metadata for destructive actions
+- [ ] Add optional admin session timeout
+- [ ] Improve confirmation flow around resets and deletions
 
-### Milestone 2
+### Data / Reporting
 
-- Improve player entry speed and editing UX.
-- Add sorting and better filtering.
-- Improve admin safety around destructive actions.
+- [ ] Separate troop tiers from troop types in the data model and UI
+- [ ] Add available-only totals in stats
+- [ ] Add per-partner troop totals
+- [ ] Improve CSV export formatting
 
-### Milestone 3
+## Later
 
-- Add weekly archives.
-- Add richer analytics.
-- Add stronger admin authentication.
+### Admin
 
-## How to use this file
+- [ ] Replace the single password header with a stronger admin authentication flow
+- [ ] Add bulk import support for registrations
 
-- Use GitHub Issues for bugs, ideas, and feature requests.
-- Use this roadmap to group future work into batches instead of mixing everything into ad hoc fixes.
-- Update this file when a priority changes or when a milestone is completed.
+### Data / Reporting
+
+- [ ] Add weekly archive snapshots instead of reset-only workflow
+- [ ] Add archive browsing and date-based exports
+- [ ] Add richer analytics across past weeks
+
+### Ops / Deployment
+
+- [ ] Add automated PostgreSQL backup guidance or scripts
+- [ ] Add structured logging and log rotation guidance
+- [ ] Add CI checks for linting and type validation before deploy
+
+## Notes
+
+- Use GitHub Issues for bugs, feature requests, and implementation discussion.
+- Keep the roadmap focused on the current product and deployment model.
+- Prefer small reliability and UX wins before expanding scope.
