@@ -21,6 +21,32 @@ fail() {
   exit 1
 }
 
+load_runtime_env() {
+  local candidate
+
+  for candidate in "$HOME/.profile" "$HOME/.bash_profile" "$HOME/.bashrc"; do
+    if [ -f "$candidate" ]; then
+      # shellcheck disable=SC1090
+      . "$candidate"
+    fi
+  done
+
+  export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+
+  if [ -s "$NVM_DIR/nvm.sh" ]; then
+    # shellcheck disable=SC1090
+    . "$NVM_DIR/nvm.sh"
+  fi
+
+  if [ -d "$HOME/.local/bin" ]; then
+    export PATH="$HOME/.local/bin:$PATH"
+  fi
+
+  if [ -d "$HOME/bin" ]; then
+    export PATH="$HOME/bin:$PATH"
+  fi
+}
+
 require_command() {
   if ! command -v "$1" >/dev/null 2>&1; then
     fail "Required command not found: $1"
@@ -108,12 +134,18 @@ restart_pm2() {
 }
 
 main() {
+  load_runtime_env
+
   require_command git
   require_command npm
   require_command pm2
   require_command curl
   require_command rsync
   require_command sha256sum
+
+  log "Using git: $(command -v git)"
+  log "Using npm: $(command -v npm)"
+  log "Using pm2: $(command -v pm2)"
 
   [ -d "$APP_DIR/.git" ] || fail "Git repository not found in $APP_DIR"
 
