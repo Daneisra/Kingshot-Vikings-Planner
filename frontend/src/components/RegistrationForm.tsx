@@ -48,7 +48,7 @@ export function RegistrationForm({
     setFormError("");
 
     if (form.nickname.trim().length < 2 || form.partnerName.trim().length < 2) {
-      setFormError("Le pseudo et le partenaire doivent contenir au moins 2 caracteres.");
+      setFormError("Nickname and partner name must be at least 2 characters long.");
       return;
     }
 
@@ -71,46 +71,46 @@ export function RegistrationForm({
     <section className="rounded-[2rem] border border-amber-400/15 bg-slate-950/70 p-6 shadow-panel backdrop-blur">
       <div className="mb-5 flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm uppercase tracking-[0.2em] text-amber-300">Inscription rapide</p>
+          <p className="text-sm uppercase tracking-[0.2em] text-amber-300">Quick Sign-Up</p>
           <h2 className="mt-2 text-2xl font-semibold text-frost">
-            {editingRegistration ? "Modifier une inscription" : "Ajouter un joueur"}
+            {editingRegistration ? "Edit registration" : "Add a player"}
           </h2>
         </div>
 
         {editingRegistration ? (
           <button type="button" className="secondary-button" onClick={onCancelEdit}>
-            Annuler
+            Cancel
           </button>
         ) : null}
       </div>
 
       <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
         <label>
-          <span className="mb-2 block text-sm font-medium text-slate-300">Pseudo</span>
+          <span className="mb-2 block text-sm font-medium text-slate-300">Nickname</span>
           <input
             type="text"
             value={form.nickname}
             onChange={(event) => setForm((current) => ({ ...current, nickname: event.target.value }))}
-            placeholder="Pseudo Kingshot"
+            placeholder="Kingshot nickname"
             maxLength={40}
             required
           />
         </label>
 
         <label>
-          <span className="mb-2 block text-sm font-medium text-slate-300">Partenaire habituel</span>
+          <span className="mb-2 block text-sm font-medium text-slate-300">Usual partner</span>
           <input
             type="text"
             value={form.partnerName}
             onChange={(event) => setForm((current) => ({ ...current, partnerName: event.target.value }))}
-            placeholder="Pseudo du partenaire"
+            placeholder="Partner nickname"
             maxLength={40}
             required
           />
         </label>
 
         <label>
-          <span className="mb-2 block text-sm font-medium text-slate-300">Nombre de troupes</span>
+          <span className="mb-2 block text-sm font-medium text-slate-300">Troop count</span>
           <input
             type="number"
             min={0}
@@ -123,7 +123,7 @@ export function RegistrationForm({
         </label>
 
         <label>
-          <span className="mb-2 block text-sm font-medium text-slate-300">Niveau des troupes</span>
+          <span className="mb-2 block text-sm font-medium text-slate-300">Troop level</span>
           <input
             type="number"
             min={1}
@@ -137,20 +137,20 @@ export function RegistrationForm({
         </label>
 
         <label className="md:col-span-2">
-          <span className="mb-2 block text-sm font-medium text-slate-300">Commentaire optionnel</span>
+          <span className="mb-2 block text-sm font-medium text-slate-300">Optional comment</span>
           <textarea
             rows={3}
             value={form.comment}
             onChange={(event) => setForm((current) => ({ ...current, comment: event.target.value }))}
-            placeholder="Besoin d'aide, horaires, precision tactique..."
+            placeholder="Need help, timing, tactical details..."
             maxLength={300}
           />
         </label>
 
         <label className="md:col-span-2 flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
           <div>
-            <span className="block text-sm font-medium text-frost">Disponible cette semaine</span>
-            <span className="text-sm text-slate-400">Passe a non si tu ne peux pas participer.</span>
+            <span className="block text-sm font-medium text-frost">Available this week</span>
+            <span className="text-sm text-slate-400">Switch to no if you cannot participate.</span>
           </div>
 
           <button
@@ -171,9 +171,9 @@ export function RegistrationForm({
         {formError ? <p className="md:col-span-2 text-sm text-rose-300">{formError}</p> : null}
 
         <div className="md:col-span-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-slate-400">Objectif : remplir le formulaire en moins de 20 secondes.</p>
+          <p className="text-sm text-slate-400">Goal: submit the form in under 20 seconds.</p>
           <button type="submit" className="primary-button" disabled={isSubmitting}>
-            {isSubmitting ? "Enregistrement..." : editingRegistration ? "Mettre a jour" : "Ajouter"}
+            {isSubmitting ? "Saving..." : editingRegistration ? "Update" : "Add"}
           </button>
         </div>
       </form>

@@ -10,7 +10,7 @@ interface RegistrationListProps {
 }
 
 function formatAvailabilityLabel(isAvailable: boolean) {
-  return isAvailable ? "Disponible pour la semaine" : "Indisponible pour cette rotation";
+  return isAvailable ? "Available this week" : "Unavailable this rotation";
 }
 
 export function RegistrationList({
@@ -37,9 +37,9 @@ export function RegistrationList({
     return (
       <section className="rounded-3xl border border-dashed border-white/15 bg-white/5 p-8 text-center shadow-panel">
         <Users className="mx-auto h-10 w-10 text-slate-400" />
-        <h3 className="mt-4 text-xl font-semibold text-frost">Aucune inscription ne correspond</h3>
+        <h3 className="mt-4 text-xl font-semibold text-frost">No registrations match</h3>
         <p className="mt-2 text-slate-400">
-          Ajoute un joueur ou ajuste les filtres pour afficher la liste de la semaine.
+          Add a player or adjust the filters to display this week's list.
         </p>
       </section>
     );
@@ -63,25 +63,25 @@ export function RegistrationList({
                       : "bg-rose-500/15 text-rose-200"
                   }`}
                 >
-                  {registration.isAvailable ? "Disponible" : "Absent"}
+                  {registration.isAvailable ? "Available" : "Away"}
                 </span>
               </div>
 
               <div className="grid gap-3 text-sm text-slate-300 sm:grid-cols-2 xl:grid-cols-4">
                 <p>
-                  <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Partenaire</span>
+                  <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Partner</span>
                   {registration.partnerName}
                 </p>
                 <p>
-                  <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Troupes</span>
-                  {registration.troopCount.toLocaleString("fr-FR")}
+                  <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Troops</span>
+                  {registration.troopCount.toLocaleString("en-US")}
                 </p>
                 <p>
-                  <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Niveau</span>
+                  <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Level</span>
                   {registration.troopLevel}
                 </p>
                 <p>
-                  <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Statut</span>
+                  <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Status</span>
                   {formatAvailabilityLabel(registration.isAvailable)}
                 </p>
               </div>
@@ -96,7 +96,7 @@ export function RegistrationList({
             <div className="flex gap-3">
               <button type="button" className="secondary-button" onClick={() => onEdit(registration)}>
                 <Pencil className="h-4 w-4" />
-                Modifier
+                Edit
               </button>
 
               {isAdminUnlocked ? (
@@ -106,7 +106,7 @@ export function RegistrationList({
                   onClick={() => onDelete(registration)}
                 >
                   <Trash2 className="h-4 w-4" />
-                  Supprimer
+                  Delete
                 </button>
               ) : null}
             </div>

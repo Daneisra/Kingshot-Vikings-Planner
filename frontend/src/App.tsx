@@ -1,5 +1,5 @@
 import { startTransition, useEffect, useState } from "react";
-import { AlertTriangle, Crown, RefreshCw } from "lucide-react";
+import { AlertTriangle, Crown, Github, RefreshCw } from "lucide-react";
 import { AdminPanel } from "./components/AdminPanel";
 import { FiltersBar } from "./components/FiltersBar";
 import { RegistrationForm } from "./components/RegistrationForm";
@@ -28,6 +28,7 @@ const emptyStats: StatsResponse = {
 };
 
 const adminStorageKey = "kingshot-vikings-admin-password";
+const githubIssuesUrl = "https://github.com/Daneisra/Kingshot-Vikings-Planner/issues";
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -76,7 +77,7 @@ export default function App() {
         setStats(nextStats);
       });
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Impossible de charger les inscriptions.");
+      setErrorMessage(error instanceof Error ? error.message : "Unable to load registrations.");
     } finally {
       setIsLoading(false);
     }
@@ -84,7 +85,7 @@ export default function App() {
 
   useEffect(() => {
     loadPartners().catch(() => {
-      setErrorMessage("Impossible de charger la liste des partenaires.");
+      setErrorMessage("Unable to load the partners list.");
     });
   }, []);
 
@@ -121,16 +122,16 @@ export default function App() {
     try {
       if (editingRegistration) {
         await api.updateRegistration(editingRegistration.id, payload);
-        setSuccessMessage("Inscription mise a jour.");
+        setSuccessMessage("Registration updated.");
       } else {
         await api.createRegistration(payload);
-        setSuccessMessage("Inscription ajoutee.");
+        setSuccessMessage("Registration added.");
       }
 
       setEditingRegistration(null);
       await refreshAll();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Impossible d'enregistrer l'inscription.");
+      setErrorMessage(error instanceof Error ? error.message : "Unable to save the registration.");
       throw error;
     } finally {
       setIsSubmitting(false);
@@ -139,11 +140,11 @@ export default function App() {
 
   async function handleDelete(registration: Registration) {
     if (!isAdminUnlocked) {
-      setErrorMessage("Le panneau admin doit etre debloque pour supprimer une inscription.");
+      setErrorMessage("Unlock the admin panel before deleting a registration.");
       return;
     }
 
-    if (!window.confirm(`Supprimer l'inscription de ${registration.nickname} ?`)) {
+    if (!window.confirm(`Delete ${registration.nickname}'s registration?`)) {
       return;
     }
 
@@ -152,7 +153,7 @@ export default function App() {
 
     try {
       await api.deleteRegistration(registration.id, adminPassword);
-      setSuccessMessage("Inscription supprimee.");
+      setSuccessMessage("Registration deleted.");
 
       if (editingRegistration?.id === registration.id) {
         setEditingRegistration(null);
@@ -160,7 +161,7 @@ export default function App() {
 
       await refreshAll();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Suppression impossible.");
+      setErrorMessage(error instanceof Error ? error.message : "Unable to delete the registration.");
     }
   }
 
@@ -173,11 +174,11 @@ export default function App() {
       await api.verifyAdminPassword(adminPassword);
       setIsAdminUnlocked(true);
       localStorage.setItem(adminStorageKey, adminPassword);
-      setSuccessMessage("Panneau admin debloque.");
+      setSuccessMessage("Admin panel unlocked.");
     } catch (error) {
       setIsAdminUnlocked(false);
       localStorage.removeItem(adminStorageKey);
-      setErrorMessage(error instanceof Error ? error.message : "Mot de passe admin invalide.");
+      setErrorMessage(error instanceof Error ? error.message : "Invalid admin password.");
     } finally {
       setIsAdminBusy(false);
     }
@@ -186,7 +187,7 @@ export default function App() {
   function handleLockAdmin() {
     setIsAdminUnlocked(false);
     localStorage.removeItem(adminStorageKey);
-    setSuccessMessage("Panneau admin verrouille.");
+    setSuccessMessage("Admin panel locked.");
   }
 
   async function handleExportCsv() {
@@ -200,9 +201,9 @@ export default function App() {
     try {
       const blob = await api.exportCsv(adminPassword, { ...filters, search: debouncedSearch });
       downloadBlob(blob, "kingshot-vikings-registrations.csv");
-      setSuccessMessage("Export CSV genere.");
+      setSuccessMessage("CSV export generated.");
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Export CSV impossible.");
+      setErrorMessage(error instanceof Error ? error.message : "Unable to export CSV.");
     } finally {
       setIsAdminBusy(false);
     }
@@ -213,7 +214,7 @@ export default function App() {
       return;
     }
 
-    if (!window.confirm("Reinitialiser toute la liste pour une nouvelle semaine ?")) {
+    if (!window.confirm("Reset the entire list for a new week?")) {
       return;
     }
 
@@ -225,10 +226,10 @@ export default function App() {
       await api.resetRegistrations(adminPassword);
       setEditingRegistration(null);
       setFilters(defaultFilters);
-      setSuccessMessage("La liste a ete reinitialisee.");
+      setSuccessMessage("The list has been reset.");
       await refreshAll(defaultFilters);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Reinitialisation impossible.");
+      setErrorMessage(error instanceof Error ? error.message : "Unable to reset the list.");
     } finally {
       setIsAdminBusy(false);
     }
@@ -245,17 +246,28 @@ export default function App() {
                 Kingshot Vikings Planner
               </div>
               <h1 className="mt-4 text-4xl font-semibold tracking-tight text-frost sm:text-5xl">
-                Organise les inscriptions Vikings sans friction.
+                Organize Viking sign-ups without friction.
               </h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
-                Une feuille d&apos;inscription partagee, rapide sur mobile, avec suivi des troupes,
-                disponibilites, filtres et commandes admin protegees.
+                A shared sign-up board built for mobile, with troop tracking, availability filters,
+                and protected admin actions.
               </p>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <a
+                  href={githubIssuesUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="secondary-button"
+                >
+                  <Github className="h-4 w-4" />
+                  Report bugs or request features
+                </a>
+              </div>
             </div>
 
             <button type="button" className="secondary-button w-full xl:w-auto" onClick={() => refreshAll()}>
               <RefreshCw className="h-4 w-4" />
-              Rafraichir
+              Refresh
             </button>
           </div>
         </header>
@@ -316,7 +328,7 @@ export default function App() {
 
             {stats.topPartners.length > 0 ? (
               <section className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-panel backdrop-blur">
-                <p className="text-sm uppercase tracking-[0.2em] text-amber-300">Partenaires les plus choisis</p>
+                <p className="text-sm uppercase tracking-[0.2em] text-amber-300">Most selected partners</p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {stats.topPartners.map((partner) => (
                     <div
@@ -325,7 +337,7 @@ export default function App() {
                     >
                       <p className="text-base font-semibold text-frost">{partner.partnerName}</p>
                       <p className="mt-1 text-sm text-slate-400">
-                        {partner.count} inscription{partner.count > 1 ? "s" : ""}
+                        {partner.count} registration{partner.count > 1 ? "s" : ""}
                       </p>
                     </div>
                   ))}

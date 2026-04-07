@@ -5,7 +5,7 @@ import { HttpError } from "../utils/http-error";
 export function errorHandler(error: unknown, _req: Request, res: Response, _next: NextFunction) {
   if (error instanceof ZodError) {
     return res.status(400).json({
-      message: "Les donnees envoyees sont invalides.",
+      message: "The submitted data is invalid.",
       issues: error.issues.map((issue) => ({
         path: issue.path.join("."),
         message: issue.message
@@ -18,6 +18,5 @@ export function errorHandler(error: unknown, _req: Request, res: Response, _next
   }
 
   console.error(error);
-  res.status(500).json({ message: "Une erreur interne est survenue." });
+  res.status(500).json({ message: "An internal error occurred." });
 }
-

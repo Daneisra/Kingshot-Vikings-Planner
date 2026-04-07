@@ -32,10 +32,9 @@ app.use("/api/registrations", registrationsRouter);
 app.use("/api/admin", adminRouter);
 
 app.use((_req, res) => {
-  res.status(404).json({ message: "Route introuvable." });
+  res.status(404).json({ message: "Route not found." });
 });
 
 app.use(errorHandler);
 
 export { app };
-

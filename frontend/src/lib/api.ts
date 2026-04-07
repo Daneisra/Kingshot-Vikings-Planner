@@ -52,7 +52,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(payload?.message || "La requete a echoue.");
+    throw new Error(payload?.message || "The request failed.");
   }
 
   if (response.status === 204) {
@@ -111,10 +111,9 @@ export const api = {
 
     if (!response.ok) {
       const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-      throw new Error(payload?.message || "Impossible d'exporter le CSV.");
+      throw new Error(payload?.message || "Unable to export CSV.");
     }
 
     return response.blob();
   }
 };
-

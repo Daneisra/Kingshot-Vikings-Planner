@@ -12,14 +12,14 @@ function escapeCell(value: string | number | boolean | null) {
 
 export function buildRegistrationsCsv(registrations: RegistrationRecord[]) {
   const header = [
-    "Pseudo",
-    "Partenaire",
-    "Nombre de troupes",
-    "Niveau de troupes",
-    "Disponible cette semaine",
-    "Commentaire",
-    "Cree le",
-    "Mis a jour le"
+    "Nickname",
+    "Partner",
+    "Troop Count",
+    "Troop Level",
+    "Available This Week",
+    "Comment",
+    "Created At",
+    "Updated At"
   ];
 
   const rows = registrations.map((registration) => [
@@ -27,7 +27,7 @@ export function buildRegistrationsCsv(registrations: RegistrationRecord[]) {
     registration.partnerName,
     registration.troopCount,
     registration.troopLevel,
-    registration.isAvailable ? "Oui" : "Non",
+    registration.isAvailable ? "Yes" : "No",
     registration.comment,
     registration.createdAt,
     registration.updatedAt
@@ -37,4 +37,3 @@ export function buildRegistrationsCsv(registrations: RegistrationRecord[]) {
     .map((row) => row.map((cell) => escapeCell(cell ?? null)).join(","))
     .join("\n");
 }
-

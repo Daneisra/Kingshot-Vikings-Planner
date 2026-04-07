@@ -12,14 +12,14 @@ import {
 import { asyncHandler } from "../utils/async-handler";
 
 const registrationSchema = z.object({
-  nickname: z.string().trim().min(2, "Le pseudo est requis.").max(40),
-  partnerName: z.string().trim().min(2, "Le partenaire est requis.").max(40),
+  nickname: z.string().trim().min(2, "Nickname is required.").max(40),
+  partnerName: z.string().trim().min(2, "Partner name is required.").max(40),
   troopCount: z.coerce.number().int().min(0).max(100000000),
   troopLevel: z.coerce.number().int().min(1).max(100),
   comment: z
     .string()
     .trim()
-    .max(300, "Le commentaire est trop long.")
+    .max(300, "Comment is too long.")
     .optional()
     .transform((value) => (value ? value : null)),
   isAvailable: z.boolean()
@@ -45,7 +45,7 @@ const filtersSchema = z.object({
 });
 
 const idSchema = z.object({
-  id: z.string().uuid("Identifiant invalide.")
+  id: z.string().uuid("Invalid identifier.")
 });
 
 export const registrationsRouter = Router();
@@ -104,4 +104,3 @@ registrationsRouter.delete(
     res.status(204).send();
   })
 );
-

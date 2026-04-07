@@ -25,10 +25,10 @@ export function AdminPanel({
     <section className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-panel backdrop-blur">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm uppercase tracking-[0.2em] text-amber-300">Administration</p>
-          <h2 className="mt-2 text-xl font-semibold text-frost">Actions protegees</h2>
+          <p className="text-sm uppercase tracking-[0.2em] text-amber-300">Admin</p>
+          <h2 className="mt-2 text-xl font-semibold text-frost">Protected actions</h2>
           <p className="mt-2 text-sm text-slate-400">
-            Le mot de passe admin permet la suppression, l&apos;export CSV et la reinitialisation.
+            The admin password unlocks deletion, CSV export, and weekly reset actions.
           </p>
         </div>
 
@@ -40,18 +40,18 @@ export function AdminPanel({
           }`}
         >
           {isAdminUnlocked ? <ShieldCheck className="h-4 w-4" /> : <LockKeyhole className="h-4 w-4" />}
-          {isAdminUnlocked ? "Debloque" : "Verrouille"}
+          {isAdminUnlocked ? "Unlocked" : "Locked"}
         </div>
       </div>
 
       <div className="mt-5 flex flex-col gap-4 lg:flex-row">
         <label className="flex-1">
-          <span className="mb-2 block text-sm font-medium text-slate-300">Mot de passe admin</span>
+          <span className="mb-2 block text-sm font-medium text-slate-300">Admin password</span>
           <input
             type="password"
             value={adminPassword}
             onChange={(event) => onPasswordChange(event.target.value)}
-            placeholder="Saisir le mot de passe"
+            placeholder="Enter admin password"
           />
         </label>
 
@@ -63,11 +63,11 @@ export function AdminPanel({
             disabled={isBusy || adminPassword.trim().length === 0}
           >
             <ShieldCheck className="h-4 w-4" />
-            Debloquer
+            Unlock
           </button>
 
           <button type="button" className="secondary-button" onClick={onLock}>
-            Verrouiller
+            Lock
           </button>
         </div>
       </div>
@@ -90,7 +90,7 @@ export function AdminPanel({
           disabled={!isAdminUnlocked || isBusy}
         >
           <RotateCcw className="h-4 w-4" />
-          Nouvelle semaine
+          New week
         </button>
       </div>
     </section>

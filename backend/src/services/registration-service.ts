@@ -67,8 +67,9 @@ export async function listRegistrations(filters: RegistrationFilters) {
 export async function listPartners() {
   const result = await pool.query<{ partnerName: string }>(
     `
-      SELECT DISTINCT partner_name AS "partnerName"
+      SELECT partner_name AS "partnerName"
       FROM registrations
+      GROUP BY partner_name
       ORDER BY LOWER(partner_name) ASC
     `
   );
@@ -168,7 +169,7 @@ export async function updateRegistration(id: string, input: RegistrationInput) {
   const registration = mapRow(result);
 
   if (!registration) {
-    throw new HttpError(404, "Inscription introuvable.");
+    throw new HttpError(404, "Registration not found.");
   }
 
   return registration;
@@ -178,7 +179,7 @@ export async function deleteRegistration(id: string) {
   const result = await pool.query("DELETE FROM registrations WHERE id = $1", [id]);
 
   if (result.rowCount === 0) {
-    throw new HttpError(404, "Inscription introuvable.");
+    throw new HttpError(404, "Registration not found.");
   }
 }
 

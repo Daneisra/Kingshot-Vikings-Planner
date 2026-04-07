@@ -5,7 +5,7 @@ interface StatsCardsProps {
   stats: StatsResponse;
 }
 
-const formatter = new Intl.NumberFormat("fr-FR");
+const formatter = new Intl.NumberFormat("en-US");
 
 export function StatsCards({ stats }: StatsCardsProps) {
   const cards = [
@@ -15,17 +15,17 @@ export function StatsCards({ stats }: StatsCardsProps) {
       icon: Users
     },
     {
-      label: "Troupes totales",
+      label: "Total Troops",
       value: formatter.format(stats.totalTroops),
       icon: Swords
     },
     {
-      label: "Niveau moyen",
+      label: "Average Level",
       value: stats.averageTroopLevel.toFixed(1),
       icon: Shield
     },
     {
-      label: "Top partenaires",
+      label: "Top Partners",
       value: formatter.format(stats.topPartners.length),
       icon: BarChart3
     }
