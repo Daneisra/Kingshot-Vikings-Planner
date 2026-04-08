@@ -272,46 +272,9 @@ export function RegistrationForm({
                 </div>
               </div>
 
-              <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_170px] lg:items-start">
-                <div className="space-y-3">
-                  {troopTypeOrder.map((troopType) => {
-                    const field = `tierGroups.${index}.${troopType}` as const;
-
-                    return (
-                      <label
-                        key={troopType}
-                        className="grid gap-2 rounded-2xl border border-white/10 bg-slate-950/45 px-4 py-3 sm:grid-cols-[120px_minmax(0,1fr)] sm:items-center"
-                      >
-                        <div>
-                          <span className="block text-sm font-medium text-slate-200">{troopTypeLabels[troopType]}</span>
-                          <span className="mt-1 block text-xs text-slate-500">
-                            {isOptional ? "0 if unused in this tier." : "Count for this troop type."}
-                          </span>
-                        </div>
-
-                        <div>
-                          <input
-                            type="number"
-                            min={0}
-                            value={group[troopType]}
-                            onChange={(event) =>
-                              updateTierGroup(index as 0 | 1, {
-                                [troopType]: Math.max(0, Number(event.target.value) || 0)
-                              } as Partial<TierGroupDraft>)
-                            }
-                            onBlur={() => handleBlur(field)}
-                            aria-invalid={Boolean(fieldErrors[field]) && (hasSubmitted || touched[field])}
-                            className={getInputClassName(field)}
-                          />
-                          {renderFieldError(field)}
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4 lg:sticky lg:top-4">
-                  <label>
+              <div className="mt-4 space-y-4">
+                <div className="flex justify-end">
+                  <label className="w-full max-w-[180px] rounded-2xl border border-white/10 bg-slate-950/45 p-4">
                     <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
                       Tier
                     </span>
@@ -333,6 +296,43 @@ export function RegistrationForm({
                     </p>
                     {renderFieldError(tierField)}
                   </label>
+                </div>
+
+                <div className="space-y-3">
+                  {troopTypeOrder.map((troopType) => {
+                    const field = `tierGroups.${index}.${troopType}` as const;
+
+                    return (
+                      <label
+                        key={troopType}
+                        className="grid gap-3 rounded-2xl border border-white/10 bg-slate-950/45 px-4 py-3 sm:grid-cols-[140px_minmax(0,1fr)] sm:items-center"
+                      >
+                        <div>
+                          <span className="block text-sm font-medium text-slate-200">{troopTypeLabels[troopType]}</span>
+                          <span className="mt-1 block text-xs text-slate-500">
+                            {isOptional ? "0 if unused in this tier." : "Count for this troop type."}
+                          </span>
+                        </div>
+
+                        <div className="min-w-0">
+                          <input
+                            type="number"
+                            min={0}
+                            value={group[troopType]}
+                            onChange={(event) =>
+                              updateTierGroup(index as 0 | 1, {
+                                [troopType]: Math.max(0, Number(event.target.value) || 0)
+                              } as Partial<TierGroupDraft>)
+                            }
+                            onBlur={() => handleBlur(field)}
+                            aria-invalid={Boolean(fieldErrors[field]) && (hasSubmitted || touched[field])}
+                            className={getInputClassName(field)}
+                          />
+                          {renderFieldError(field)}
+                        </div>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             </section>
