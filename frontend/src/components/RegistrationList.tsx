@@ -41,6 +41,24 @@ function formatTroopType(type: Registration["troopLoadout"][number]["type"]) {
   return `${type.charAt(0).toUpperCase()}${type.slice(1)}`;
 }
 
+function groupTroopLoadoutByTier(registration: Registration) {
+  const grouped = new Map<number, Partial<Record<Registration["troopLoadout"][number]["type"], number>>>();
+
+  for (const entry of registration.troopLoadout) {
+    const current = grouped.get(entry.tier) ?? {};
+    current[entry.type] = (current[entry.type] ?? 0) + entry.count;
+    grouped.set(entry.tier, current);
+  }
+
+  return Array.from(grouped.entries())
+    .sort((left, right) => right[0] - left[0])
+    .slice(0, 2)
+    .map(([tier, counts]) => ({
+      tier,
+      counts
+    }));
+}
+
 export function RegistrationList({
   registrations,
   isLoading,
@@ -130,106 +148,118 @@ export function RegistrationList({
         </label>
       </div>
 
-      {sortedRegistrations.map((registration) => (
-        <article
-          key={registration.id}
-          className={`rounded-3xl border p-5 shadow-panel backdrop-blur transition ${
-            registration.id === editingRegistrationId
-              ? "border-amber-400/40 bg-amber-400/5 ring-1 ring-amber-400/15"
-              : "border-white/10 bg-slate-950/70"
-          }`}
-        >
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-3">
-                <h3 className="text-xl font-semibold text-frost">{registration.nickname}</h3>
-                {registration.id === editingRegistrationId ? (
-                  <span className="rounded-full bg-amber-400/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">
-                    Editing
+      {sortedRegistrations.map((registration) => {
+        const tierGroups = groupTroopLoadoutByTier(registration);
+
+        return (
+          <article
+            key={registration.id}
+            className={`rounded-3xl border p-5 shadow-panel backdrop-blur transition ${
+              registration.id === editingRegistrationId
+                ? "border-amber-400/40 bg-amber-400/5 ring-1 ring-amber-400/15"
+                : "border-white/10 bg-slate-950/70"
+            }`}
+          >
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <h3 className="text-xl font-semibold text-frost">{registration.nickname}</h3>
+                  {registration.id === editingRegistrationId ? (
+                    <span className="rounded-full bg-amber-400/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">
+                      Editing
+                    </span>
+                  ) : null}
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${
+                      registration.isAvailable
+                        ? "bg-emerald-500/15 text-emerald-200"
+                        : "bg-rose-500/15 text-rose-200"
+                    }`}
+                  >
+                    {registration.isAvailable ? "Available" : "Away"}
                   </span>
-                ) : null}
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${
-                    registration.isAvailable
-                      ? "bg-emerald-500/15 text-emerald-200"
-                      : "bg-rose-500/15 text-rose-200"
-                  }`}
-                >
-                  {registration.isAvailable ? "Available" : "Away"}
-                </span>
-              </div>
-
-              <div className="grid gap-3 text-sm text-slate-300 sm:grid-cols-2 xl:grid-cols-4">
-                <p>
-                  <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Partner</span>
-                  {registration.partnerName}
-                </p>
-                <p>
-                  <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Troops</span>
-                  {registration.troopCount.toLocaleString("en-US")}
-                </p>
-                <p>
-                  <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Top Tier</span>
-                  T{registration.troopLevel}
-                </p>
-                <p>
-                  <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Status</span>
-                  {formatAvailabilityLabel(registration.isAvailable)}
-                </p>
-              </div>
-
-              {registration.troopLoadout.length > 0 ? (
-                <div className="grid gap-3 text-sm text-slate-300 sm:grid-cols-2">
-                  {registration.troopLoadout.map((entry, index) => (
-                    <p
-                      key={`${registration.id}-${entry.type}-${entry.tier}-${index}`}
-                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
-                    >
-                      <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">
-                        {index === 0 ? "Strongest Tier" : "Second Tier"}
-                      </span>
-                      {formatTroopType(entry.type)} · T{entry.tier} · {entry.count.toLocaleString("en-US")}
-                    </p>
-                  ))}
                 </div>
-              ) : (
-                <p className="rounded-2xl border border-amber-400/20 bg-amber-400/8 px-4 py-3 text-sm text-amber-100">
-                  Legacy entry: troop tiers were recorded before troop types were tracked separately.
-                </p>
-              )}
 
-              {registration.comment ? (
-                <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
-                  {registration.comment}
-                </p>
-              ) : null}
-            </div>
+                <div className="grid gap-3 text-sm text-slate-300 sm:grid-cols-2 xl:grid-cols-4">
+                  <p>
+                    <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Partner</span>
+                    {registration.partnerName}
+                  </p>
+                  <p>
+                    <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Troops</span>
+                    {registration.troopCount.toLocaleString("en-US")}
+                  </p>
+                  <p>
+                    <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Top Tier</span>
+                    T{registration.troopLevel}
+                  </p>
+                  <p>
+                    <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Status</span>
+                    {formatAvailabilityLabel(registration.isAvailable)}
+                  </p>
+                </div>
 
-            <div className="flex gap-3">
-              <button
-                type="button"
-                className={registration.id === editingRegistrationId ? "primary-button" : "secondary-button"}
-                onClick={() => onEdit(registration)}
-              >
-                <Pencil className="h-4 w-4" />
-                {registration.id === editingRegistrationId ? "Editing..." : "Edit"}
-              </button>
+                {tierGroups.length > 0 ? (
+                  <div className="grid gap-3 text-sm text-slate-300 sm:grid-cols-2">
+                    {tierGroups.map((group, index) => (
+                      <div
+                        key={`${registration.id}-tier-${group.tier}-${index}`}
+                        className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
+                      >
+                        <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">
+                          {index === 0 ? "Strongest Tier" : "Second Tier"}
+                        </span>
+                        <p className="mt-2 text-base font-semibold text-frost">T{group.tier}</p>
+                        <div className="mt-3 grid gap-2 text-sm text-slate-300">
+                          {(["infantry", "lancer", "marksman"] as const).map((troopType) => (
+                            <p key={troopType}>
+                              <span className="text-slate-500">{formatTroopType(troopType)}:</span>{" "}
+                              {(group.counts[troopType] ?? 0).toLocaleString("en-US")}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="rounded-2xl border border-amber-400/20 bg-amber-400/8 px-4 py-3 text-sm text-amber-100">
+                    Legacy entry: troop tiers were recorded before troop types were tracked separately.
+                  </p>
+                )}
 
-              {isAdminUnlocked ? (
+                {registration.comment ? (
+                  <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
+                    {registration.comment}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="flex gap-3">
                 <button
                   type="button"
-                  className="danger-button"
-                  onClick={() => onDelete(registration)}
-                  disabled={deletingRegistrationId !== null}
+                  className={registration.id === editingRegistrationId ? "primary-button" : "secondary-button"}
+                  onClick={() => onEdit(registration)}
                 >
-                  <Trash2 className="h-4 w-4" />
-                  {deletingRegistrationId === registration.id ? "Deleting..." : "Delete"}
+                  <Pencil className="h-4 w-4" />
+                  {registration.id === editingRegistrationId ? "Editing..." : "Edit"}
                 </button>
-              ) : null}
+
+                {isAdminUnlocked ? (
+                  <button
+                    type="button"
+                    className="danger-button"
+                    onClick={() => onDelete(registration)}
+                    disabled={deletingRegistrationId !== null}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {deletingRegistrationId === registration.id ? "Deleting..." : "Delete"}
+                  </button>
+                ) : null}
+              </div>
             </div>
-          </div>
-        </article>
-      ))}
+          </article>
+        );
+      })}
     </section>
   );
 }

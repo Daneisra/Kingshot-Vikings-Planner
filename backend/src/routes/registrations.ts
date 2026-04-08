@@ -26,9 +26,10 @@ const registrationSchema = z.object({
   troopLoadout: z
     .array(troopLoadoutEntrySchema)
     .min(1, "At least one troop line is required.")
-    .max(2, "Only your strongest 2 troop tiers should be counted.")
+    .max(6, "Only your strongest 2 troop tiers should be counted.")
     .superRefine((entries, context) => {
       const combinations = new Set<string>();
+      const tiers = new Set<number>();
 
       entries.forEach((entry, index) => {
         const key = `${entry.type}:${entry.tier}`;
@@ -42,7 +43,16 @@ const registrationSchema = z.object({
         }
 
         combinations.add(key);
+        tiers.add(entry.tier);
       });
+
+      if (tiers.size > 2) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Only your strongest 2 troop tiers should be counted.",
+          path: []
+        });
+      }
     }),
   comment: z
     .string()

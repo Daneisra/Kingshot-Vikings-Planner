@@ -7,28 +7,35 @@ const MAX_TROOP_TIER = 11;
 const MAX_TEXT_LENGTH = 40;
 const MAX_COMMENT_LENGTH = 300;
 const troopTierOptions = [7, 8, 9, 10, 11];
+const troopTypeLabels: Record<TroopType, string> = {
+  infantry: "Infantry",
+  lancer: "Lancer",
+  marksman: "Marksman"
+};
+const troopTypeOrder: TroopType[] = ["infantry", "lancer", "marksman"];
 
-const troopTypeOptions: Array<{ value: TroopType; label: string; description: string }> = [
-  { value: "infantry", label: "Infantry", description: "Front line / tank line" },
-  { value: "lancer", label: "Lancer", description: "Cavalry / fast damage line" },
-  { value: "marksman", label: "Marksman", description: "Back line / ranged damage" }
-];
-
-interface TroopLoadoutDraftEntry {
-  type: TroopType | "";
+interface TierGroupDraft {
   tier: number;
-  count: number;
+  infantry: number;
+  lancer: number;
+  marksman: number;
 }
 
 interface RegistrationFormState {
   nickname: string;
   partnerName: string;
-  troopLoadout: [TroopLoadoutDraftEntry, TroopLoadoutDraftEntry];
+  tierGroups: [TierGroupDraft, TierGroupDraft];
   comment: string;
   isAvailable: boolean;
 }
 
-type FieldName = "nickname" | "partnerName" | "comment" | `troopLoadout.${number}.${"type" | "tier" | "count"}`;
+type TierFieldName =
+  | `tierGroups.${number}.tier`
+  | `tierGroups.${number}.infantry`
+  | `tierGroups.${number}.lancer`
+  | `tierGroups.${number}.marksman`;
+
+type FieldName = "nickname" | "partnerName" | "comment" | TierFieldName;
 type FieldErrors = Partial<Record<FieldName, string>>;
 type TouchedState = Partial<Record<FieldName, boolean>>;
 
@@ -39,16 +46,17 @@ interface RegistrationFormProps {
   onCancelEdit: () => void;
 }
 
-const defaultTroopLine = (): TroopLoadoutDraftEntry => ({
-  type: "",
+const defaultTierGroup = (): TierGroupDraft => ({
   tier: MIN_TROOP_TIER,
-  count: 0
+  infantry: 0,
+  lancer: 0,
+  marksman: 0
 });
 
 const initialState = (): RegistrationFormState => ({
   nickname: "",
   partnerName: "",
-  troopLoadout: [defaultTroopLine(), defaultTroopLine()],
+  tierGroups: [defaultTierGroup(), defaultTierGroup()],
   comment: "",
   isAvailable: true
 });
@@ -67,16 +75,17 @@ export function RegistrationForm({
 
   const fieldErrors = useMemo(() => getFieldErrors(form), [form]);
   const hasValidationErrors = Object.values(fieldErrors).some(Boolean);
-  const totalTroops = form.troopLoadout.reduce((sum, entry) => sum + Math.max(0, entry.count || 0), 0);
+  const totalTroops = form.tierGroups.reduce(
+    (sum, group) => sum + group.infantry + group.lancer + group.marksman,
+    0
+  );
 
   useEffect(() => {
     if (editingRegistration) {
-      const draftLoadout = buildDraftLoadout(editingRegistration);
-
       setForm({
         nickname: editingRegistration.nickname,
         partnerName: editingRegistration.partnerName,
-        troopLoadout: draftLoadout,
+        tierGroups: buildTierGroups(editingRegistration),
         comment: editingRegistration.comment ?? "",
         isAvailable: editingRegistration.isAvailable
       });
@@ -119,19 +128,7 @@ export function RegistrationForm({
       await onSubmit({
         nickname: form.nickname.trim(),
         partnerName: form.partnerName.trim(),
-        troopLoadout: form.troopLoadout.flatMap((entry) => {
-          if (!entry.type || entry.count <= 0) {
-            return [];
-          }
-
-          return [
-            {
-              type: entry.type,
-              tier: entry.tier,
-              count: entry.count
-            }
-          ];
-        }),
+        troopLoadout: flattenTierGroups(form.tierGroups),
         comment: form.comment.trim(),
         isAvailable: form.isAvailable
       });
@@ -166,17 +163,17 @@ export function RegistrationForm({
     return <p className="mt-2 text-xs text-rose-300">{message}</p>;
   }
 
-  function updateTroopLine(index: 0 | 1, patch: Partial<TroopLoadoutDraftEntry>) {
+  function updateTierGroup(index: 0 | 1, patch: Partial<TierGroupDraft>) {
     setForm((current) => {
-      const nextLoadout = [...current.troopLoadout] as RegistrationFormState["troopLoadout"];
-      nextLoadout[index] = {
-        ...nextLoadout[index],
+      const nextTierGroups = [...current.tierGroups] as RegistrationFormState["tierGroups"];
+      nextTierGroups[index] = {
+        ...nextTierGroups[index],
         ...patch
       };
 
       return {
         ...current,
-        troopLoadout: nextLoadout
+        tierGroups: nextTierGroups
       };
     });
   }
@@ -249,79 +246,38 @@ export function RegistrationForm({
         <div className="md:col-span-2 rounded-2xl border border-amber-400/15 bg-amber-400/5 px-4 py-3 text-sm text-amber-100">
           <p className="font-medium text-amber-100">Only count your strongest 2 troop tiers.</p>
           <p className="mt-1 text-amber-50/90">
-            Kingshot marches use Infantry, Lancers, and Marksmen. Record your top two type+tier groups only.
+            For each tier block, enter one common tier and the counts for Infantry, Lancers, and Marksmen.
           </p>
         </div>
 
-        {form.troopLoadout.map((entry, index) => {
-          const troopLabel = index === 0 ? "Strongest troop tier" : "Second troop tier";
+        {form.tierGroups.map((group, index) => {
           const isOptional = index === 1;
-          const typeField = `troopLoadout.${index}.type` as const;
-          const tierField = `troopLoadout.${index}.tier` as const;
-          const countField = `troopLoadout.${index}.count` as const;
+          const troopBlockLabel = index === 0 ? "Strongest troop tier" : "Second troop tier";
+          const tierField = `tierGroups.${index}.tier` as const;
+          const groupTotal = group.infantry + group.lancer + group.marksman;
 
           return (
-            <section
-              key={index}
-              className="md:col-span-2 rounded-3xl border border-white/10 bg-white/5 p-4"
-            >
+            <section key={index} className="md:col-span-2 rounded-3xl border border-white/10 bg-white/5 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-base font-semibold text-frost">{troopLabel}</h3>
+                  <h3 className="text-base font-semibold text-frost">{troopBlockLabel}</h3>
                   <p className="mt-1 text-sm text-slate-400">
-                    {isOptional ? "Optional. Leave empty if only one tier matters this week." : "Required."}
+                    {isOptional ? "Optional. Leave all troop counts at 0 if unused." : "Required."}
                   </p>
                 </div>
 
-                {isOptional ? (
-                  <button
-                    type="button"
-                    className="secondary-button px-3 py-2 text-xs"
-                    onClick={() => updateTroopLine(1, defaultTroopLine())}
-                  >
-                    Clear
-                  </button>
-                ) : null}
+                <div className="text-right">
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Block Total</p>
+                  <p className="mt-1 text-lg font-semibold text-frost">{groupTotal.toLocaleString("en-US")}</p>
+                </div>
               </div>
 
-              <div className="mt-4 grid gap-4 md:grid-cols-3">
+              <div className="mt-4 grid gap-4 md:grid-cols-[180px_minmax(0,1fr)]">
                 <label>
-                  <span className="mb-2 block text-sm font-medium text-slate-300">Troop type</span>
+                  <span className="mb-2 block text-sm font-medium text-slate-300">Tier</span>
                   <select
-                    value={entry.type}
-                    onChange={(event) =>
-                      updateTroopLine(index as 0 | 1, {
-                        type: event.target.value as TroopLoadoutDraftEntry["type"]
-                      })
-                    }
-                    onBlur={() => handleBlur(typeField)}
-                    aria-invalid={Boolean(fieldErrors[typeField]) && (hasSubmitted || touched[typeField])}
-                    className={getInputClassName(typeField)}
-                  >
-                    <option value="">{isOptional ? "Unused line" : "Select troop type"}</option>
-                    {troopTypeOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-2 text-xs text-slate-500">
-                    {entry.type
-                      ? troopTypeOptions.find((option) => option.value === entry.type)?.description
-                      : "Choose Infantry, Lancer, or Marksman."}
-                  </p>
-                  {renderFieldError(typeField)}
-                </label>
-
-                <label>
-                  <span className="mb-2 block text-sm font-medium text-slate-300">Troop tier</span>
-                  <select
-                    value={entry.tier}
-                    onChange={(event) =>
-                      updateTroopLine(index as 0 | 1, {
-                        tier: Number(event.target.value)
-                      })
-                    }
+                    value={group.tier}
+                    onChange={(event) => updateTierGroup(index as 0 | 1, { tier: Number(event.target.value) })}
                     onBlur={() => handleBlur(tierField)}
                     aria-invalid={Boolean(fieldErrors[tierField]) && (hasSubmitted || touched[tierField])}
                     className={getInputClassName(tierField)}
@@ -333,32 +289,39 @@ export function RegistrationForm({
                     ))}
                   </select>
                   <p className="mt-2 text-xs text-slate-500">
-                    T7+ only. T11 is included for late-game War Academy progress.
+                    T7+ only. T11 is available for late-game War Academy players.
                   </p>
                   {renderFieldError(tierField)}
                 </label>
 
-                <label>
-                  <span className="mb-2 block text-sm font-medium text-slate-300">Troop count</span>
-                  <input
-                    type="number"
-                    min={0}
-                    value={entry.count}
-                    onChange={(event) =>
-                      updateTroopLine(index as 0 | 1, {
-                        count: Math.max(0, Number(event.target.value) || 0)
-                      })
-                    }
-                    onBlur={() => handleBlur(countField)}
-                    aria-invalid={Boolean(fieldErrors[countField]) && (hasSubmitted || touched[countField])}
-                    className={getInputClassName(countField)}
-                    required={index === 0}
-                  />
-                  <p className="mt-2 text-xs text-slate-500">
-                    {index === 0 ? "Required." : "Set to 0 if you only want to report one tier."}
-                  </p>
-                  {renderFieldError(countField)}
-                </label>
+                <div className="grid gap-4 md:grid-cols-3">
+                  {troopTypeOrder.map((troopType) => {
+                    const field = `tierGroups.${index}.${troopType}` as const;
+
+                    return (
+                      <label key={troopType}>
+                        <span className="mb-2 block text-sm font-medium text-slate-300">{troopTypeLabels[troopType]}</span>
+                        <input
+                          type="number"
+                          min={0}
+                          value={group[troopType]}
+                          onChange={(event) =>
+                            updateTierGroup(index as 0 | 1, {
+                              [troopType]: Math.max(0, Number(event.target.value) || 0)
+                            } as Partial<TierGroupDraft>)
+                          }
+                          onBlur={() => handleBlur(field)}
+                          aria-invalid={Boolean(fieldErrors[field]) && (hasSubmitted || touched[field])}
+                          className={getInputClassName(field)}
+                        />
+                        <p className="mt-2 text-xs text-slate-500">
+                          {isOptional ? "Use 0 if this type is not part of the block." : "Enter the count for this type."}
+                        </p>
+                        {renderFieldError(field)}
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
             </section>
           );
@@ -367,7 +330,7 @@ export function RegistrationForm({
         <div className="md:col-span-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
           <p className="text-sm font-medium text-frost">Reported troops</p>
           <p className="mt-1 text-2xl font-semibold text-frost">{totalTroops.toLocaleString("en-US")}</p>
-          <p className="mt-1 text-xs text-slate-500">Derived automatically from your strongest two troop tiers.</p>
+          <p className="mt-1 text-xs text-slate-500">Derived automatically from your strongest two tier blocks.</p>
         </div>
 
         <label className="md:col-span-2">
@@ -426,29 +389,62 @@ export function RegistrationForm({
   );
 }
 
-function buildDraftLoadout(registration: Registration): [TroopLoadoutDraftEntry, TroopLoadoutDraftEntry] {
-  const lines = registration.troopLoadout.slice(0, 2).map((entry) => ({
-    type: entry.type,
-    tier: entry.tier,
-    count: entry.count
-  }));
-
-  if (lines.length === 0) {
+function buildTierGroups(registration: Registration): [TierGroupDraft, TierGroupDraft] {
+  if (registration.troopLoadout.length === 0) {
     return [
       {
-        type: "",
         tier: Math.max(MIN_TROOP_TIER, Math.min(MAX_TROOP_TIER, registration.troopLevel || MIN_TROOP_TIER)),
-        count: registration.troopCount
+        infantry: registration.troopCount,
+        lancer: 0,
+        marksman: 0
       },
-      defaultTroopLine()
+      defaultTierGroup()
     ];
   }
 
-  if (lines.length === 1) {
-    return [lines[0], defaultTroopLine()];
+  const groupedByTier = new Map<number, TierGroupDraft>();
+
+  for (const entry of registration.troopLoadout) {
+    const currentGroup = groupedByTier.get(entry.tier) ?? {
+      tier: entry.tier,
+      infantry: 0,
+      lancer: 0,
+      marksman: 0
+    };
+
+    currentGroup[entry.type] += entry.count;
+    groupedByTier.set(entry.tier, currentGroup);
   }
 
-  return [lines[0], lines[1]];
+  const orderedGroups = Array.from(groupedByTier.values())
+    .sort((left, right) => right.tier - left.tier)
+    .slice(0, 2);
+
+  if (orderedGroups.length === 1) {
+    return [orderedGroups[0], defaultTierGroup()];
+  }
+
+  return [orderedGroups[0] ?? defaultTierGroup(), orderedGroups[1] ?? defaultTierGroup()];
+}
+
+function flattenTierGroups(tierGroups: [TierGroupDraft, TierGroupDraft]): TroopLoadoutEntry[] {
+  return tierGroups.flatMap((group) =>
+    troopTypeOrder.flatMap((troopType) => {
+      const count = group[troopType];
+
+      if (count <= 0) {
+        return [];
+      }
+
+      return [
+        {
+          type: troopType,
+          tier: group.tier,
+          count
+        }
+      ];
+    })
+  );
 }
 
 function getFieldErrors(form: RegistrationFormState): FieldErrors {
@@ -456,7 +452,9 @@ function getFieldErrors(form: RegistrationFormState): FieldErrors {
   const nicknameLength = form.nickname.trim().length;
   const partnerNameLength = form.partnerName.trim().length;
   const commentLength = form.comment.length;
-  const [primary, secondary] = form.troopLoadout;
+  const [primaryGroup, secondaryGroup] = form.tierGroups;
+  const primaryTotal = getTierGroupTotal(primaryGroup);
+  const secondaryTotal = getTierGroupTotal(secondaryGroup);
 
   if (nicknameLength < 2) {
     errors.nickname = "Nickname must be at least 2 characters.";
@@ -470,11 +468,11 @@ function getFieldErrors(form: RegistrationFormState): FieldErrors {
     errors.partnerName = `Partner name must be ${MAX_TEXT_LENGTH} characters or less.`;
   }
 
-  validateTroopLine(primary, 0, errors, true);
-  validateTroopLine(secondary, 1, errors, false);
+  validateTierGroup(primaryGroup, 0, errors, true);
+  validateTierGroup(secondaryGroup, 1, errors, false);
 
-  if (primary.type && secondary.type && primary.type === secondary.type && primary.tier === secondary.tier && secondary.count > 0) {
-    errors["troopLoadout.1.tier"] = "Duplicate troop type+tier combinations are not allowed.";
+  if (primaryTotal > 0 && secondaryTotal > 0 && primaryGroup.tier === secondaryGroup.tier) {
+    errors["tierGroups.1.tier"] = "Use two different tiers. Do not repeat the same tier twice.";
   }
 
   if (commentLength > MAX_COMMENT_LENGTH) {
@@ -484,30 +482,35 @@ function getFieldErrors(form: RegistrationFormState): FieldErrors {
   return errors;
 }
 
-function validateTroopLine(
-  entry: TroopLoadoutDraftEntry,
+function validateTierGroup(
+  group: TierGroupDraft,
   index: 0 | 1,
   errors: FieldErrors,
   required: boolean
 ) {
-  const typeField = `troopLoadout.${index}.type` as const;
-  const tierField = `troopLoadout.${index}.tier` as const;
-  const countField = `troopLoadout.${index}.count` as const;
-  const hasAnyValue = Boolean(entry.type) || entry.count > 0;
+  const tierField = `tierGroups.${index}.tier` as const;
+  const total = getTierGroupTotal(group);
 
-  if (required || hasAnyValue) {
-    if (!entry.type) {
-      errors[typeField] = "Choose a troop type.";
-    }
-
-    if (!Number.isInteger(entry.tier) || entry.tier < MIN_TROOP_TIER || entry.tier > MAX_TROOP_TIER) {
-      errors[tierField] = `Troop tier must be between T${MIN_TROOP_TIER} and T${MAX_TROOP_TIER}.`;
-    }
-
-    if (!Number.isInteger(entry.count) || entry.count < 1) {
-      errors[countField] = "Troop count must be at least 1.";
-    } else if (entry.count > 100000000) {
-      errors[countField] = "Troop count is unrealistically high.";
-    }
+  if (!Number.isInteger(group.tier) || group.tier < MIN_TROOP_TIER || group.tier > MAX_TROOP_TIER) {
+    errors[tierField] = `Troop tier must be between T${MIN_TROOP_TIER} and T${MAX_TROOP_TIER}.`;
   }
+
+  troopTypeOrder.forEach((troopType) => {
+    const field = `tierGroups.${index}.${troopType}` as const;
+    const count = group[troopType];
+
+    if (!Number.isInteger(count) || count < 0) {
+      errors[field] = "Troop count must be 0 or higher.";
+    } else if (count > 100000000) {
+      errors[field] = "Troop count is unrealistically high.";
+    }
+  });
+
+  if (required && total < 1) {
+    errors["tierGroups.0.infantry"] = "Enter at least one troop count in the strongest tier block.";
+  }
+}
+
+function getTierGroupTotal(group: TierGroupDraft) {
+  return group.infantry + group.lancer + group.marksman;
 }

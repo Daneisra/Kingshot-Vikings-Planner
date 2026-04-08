@@ -41,12 +41,14 @@ export function buildRegistrationsCsv(
   const header = [
     "Nickname",
     "Partner",
-    "Primary Troop Type",
-    "Primary Troop Tier",
-    "Primary Troop Count",
-    "Secondary Troop Type",
-    "Secondary Troop Tier",
-    "Secondary Troop Count",
+    "Primary Tier",
+    "Primary Infantry",
+    "Primary Lancer",
+    "Primary Marksman",
+    "Secondary Tier",
+    "Secondary Infantry",
+    "Secondary Lancer",
+    "Secondary Marksman",
     "Troop Count",
     "Highest Troop Tier",
     "Availability",
@@ -55,22 +57,30 @@ export function buildRegistrationsCsv(
     "Updated At"
   ];
 
-  const rows = registrations.map((registration) => [
-    registration.nickname,
-    registration.partnerName,
-    formatTroopType(registration.troopLoadout[0]?.type),
-    formatTroopTier(registration.troopLoadout[0]),
-    registration.troopLoadout[0]?.count ?? "",
-    formatTroopType(registration.troopLoadout[1]?.type),
-    formatTroopTier(registration.troopLoadout[1]),
-    registration.troopLoadout[1]?.count ?? "",
-    registration.troopCount,
-    registration.troopLevel ? `T${registration.troopLevel}` : "",
-    registration.isAvailable ? "Available" : "Unavailable",
-    registration.comment,
-    registration.createdAt,
-    registration.updatedAt
-  ]);
+  const rows = registrations.map((registration) => {
+    const tierGroups = groupTroopLoadoutByTier(registration.troopLoadout);
+    const primaryGroup = tierGroups[0];
+    const secondaryGroup = tierGroups[1];
+
+    return [
+      registration.nickname,
+      registration.partnerName,
+      formatTierGroupTier(primaryGroup),
+      primaryGroup?.counts.infantry ?? "",
+      primaryGroup?.counts.lancer ?? "",
+      primaryGroup?.counts.marksman ?? "",
+      formatTierGroupTier(secondaryGroup),
+      secondaryGroup?.counts.infantry ?? "",
+      secondaryGroup?.counts.lancer ?? "",
+      secondaryGroup?.counts.marksman ?? "",
+      registration.troopCount,
+      registration.troopLevel ? `T${registration.troopLevel}` : "",
+      registration.isAvailable ? "Available" : "Unavailable",
+      registration.comment,
+      registration.createdAt,
+      registration.updatedAt
+    ];
+  });
 
   return `\ufeff${[...summaryRows, header, ...rows]
     .map((row) => row.map((cell) => escapeCell(cell ?? null)).join(","))
@@ -95,18 +105,24 @@ function formatFilters(filters: RegistrationFilters) {
   return appliedFilters.length > 0 ? appliedFilters.join("; ") : "none";
 }
 
-function formatTroopType(type: TroopLoadoutEntry["type"] | undefined) {
-  if (!type) {
-    return "";
+function groupTroopLoadoutByTier(troopLoadout: TroopLoadoutEntry[]) {
+  const grouped = new Map<number, { infantry: number; lancer: number; marksman: number }>();
+
+  for (const entry of troopLoadout) {
+    const currentGroup = grouped.get(entry.tier) ?? { infantry: 0, lancer: 0, marksman: 0 };
+    currentGroup[entry.type] += entry.count;
+    grouped.set(entry.tier, currentGroup);
   }
 
-  if (type === "marksman") {
-    return "Marksman";
-  }
-
-  return `${type.charAt(0).toUpperCase()}${type.slice(1)}`;
+  return Array.from(grouped.entries())
+    .sort((left, right) => right[0] - left[0])
+    .slice(0, 2)
+    .map(([tier, counts]) => ({
+      tier,
+      counts
+    }));
 }
 
-function formatTroopTier(entry: TroopLoadoutEntry | undefined) {
-  return entry ? `T${entry.tier}` : "";
+function formatTierGroupTier(group: { tier: number } | undefined) {
+  return group ? `T${group.tier}` : "";
 }
