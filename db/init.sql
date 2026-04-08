@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   partner_name VARCHAR(40) NOT NULL,
   troop_count INTEGER NOT NULL CHECK (troop_count >= 0),
   troop_level INTEGER NOT NULL CHECK (troop_level >= 7 AND troop_level <= 100),
+  troop_loadout JSONB NOT NULL DEFAULT '[]'::jsonb,
   comment TEXT,
   is_available BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

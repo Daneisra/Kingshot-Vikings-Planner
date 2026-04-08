@@ -5,7 +5,8 @@ import {
   RegistrationFilters,
   RegistrationInput,
   RegistrationRecord,
-  RegistrationStats
+  RegistrationStats,
+  TroopLoadoutEntry
 } from "../types/registration";
 import { insertAuditLog } from "./audit-service";
 import { HttpError } from "../utils/http-error";
@@ -16,6 +17,7 @@ const selectColumns = `
   partner_name AS "partnerName",
   troop_count AS "troopCount",
   troop_level AS "troopLevel",
+  troop_loadout AS "troopLoadout",
   comment,
   is_available AS "isAvailable",
   created_at AS "createdAt",
@@ -48,7 +50,57 @@ function buildWhereClause(filters: RegistrationFilters) {
 }
 
 function mapRow(result: QueryResult<RegistrationRecord>) {
-  return result.rows[0];
+  const row = result.rows[0];
+
+  if (!row) {
+    return row;
+  }
+
+  return {
+    ...row,
+    troopLoadout: normalizeTroopLoadout(row.troopLoadout)
+  };
+}
+
+function normalizeTroopLoadout(value: unknown): TroopLoadoutEntry[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((entry) => {
+    if (
+      typeof entry !== "object" ||
+      entry === null ||
+      !("type" in entry) ||
+      !("tier" in entry) ||
+      !("count" in entry)
+    ) {
+      return [];
+    }
+
+    const troopType = String(entry.type);
+    const tier = Number(entry.tier);
+    const count = Number(entry.count);
+
+    if (!["infantry", "lancer", "marksman"].includes(troopType) || !Number.isInteger(tier) || !Number.isInteger(count)) {
+      return [];
+    }
+
+    return [
+      {
+        type: troopType as TroopLoadoutEntry["type"],
+        tier,
+        count
+      }
+    ];
+  });
+}
+
+function summarizeTroopLoadout(troopLoadout: TroopLoadoutEntry[]) {
+  return {
+    troopCount: troopLoadout.reduce((sum, entry) => sum + entry.count, 0),
+    troopLevel: troopLoadout.reduce((highestTier, entry) => Math.max(highestTier, entry.tier), 0)
+  };
 }
 
 export async function listRegistrations(filters: RegistrationFilters) {
@@ -63,7 +115,10 @@ export async function listRegistrations(filters: RegistrationFilters) {
     values
   );
 
-  return result.rows;
+  return result.rows.map((row) => ({
+    ...row,
+    troopLoadout: normalizeTroopLoadout(row.troopLoadout)
+  }));
 }
 
 export async function listPartners() {
@@ -140,6 +195,8 @@ export async function getRegistrationStats(filters: RegistrationFilters): Promis
 }
 
 export async function createRegistration(input: RegistrationInput) {
+  const troopLoadout = normalizeTroopLoadout(input.troopLoadout);
+  const { troopCount, troopLevel } = summarizeTroopLoadout(troopLoadout);
   const result = await pool.query<RegistrationRecord>(
     `
       INSERT INTO registrations (
@@ -147,17 +204,19 @@ export async function createRegistration(input: RegistrationInput) {
         partner_name,
         troop_count,
         troop_level,
+        troop_loadout,
         comment,
         is_available
       )
-      VALUES ($1, $2, $3, $4, $5, $6)
+      VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7)
       RETURNING ${selectColumns}
     `,
     [
       input.nickname,
       input.partnerName,
-      input.troopCount,
-      input.troopLevel,
+      troopCount,
+      troopLevel,
+      JSON.stringify(troopLoadout),
       input.comment,
       input.isAvailable
     ]
@@ -167,6 +226,8 @@ export async function createRegistration(input: RegistrationInput) {
 }
 
 export async function updateRegistration(id: string, input: RegistrationInput) {
+  const troopLoadout = normalizeTroopLoadout(input.troopLoadout);
+  const { troopCount, troopLevel } = summarizeTroopLoadout(troopLoadout);
   const result = await pool.query<RegistrationRecord>(
     `
       UPDATE registrations
@@ -175,12 +236,22 @@ export async function updateRegistration(id: string, input: RegistrationInput) {
         partner_name = $3,
         troop_count = $4,
         troop_level = $5,
-        comment = $6,
-        is_available = $7
+        troop_loadout = $6::jsonb,
+        comment = $7,
+        is_available = $8
       WHERE id = $1
       RETURNING ${selectColumns}
     `,
-    [id, input.nickname, input.partnerName, input.troopCount, input.troopLevel, input.comment, input.isAvailable]
+    [
+      id,
+      input.nickname,
+      input.partnerName,
+      troopCount,
+      troopLevel,
+      JSON.stringify(troopLoadout),
+      input.comment,
+      input.isAvailable
+    ]
   );
 
   const registration = mapRow(result);
@@ -223,6 +294,7 @@ export async function deleteRegistration(id: string, auditContext: AuditContext)
         partnerName: registration.partnerName,
         troopCount: registration.troopCount,
         troopLevel: registration.troopLevel,
+        troopLoadout: registration.troopLoadout,
         isAvailable: registration.isAvailable
       },
       context: auditContext

@@ -33,6 +33,14 @@ function formatAvailabilityLabel(isAvailable: boolean) {
   return isAvailable ? "Available this week" : "Unavailable this rotation";
 }
 
+function formatTroopType(type: Registration["troopLoadout"][number]["type"]) {
+  if (type === "marksman") {
+    return "Marksman";
+  }
+
+  return `${type.charAt(0).toUpperCase()}${type.slice(1)}`;
+}
+
 export function RegistrationList({
   registrations,
   isLoading,
@@ -161,14 +169,34 @@ export function RegistrationList({
                   {registration.troopCount.toLocaleString("en-US")}
                 </p>
                 <p>
-                  <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Level</span>
-                  {registration.troopLevel}
+                  <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Top Tier</span>
+                  T{registration.troopLevel}
                 </p>
                 <p>
                   <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Status</span>
                   {formatAvailabilityLabel(registration.isAvailable)}
                 </p>
               </div>
+
+              {registration.troopLoadout.length > 0 ? (
+                <div className="grid gap-3 text-sm text-slate-300 sm:grid-cols-2">
+                  {registration.troopLoadout.map((entry, index) => (
+                    <p
+                      key={`${registration.id}-${entry.type}-${entry.tier}-${index}`}
+                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
+                    >
+                      <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">
+                        {index === 0 ? "Strongest Tier" : "Second Tier"}
+                      </span>
+                      {formatTroopType(entry.type)} · T{entry.tier} · {entry.count.toLocaleString("en-US")}
+                    </p>
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-2xl border border-amber-400/20 bg-amber-400/8 px-4 py-3 text-sm text-amber-100">
+                  Legacy entry: troop tiers were recorded before troop types were tracked separately.
+                </p>
+              )}
 
               {registration.comment ? (
                 <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">

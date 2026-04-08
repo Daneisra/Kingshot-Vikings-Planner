@@ -1,9 +1,18 @@
+export type TroopType = "infantry" | "lancer" | "marksman";
+
+export interface TroopLoadoutEntry {
+  type: TroopType;
+  tier: number;
+  count: number;
+}
+
 export interface RegistrationRecord {
   id: string;
   nickname: string;
   partnerName: string;
   troopCount: number;
   troopLevel: number;
+  troopLoadout: TroopLoadoutEntry[];
   comment: string | null;
   isAvailable: boolean;
   createdAt: string;
@@ -13,8 +22,7 @@ export interface RegistrationRecord {
 export interface RegistrationInput {
   nickname: string;
   partnerName: string;
-  troopCount: number;
-  troopLevel: number;
+  troopLoadout: TroopLoadoutEntry[];
   comment: string | null;
   isAvailable: boolean;
 }

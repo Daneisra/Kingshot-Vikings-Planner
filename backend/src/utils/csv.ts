@@ -1,4 +1,4 @@
-import { RegistrationFilters, RegistrationRecord } from "../types/registration";
+import { RegistrationFilters, RegistrationRecord, TroopLoadoutEntry } from "../types/registration";
 
 function escapeCell(value: string | number | boolean | null) {
   const rawValue = value === null ? "" : String(value);
@@ -41,8 +41,14 @@ export function buildRegistrationsCsv(
   const header = [
     "Nickname",
     "Partner",
+    "Primary Troop Type",
+    "Primary Troop Tier",
+    "Primary Troop Count",
+    "Secondary Troop Type",
+    "Secondary Troop Tier",
+    "Secondary Troop Count",
     "Troop Count",
-    "Troop Level",
+    "Highest Troop Tier",
     "Availability",
     "Comment",
     "Created At",
@@ -52,8 +58,14 @@ export function buildRegistrationsCsv(
   const rows = registrations.map((registration) => [
     registration.nickname,
     registration.partnerName,
+    formatTroopType(registration.troopLoadout[0]?.type),
+    formatTroopTier(registration.troopLoadout[0]),
+    registration.troopLoadout[0]?.count ?? "",
+    formatTroopType(registration.troopLoadout[1]?.type),
+    formatTroopTier(registration.troopLoadout[1]),
+    registration.troopLoadout[1]?.count ?? "",
     registration.troopCount,
-    registration.troopLevel,
+    registration.troopLevel ? `T${registration.troopLevel}` : "",
     registration.isAvailable ? "Available" : "Unavailable",
     registration.comment,
     registration.createdAt,
@@ -81,4 +93,20 @@ function formatFilters(filters: RegistrationFilters) {
   }
 
   return appliedFilters.length > 0 ? appliedFilters.join("; ") : "none";
+}
+
+function formatTroopType(type: TroopLoadoutEntry["type"] | undefined) {
+  if (!type) {
+    return "";
+  }
+
+  if (type === "marksman") {
+    return "Marksman";
+  }
+
+  return `${type.charAt(0).toUpperCase()}${type.slice(1)}`;
+}
+
+function formatTroopTier(entry: TroopLoadoutEntry | undefined) {
+  return entry ? `T${entry.tier}` : "";
 }

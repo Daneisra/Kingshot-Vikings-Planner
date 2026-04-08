@@ -25,6 +25,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 
 - Shared registration list for the current Vikings cycle
 - Create, edit, and delete player registrations
+- Track up to 2 strongest troop tiers with troop type, tier, and count
 - Search by nickname
 - Filter by partner and weekly availability
 - Quick stats:
