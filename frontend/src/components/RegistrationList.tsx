@@ -1,5 +1,21 @@
-import { Pencil, Trash2, Users } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ArrowDownUp, Pencil, Trash2, Users } from "lucide-react";
 import type { Registration } from "../types/registration";
+
+type SortOption =
+  | "default"
+  | "nickname-asc"
+  | "troops-desc"
+  | "level-desc"
+  | "updated-desc";
+
+const sortOptions: Array<{ value: SortOption; label: string }> = [
+  { value: "default", label: "Default order" },
+  { value: "nickname-asc", label: "Nickname A-Z" },
+  { value: "troops-desc", label: "Highest troops first" },
+  { value: "level-desc", label: "Highest level first" },
+  { value: "updated-desc", label: "Recently updated" }
+];
 
 interface RegistrationListProps {
   registrations: Registration[];
@@ -20,6 +36,15 @@ export function RegistrationList({
   onEdit,
   onDelete
 }: RegistrationListProps) {
+  const [sortBy, setSortBy] = useState<SortOption>("default");
+
+  const sortedRegistrations = useMemo(() => {
+    const entries = [...registrations];
+
+    entries.sort((left, right) => compareRegistrations(left, right, sortBy));
+    return entries;
+  }, [registrations, sortBy]);
+
   if (isLoading) {
     return (
       <section className="grid gap-4">
@@ -47,7 +72,30 @@ export function RegistrationList({
 
   return (
     <section className="grid gap-4">
-      {registrations.map((registration) => (
+      <div className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-white/5 p-4 shadow-panel backdrop-blur sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm uppercase tracking-[0.2em] text-amber-300">Player list</p>
+          <p className="mt-2 text-sm text-slate-400">
+            {sortedRegistrations.length} registration{sortedRegistrations.length > 1 ? "s" : ""} shown
+          </p>
+        </div>
+
+        <label className="sm:w-64">
+          <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-300">
+            <ArrowDownUp className="h-4 w-4" />
+            Sort by
+          </span>
+          <select value={sortBy} onChange={(event) => setSortBy(event.target.value as SortOption)}>
+            {sortOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {sortedRegistrations.map((registration) => (
         <article
           key={registration.id}
           className="rounded-3xl border border-white/10 bg-slate-950/70 p-5 shadow-panel backdrop-blur"
@@ -115,4 +163,32 @@ export function RegistrationList({
       ))}
     </section>
   );
+}
+
+function compareRegistrations(left: Registration, right: Registration, sortBy: SortOption) {
+  switch (sortBy) {
+    case "nickname-asc":
+      return compareText(left.nickname, right.nickname);
+    case "troops-desc":
+      return compareNumbers(right.troopCount, left.troopCount) || compareDefault(left, right);
+    case "level-desc":
+      return compareNumbers(right.troopLevel, left.troopLevel) || compareDefault(left, right);
+    case "updated-desc":
+      return compareNumbers(Date.parse(right.updatedAt), Date.parse(left.updatedAt)) || compareDefault(left, right);
+    case "default":
+    default:
+      return compareDefault(left, right);
+  }
+}
+
+function compareDefault(left: Registration, right: Registration) {
+  return compareNumbers(Number(right.isAvailable), Number(left.isAvailable)) || compareText(left.nickname, right.nickname);
+}
+
+function compareText(left: string, right: string) {
+  return left.localeCompare(right, "en", { sensitivity: "base" });
+}
+
+function compareNumbers(left: number, right: number) {
+  return left - right;
 }
