@@ -41,10 +41,14 @@ adminRouter.get(
   asyncHandler(async (req, res) => {
     const filters = filtersSchema.parse(req.query);
     const registrations = await listRegistrations(filters);
-    const csv = buildRegistrationsCsv(registrations);
+    const csv = buildRegistrationsCsv(registrations, { filters, exportedAt: new Date() });
+    const exportDate = new Date().toISOString().slice(0, 10);
 
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", 'attachment; filename="kingshot-vikings-registrations.csv"');
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="kingshot-vikings-registrations-${exportDate}.csv"`
+    );
     res.send(csv);
   })
 );

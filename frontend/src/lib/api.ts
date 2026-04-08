@@ -237,6 +237,30 @@ export const api = {
       throw apiError;
     }
 
-    return response.blob();
+    return {
+      blob: await response.blob(),
+      filename: getFilenameFromDisposition(response.headers.get("content-disposition"))
+    };
   }
 };
+
+function getFilenameFromDisposition(contentDisposition: string | null) {
+  if (!contentDisposition) {
+    return "kingshot-vikings-registrations.csv";
+  }
+
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+
+  if (utf8Match?.[1]) {
+    return decodeURIComponent(utf8Match[1]);
+  }
+
+  const quotedMatch = contentDisposition.match(/filename="([^"]+)"/i);
+
+  if (quotedMatch?.[1]) {
+    return quotedMatch[1];
+  }
+
+  const plainMatch = contentDisposition.match(/filename=([^;]+)/i);
+  return plainMatch?.[1]?.trim() || "kingshot-vikings-registrations.csv";
+}

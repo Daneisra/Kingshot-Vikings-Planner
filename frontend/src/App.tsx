@@ -458,8 +458,8 @@ export default function App() {
     setIsExportingCsv(true);
 
     try {
-      const blob = await api.exportCsv(adminPassword, { ...filters, search: debouncedSearch });
-      downloadBlob(blob, "kingshot-vikings-registrations.csv");
+      const { blob, filename } = await api.exportCsv(adminPassword, { ...filters, search: debouncedSearch });
+      downloadBlob(blob, filename);
       pushToast("success", "CSV export generated.");
     } catch (error) {
       pushToast("error", getDisplayMessage(error, "Unable to export CSV."));
