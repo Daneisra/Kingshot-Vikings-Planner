@@ -22,6 +22,7 @@ interface RegistrationListProps {
   isLoading: boolean;
   isAdminUnlocked: boolean;
   editingRegistrationId: string | null;
+  errorMessage?: string;
   onEdit: (registration: Registration) => void;
   onDelete: (registration: Registration) => void;
 }
@@ -35,6 +36,7 @@ export function RegistrationList({
   isLoading,
   isAdminUnlocked,
   editingRegistrationId,
+  errorMessage,
   onEdit,
   onDelete
 }: RegistrationListProps) {
@@ -60,6 +62,15 @@ export function RegistrationList({
     );
   }
 
+  if (registrations.length === 0 && errorMessage) {
+    return (
+      <section className="rounded-3xl border border-amber-400/20 bg-amber-400/8 p-8 shadow-panel">
+        <h3 className="text-xl font-semibold text-frost">Unable to load registrations</h3>
+        <p className="mt-2 text-sm text-amber-100">{errorMessage}</p>
+      </section>
+    );
+  }
+
   if (registrations.length === 0) {
     return (
       <section className="rounded-3xl border border-dashed border-white/15 bg-white/5 p-8 text-center shadow-panel">
@@ -74,6 +85,12 @@ export function RegistrationList({
 
   return (
     <section className="grid gap-4">
+      {errorMessage ? (
+        <p className="rounded-2xl border border-amber-400/20 bg-amber-400/8 px-4 py-3 text-sm text-amber-100">
+          {errorMessage}
+        </p>
+      ) : null}
+
       <div className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-white/5 p-4 shadow-panel backdrop-blur sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.2em] text-amber-300">Player list</p>

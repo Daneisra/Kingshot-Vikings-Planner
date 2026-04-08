@@ -4,11 +4,19 @@ interface FiltersBarProps {
   filters: RegistrationFilters;
   partners: string[];
   isLoadingPartners: boolean;
+  partnerWarningMessage?: string;
   onChange: (filters: RegistrationFilters) => void;
   onReset: () => void;
 }
 
-export function FiltersBar({ filters, partners, isLoadingPartners, onChange, onReset }: FiltersBarProps) {
+export function FiltersBar({
+  filters,
+  partners,
+  isLoadingPartners,
+  partnerWarningMessage,
+  onChange,
+  onReset
+}: FiltersBarProps) {
   return (
     <section className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-panel backdrop-blur">
       <div className="flex flex-col gap-4 lg:flex-row">
@@ -44,6 +52,9 @@ export function FiltersBar({ filters, partners, isLoadingPartners, onChange, onR
           <p className="mt-2 text-xs text-slate-500">
             {isLoadingPartners ? "Refreshing partner list..." : "Partner options update automatically."}
           </p>
+          {partnerWarningMessage ? (
+            <p className="mt-2 text-xs text-amber-200">{partnerWarningMessage}</p>
+          ) : null}
         </label>
 
         <label className="flex-1">

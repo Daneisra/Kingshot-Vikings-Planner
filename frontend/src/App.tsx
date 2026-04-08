@@ -59,6 +59,9 @@ export default function App() {
   const [isResettingWeek, setIsResettingWeek] = useState(false);
   const [adminPassword, setAdminPassword] = useState(() => localStorage.getItem(adminStorageKey) || "");
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(() => Boolean(localStorage.getItem(adminStorageKey)));
+  const [partnersErrorMessage, setPartnersErrorMessage] = useState("");
+  const [registrationsErrorMessage, setRegistrationsErrorMessage] = useState("");
+  const [statsErrorMessage, setStatsErrorMessage] = useState("");
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const toastIdRef = useRef(0);
 
@@ -83,10 +86,13 @@ export default function App() {
 
   async function loadPartners() {
     setIsLoadingPartners(true);
+    setPartnersErrorMessage("");
 
     try {
       const nextPartners = await api.getPartners();
       setPartners(nextPartners);
+    } catch {
+      setPartnersErrorMessage("Partner filter options could not be refreshed. The rest of the board is still usable.");
     } finally {
       setIsLoadingPartners(false);
     }
@@ -94,29 +100,40 @@ export default function App() {
 
   async function loadDashboard(currentFilters: RegistrationFilters) {
     setIsLoading(true);
+    setRegistrationsErrorMessage("");
+    setStatsErrorMessage("");
 
     try {
-      const [nextRegistrations, nextStats] = await Promise.all([
+      const [registrationsResult, statsResult] = await Promise.allSettled([
         api.listRegistrations(currentFilters),
         api.getStats(currentFilters)
       ]);
 
       startTransition(() => {
-        setRegistrations(nextRegistrations);
-        setStats(nextStats);
+        if (registrationsResult.status === "fulfilled") {
+          setRegistrations(registrationsResult.value);
+        } else {
+          setRegistrationsErrorMessage(
+            registrations.length > 0
+              ? "Could not refresh the player list. Showing the last known data."
+              : "The player list is temporarily unavailable. Try refreshing again in a moment."
+          );
+        }
+
+        if (statsResult.status === "fulfilled") {
+          setStats(statsResult.value);
+        } else {
+          setStatsErrorMessage("Stats could not be refreshed. The player list may still be current.");
+        }
       });
-    } catch (error) {
-      pushToast("error", error instanceof Error ? error.message : "Unable to load registrations.");
     } finally {
       setIsLoading(false);
     }
   }
 
   useEffect(() => {
-    loadPartners().catch(() => {
-      pushToast("error", "Unable to load the partners list.");
-    });
-  }, [pushToast]);
+    void loadPartners();
+  }, []);
 
   useEffect(() => {
     if (!adminPassword) {
@@ -318,7 +335,7 @@ export default function App() {
           </div>
         </header>
 
-        <StatsCards stats={stats} />
+        <StatsCards stats={stats} warningMessage={statsErrorMessage} />
 
         <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
           <div ref={formPanelRef} className="space-y-6">
@@ -348,6 +365,7 @@ export default function App() {
               filters={filters}
               partners={partners}
               isLoadingPartners={isLoadingPartners}
+              partnerWarningMessage={partnersErrorMessage}
               onChange={setFilters}
               onReset={() => setFilters(defaultFilters)}
             />
@@ -357,6 +375,7 @@ export default function App() {
               isLoading={isLoading}
               isAdminUnlocked={isAdminUnlocked}
               editingRegistrationId={editingRegistration?.id ?? null}
+              errorMessage={registrationsErrorMessage}
               onEdit={setEditingRegistration}
               onDelete={handleDelete}
             />

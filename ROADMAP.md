@@ -16,7 +16,7 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 - [x] Fix the partner list query regression
 - [ ] Verify production behavior after the partner list fix
 - [ ] Improve API error diagnostics for failed frontend requests
-- [ ] Make partial API failures clearer in the UI
+- [x] Make partial API failures clearer in the UI
 - [ ] Review weekly reset behavior and empty-state safety
 
 ### UX
