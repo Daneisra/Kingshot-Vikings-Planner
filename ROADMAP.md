@@ -46,7 +46,7 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 
 - [ ] Add audit metadata for destructive actions
 - [ ] Add optional admin session timeout
-- [ ] Improve confirmation flow around resets and deletions
+- [x] Improve confirmation flow around resets and deletions
 
 ### Data / Reporting
 

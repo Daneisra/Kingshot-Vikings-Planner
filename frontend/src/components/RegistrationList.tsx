@@ -22,6 +22,7 @@ interface RegistrationListProps {
   isLoading: boolean;
   isAdminUnlocked: boolean;
   editingRegistrationId: string | null;
+  deletingRegistrationId: string | null;
   errorMessage?: string;
   hasActiveFilters: boolean;
   onEdit: (registration: Registration) => void;
@@ -37,6 +38,7 @@ export function RegistrationList({
   isLoading,
   isAdminUnlocked,
   editingRegistrationId,
+  deletingRegistrationId,
   errorMessage,
   hasActiveFilters,
   onEdit,
@@ -190,9 +192,10 @@ export function RegistrationList({
                   type="button"
                   className="danger-button"
                   onClick={() => onDelete(registration)}
+                  disabled={deletingRegistrationId !== null}
                 >
                   <Trash2 className="h-4 w-4" />
-                  Delete
+                  {deletingRegistrationId === registration.id ? "Deleting..." : "Delete"}
                 </button>
               ) : null}
             </div>

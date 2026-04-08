@@ -1,6 +1,7 @@
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import { Crown, Github, RefreshCw } from "lucide-react";
 import { AdminPanel } from "./components/AdminPanel";
+import { ConfirmDialog } from "./components/ConfirmDialog";
 import { FiltersBar } from "./components/FiltersBar";
 import { RegistrationForm } from "./components/RegistrationForm";
 import { RegistrationList } from "./components/RegistrationList";
@@ -32,6 +33,15 @@ const emptyStats: StatsResponse = {
 const adminStorageKey = "kingshot-vikings-admin-password";
 const githubIssuesUrl = "https://github.com/Daneisra/Kingshot-Vikings-Planner/issues";
 
+interface ConfirmDialogState {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  tone: "danger" | "default";
+  isConfirming: boolean;
+  onConfirm: () => Promise<void>;
+}
+
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -55,6 +65,7 @@ export default function App() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingPartners, setIsLoadingPartners] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingRegistrationId, setDeletingRegistrationId] = useState<string | null>(null);
   const [isUnlockingAdmin, setIsUnlockingAdmin] = useState(false);
   const [isExportingCsv, setIsExportingCsv] = useState(false);
   const [isResettingWeek, setIsResettingWeek] = useState(false);
@@ -63,6 +74,7 @@ export default function App() {
   const [partnersErrorMessage, setPartnersErrorMessage] = useState("");
   const [registrationsErrorMessage, setRegistrationsErrorMessage] = useState("");
   const [statsErrorMessage, setStatsErrorMessage] = useState("");
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const toastIdRef = useRef(0);
 
@@ -241,22 +253,33 @@ export default function App() {
       return;
     }
 
-    if (!window.confirm(`Delete ${registration.nickname}'s registration?`)) {
-      return;
-    }
+    setConfirmDialog({
+      title: "Delete registration?",
+      description: `This will permanently remove ${registration.nickname}'s entry from the current week.`,
+      confirmLabel: "Delete registration",
+      tone: "danger",
+      isConfirming: false,
+      onConfirm: async () => {
+        setDeletingRegistrationId(registration.id);
 
-    try {
-      await api.deleteRegistration(registration.id, adminPassword);
-      pushToast("success", "Registration deleted.");
+        try {
+          await api.deleteRegistration(registration.id, adminPassword);
+          pushToast("success", "Registration deleted.");
 
-      if (editingRegistration?.id === registration.id) {
-        setEditingRegistration(null);
+          if (editingRegistration?.id === registration.id) {
+            setEditingRegistration(null);
+          }
+
+          setConfirmDialog(null);
+          await refreshAll();
+        } catch (error) {
+          pushToast("error", getDisplayMessage(error, "Unable to delete the registration."));
+          setConfirmDialog(null);
+        } finally {
+          setDeletingRegistrationId(null);
+        }
       }
-
-      await refreshAll();
-    } catch (error) {
-      pushToast("error", getDisplayMessage(error, "Unable to delete the registration."));
-    }
+    });
   }
 
   async function handleUnlockAdmin() {
@@ -305,8 +328,6 @@ export default function App() {
       return;
     }
 
-    setIsResettingWeek(true);
-
     try {
       const currentWeekStats = await api.getStats(defaultFilters);
 
@@ -315,35 +336,71 @@ export default function App() {
         return;
       }
 
-      const confirmationMessage =
+      const description =
         currentWeekStats.totalParticipants === 1
-          ? "Reset the board for a new week? This will delete 1 registration."
-          : `Reset the board for a new week? This will delete ${currentWeekStats.totalParticipants} registrations.`;
+          ? "This will permanently clear 1 registration from the current week."
+          : `This will permanently clear ${currentWeekStats.totalParticipants} registrations from the current week.`;
 
-      if (!window.confirm(confirmationMessage)) {
-        return;
-      }
+      setConfirmDialog({
+        title: "Start a new week?",
+        description,
+        confirmLabel: "Reset weekly board",
+        tone: "danger",
+        isConfirming: false,
+        onConfirm: async () => {
+          setIsResettingWeek(true);
 
-      const result = await api.resetRegistrations(adminPassword);
-      setEditingRegistration(null);
-      setFilters(defaultFilters);
-      pushToast(
-        "success",
-        result.deletedCount === 1
-          ? "The list has been reset. 1 registration was removed."
-          : `The list has been reset. ${result.deletedCount} registrations were removed.`
-      );
-      await refreshAll(defaultFilters);
+          try {
+            const result = await api.resetRegistrations(adminPassword);
+            setEditingRegistration(null);
+            setFilters(defaultFilters);
+            pushToast(
+              "success",
+              result.deletedCount === 1
+                ? "The list has been reset. 1 registration was removed."
+                : `The list has been reset. ${result.deletedCount} registrations were removed.`
+            );
+            setConfirmDialog(null);
+            await refreshAll(defaultFilters);
+          } catch (error) {
+            pushToast("error", getDisplayMessage(error, "Unable to reset the list."));
+            setConfirmDialog(null);
+          } finally {
+            setIsResettingWeek(false);
+          }
+        }
+      });
     } catch (error) {
       pushToast("error", getDisplayMessage(error, "Unable to reset the list."));
-    } finally {
-      setIsResettingWeek(false);
     }
   }
 
   return (
     <div className="min-h-screen bg-abyss bg-hero-glow text-mist">
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
+      <ConfirmDialog
+        isOpen={Boolean(confirmDialog)}
+        title={confirmDialog?.title ?? ""}
+        description={confirmDialog?.description ?? ""}
+        confirmLabel={confirmDialog?.confirmLabel ?? "Confirm"}
+        tone={confirmDialog?.tone ?? "default"}
+        isConfirming={Boolean(confirmDialog?.isConfirming)}
+        onCancel={() => {
+          if (confirmDialog?.isConfirming) {
+            return;
+          }
+
+          setConfirmDialog(null);
+        }}
+        onConfirm={() => {
+          if (!confirmDialog || confirmDialog.isConfirming) {
+            return;
+          }
+
+          setConfirmDialog((current) => (current ? { ...current, isConfirming: true } : current));
+          void confirmDialog.onConfirm();
+        }}
+      />
       <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
         <header className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/70 p-6 shadow-panel backdrop-blur">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
@@ -424,6 +481,7 @@ export default function App() {
               isLoading={isLoading}
               isAdminUnlocked={isAdminUnlocked}
               editingRegistrationId={editingRegistration?.id ?? null}
+              deletingRegistrationId={deletingRegistrationId}
               errorMessage={registrationsErrorMessage}
               hasActiveFilters={hasActiveFilters}
               onEdit={setEditingRegistration}
