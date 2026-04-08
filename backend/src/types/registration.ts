@@ -34,5 +34,7 @@ export interface RegistrationStats {
   topPartners: Array<{
     partnerName: string;
     count: number;
+    totalTroops: number;
+    availableTroops: number;
   }>;
 }

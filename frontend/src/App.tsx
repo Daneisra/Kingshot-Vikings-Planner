@@ -647,6 +647,18 @@ export default function App() {
                       <p className="mt-1 text-sm text-slate-400">
                         {partner.count} registration{partner.count > 1 ? "s" : ""}
                       </p>
+                      <div className="mt-3 grid gap-2 text-sm text-slate-300 sm:grid-cols-2">
+                        <p>
+                          <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Total Troops</span>
+                          {partner.totalTroops.toLocaleString("en-US")}
+                        </p>
+                        <p>
+                          <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">
+                            Available Troops
+                          </span>
+                          {partner.availableTroops.toLocaleString("en-US")}
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>

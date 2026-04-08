@@ -52,7 +52,7 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 
 - [ ] Separate troop tiers from troop types in the data model and UI
 - [x] Add available-only totals in stats
-- [ ] Add per-partner troop totals
+- [x] Add per-partner troop totals
 - [x] Improve CSV export formatting
 
 ## Later

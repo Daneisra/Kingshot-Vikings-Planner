@@ -101,15 +101,22 @@ export async function getRegistrationStats(filters: RegistrationFilters): Promis
     values
   );
 
-  const topPartnersQuery = await pool.query<{ partnerName: string; count: string }>(
+  const topPartnersQuery = await pool.query<{
+    partnerName: string;
+    count: string;
+    totalTroops: string;
+    availableTroops: string;
+  }>(
     `
       SELECT
         partner_name AS "partnerName",
-        COUNT(*)::text AS "count"
+        COUNT(*)::text AS "count",
+        COALESCE(SUM(troop_count), 0)::text AS "totalTroops",
+        COALESCE(SUM(troop_count) FILTER (WHERE is_available = TRUE), 0)::text AS "availableTroops"
       FROM registrations
       ${whereClause}
       GROUP BY partner_name
-      ORDER BY COUNT(*) DESC, LOWER(partner_name) ASC
+      ORDER BY COUNT(*) DESC, COALESCE(SUM(troop_count), 0) DESC, LOWER(partner_name) ASC
       LIMIT 5
     `,
     values
@@ -125,7 +132,9 @@ export async function getRegistrationStats(filters: RegistrationFilters): Promis
     averageTroopLevel: Number(aggregate.averageTroopLevel ?? 0),
     topPartners: topPartnersQuery.rows.map((row) => ({
       partnerName: row.partnerName,
-      count: Number(row.count)
+      count: Number(row.count),
+      totalTroops: Number(row.totalTroops ?? 0),
+      availableTroops: Number(row.availableTroops ?? 0)
     }))
   };
 }

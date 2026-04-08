@@ -34,5 +34,7 @@ export interface StatsResponse {
   topPartners: Array<{
     partnerName: string;
     count: number;
+    totalTroops: number;
+    availableTroops: number;
   }>;
 }
