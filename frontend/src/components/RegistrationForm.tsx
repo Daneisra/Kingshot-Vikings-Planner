@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { Registration, RegistrationPayload } from "../types/registration";
 
@@ -36,6 +36,7 @@ export function RegistrationForm({
   const [formError, setFormError] = useState("");
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [touched, setTouched] = useState<TouchedState>({});
+  const nicknameInputRef = useRef<HTMLInputElement | null>(null);
 
   const fieldErrors = getFieldErrors(form);
   const hasValidationErrors = Object.values(fieldErrors).some(Boolean);
@@ -60,6 +61,19 @@ export function RegistrationForm({
     setTouched({});
     setHasSubmitted(false);
     setFormError("");
+  }, [editingRegistration]);
+
+  useEffect(() => {
+    if (!editingRegistration) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      nicknameInputRef.current?.focus();
+      nicknameInputRef.current?.select();
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
   }, [editingRegistration]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -119,6 +133,12 @@ export function RegistrationForm({
           <h2 className="mt-2 text-2xl font-semibold text-frost">
             {editingRegistration ? "Edit registration" : "Add a player"}
           </h2>
+          {editingRegistration ? (
+            <p className="mt-2 text-sm text-slate-300">
+              Editing <span className="font-semibold text-frost">{editingRegistration.nickname}</span>. Update the
+              fields below or cancel to return to the list.
+            </p>
+          ) : null}
         </div>
 
         {editingRegistration ? (
@@ -132,6 +152,7 @@ export function RegistrationForm({
         <label>
           <span className="mb-2 block text-sm font-medium text-slate-300">Nickname</span>
           <input
+            ref={nicknameInputRef}
             type="text"
             value={form.nickname}
             onChange={(event) => setForm((current) => ({ ...current, nickname: event.target.value }))}

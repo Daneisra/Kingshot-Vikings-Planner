@@ -44,6 +44,7 @@ function downloadBlob(blob: Blob, filename: string) {
 }
 
 export default function App() {
+  const formPanelRef = useRef<HTMLDivElement | null>(null);
   const [filters, setFilters] = useState<RegistrationFilters>(defaultFilters);
   const [partners, setPartners] = useState<string[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
@@ -136,6 +137,21 @@ export default function App() {
   useEffect(() => {
     void loadDashboard({ ...filters, search: debouncedSearch });
   }, [debouncedSearch, filters.available, filters.partner]);
+
+  useEffect(() => {
+    if (!editingRegistration) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      formPanelRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [editingRegistration]);
 
   async function refreshAll(nextFilters?: RegistrationFilters) {
     const activeFilters = nextFilters ?? { ...filters, search: debouncedSearch };
@@ -305,7 +321,7 @@ export default function App() {
         <StatsCards stats={stats} />
 
         <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
-          <div className="space-y-6">
+          <div ref={formPanelRef} className="space-y-6">
             <RegistrationForm
               editingRegistration={editingRegistration}
               isSubmitting={isSubmitting}
@@ -340,6 +356,7 @@ export default function App() {
               registrations={registrations}
               isLoading={isLoading}
               isAdminUnlocked={isAdminUnlocked}
+              editingRegistrationId={editingRegistration?.id ?? null}
               onEdit={setEditingRegistration}
               onDelete={handleDelete}
             />

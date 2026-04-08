@@ -40,7 +40,7 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 
 - [x] Replace the shared status banner with lightweight toast notifications
 - [x] Add list sorting options
-- [ ] Refine mobile editing flow for faster updates
+- [x] Refine mobile editing flow for faster updates
 
 ### Admin
 

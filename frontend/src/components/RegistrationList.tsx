@@ -21,6 +21,7 @@ interface RegistrationListProps {
   registrations: Registration[];
   isLoading: boolean;
   isAdminUnlocked: boolean;
+  editingRegistrationId: string | null;
   onEdit: (registration: Registration) => void;
   onDelete: (registration: Registration) => void;
 }
@@ -33,6 +34,7 @@ export function RegistrationList({
   registrations,
   isLoading,
   isAdminUnlocked,
+  editingRegistrationId,
   onEdit,
   onDelete
 }: RegistrationListProps) {
@@ -98,12 +100,21 @@ export function RegistrationList({
       {sortedRegistrations.map((registration) => (
         <article
           key={registration.id}
-          className="rounded-3xl border border-white/10 bg-slate-950/70 p-5 shadow-panel backdrop-blur"
+          className={`rounded-3xl border p-5 shadow-panel backdrop-blur transition ${
+            registration.id === editingRegistrationId
+              ? "border-amber-400/40 bg-amber-400/5 ring-1 ring-amber-400/15"
+              : "border-white/10 bg-slate-950/70"
+          }`}
         >
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-3">
                 <h3 className="text-xl font-semibold text-frost">{registration.nickname}</h3>
+                {registration.id === editingRegistrationId ? (
+                  <span className="rounded-full bg-amber-400/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">
+                    Editing
+                  </span>
+                ) : null}
                 <span
                   className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${
                     registration.isAvailable
@@ -142,9 +153,13 @@ export function RegistrationList({
             </div>
 
             <div className="flex gap-3">
-              <button type="button" className="secondary-button" onClick={() => onEdit(registration)}>
+              <button
+                type="button"
+                className={registration.id === editingRegistrationId ? "primary-button" : "secondary-button"}
+                onClick={() => onEdit(registration)}
+              >
                 <Pencil className="h-4 w-4" />
-                Edit
+                {registration.id === editingRegistrationId ? "Editing..." : "Edit"}
               </button>
 
               {isAdminUnlocked ? (
