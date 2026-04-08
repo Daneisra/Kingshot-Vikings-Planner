@@ -5,6 +5,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import { config } from "./config/env";
 import { errorHandler } from "./middleware/error-handler";
+import { attachRequestId } from "./middleware/request-id";
 import { adminRouter } from "./routes/admin";
 import { healthRouter } from "./routes/health";
 import { registrationsRouter } from "./routes/registrations";
@@ -24,6 +25,7 @@ const corsOrigin =
 app.set("trust proxy", 1);
 app.use(helmet());
 app.use(cors({ origin: corsOrigin, credentials: false }));
+app.use(attachRequestId);
 app.use(express.json({ limit: "1mb" }));
 app.use(morgan(config.nodeEnv === "production" ? "combined" : "dev"));
 

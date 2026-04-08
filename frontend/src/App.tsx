@@ -8,7 +8,7 @@ import { StatsCards } from "./components/StatsCards";
 import { ToastStack } from "./components/ToastStack";
 import type { ToastItem } from "./components/ToastStack";
 import { useDebouncedValue } from "./hooks/useDebouncedValue";
-import { api } from "./lib/api";
+import { ApiError, api } from "./lib/api";
 import type {
   Registration,
   RegistrationFilters,
@@ -45,6 +45,7 @@ function downloadBlob(blob: Blob, filename: string) {
 
 export default function App() {
   const formPanelRef = useRef<HTMLDivElement | null>(null);
+  const hasRegistrationsRef = useRef(false);
   const [filters, setFilters] = useState<RegistrationFilters>(defaultFilters);
   const [partners, setPartners] = useState<string[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
@@ -84,6 +85,18 @@ export default function App() {
     ]);
   }, []);
 
+  const getDisplayMessage = useCallback((error: unknown, fallback: string) => {
+    if (error instanceof ApiError || error instanceof Error) {
+      return error.message;
+    }
+
+    return fallback;
+  }, []);
+
+  useEffect(() => {
+    hasRegistrationsRef.current = registrations.length > 0;
+  }, [registrations.length]);
+
   async function loadPartners() {
     setIsLoadingPartners(true);
     setPartnersErrorMessage("");
@@ -91,8 +104,13 @@ export default function App() {
     try {
       const nextPartners = await api.getPartners();
       setPartners(nextPartners);
-    } catch {
-      setPartnersErrorMessage("Partner filter options could not be refreshed. The rest of the board is still usable.");
+    } catch (error) {
+      setPartnersErrorMessage(
+        `Partner filter options could not be refreshed. ${getDisplayMessage(
+          error,
+          "The rest of the board is still usable."
+        )}`
+      );
     } finally {
       setIsLoadingPartners(false);
     }
@@ -114,16 +132,27 @@ export default function App() {
           setRegistrations(registrationsResult.value);
         } else {
           setRegistrationsErrorMessage(
-            registrations.length > 0
-              ? "Could not refresh the player list. Showing the last known data."
-              : "The player list is temporarily unavailable. Try refreshing again in a moment."
+            hasRegistrationsRef.current
+              ? `Could not refresh the player list. Showing the last known data. ${getDisplayMessage(
+                  registrationsResult.reason,
+                  ""
+                )}`.trim()
+              : getDisplayMessage(
+                  registrationsResult.reason,
+                  "The player list is temporarily unavailable. Try refreshing again in a moment."
+                )
           );
         }
 
         if (statsResult.status === "fulfilled") {
           setStats(statsResult.value);
         } else {
-          setStatsErrorMessage("Stats could not be refreshed. The player list may still be current.");
+          setStatsErrorMessage(
+            `Stats could not be refreshed. ${getDisplayMessage(
+              statsResult.reason,
+              "The player list may still be current."
+            )}`
+          );
         }
       });
     } finally {
@@ -153,7 +182,7 @@ export default function App() {
 
   useEffect(() => {
     void loadDashboard({ ...filters, search: debouncedSearch });
-  }, [debouncedSearch, filters.available, filters.partner]);
+  }, [debouncedSearch, filters.available, filters.partner, getDisplayMessage]);
 
   useEffect(() => {
     if (!editingRegistration) {
@@ -196,7 +225,7 @@ export default function App() {
       setEditingRegistration(null);
       await refreshAll();
     } catch (error) {
-      pushToast("error", error instanceof Error ? error.message : "Unable to save the registration.");
+      pushToast("error", getDisplayMessage(error, "Unable to save the registration."));
       throw error;
     } finally {
       setIsSubmitting(false);
@@ -223,7 +252,7 @@ export default function App() {
 
       await refreshAll();
     } catch (error) {
-      pushToast("error", error instanceof Error ? error.message : "Unable to delete the registration.");
+      pushToast("error", getDisplayMessage(error, "Unable to delete the registration."));
     }
   }
 
@@ -238,7 +267,7 @@ export default function App() {
     } catch (error) {
       setIsAdminUnlocked(false);
       localStorage.removeItem(adminStorageKey);
-      pushToast("error", error instanceof Error ? error.message : "Invalid admin password.");
+      pushToast("error", getDisplayMessage(error, "Invalid admin password."));
     } finally {
       setIsUnlockingAdmin(false);
     }
@@ -262,7 +291,7 @@ export default function App() {
       downloadBlob(blob, "kingshot-vikings-registrations.csv");
       pushToast("success", "CSV export generated.");
     } catch (error) {
-      pushToast("error", error instanceof Error ? error.message : "Unable to export CSV.");
+      pushToast("error", getDisplayMessage(error, "Unable to export CSV."));
     } finally {
       setIsExportingCsv(false);
     }
@@ -286,7 +315,7 @@ export default function App() {
       pushToast("success", "The list has been reset.");
       await refreshAll(defaultFilters);
     } catch (error) {
-      pushToast("error", error instanceof Error ? error.message : "Unable to reset the list.");
+      pushToast("error", getDisplayMessage(error, "Unable to reset the list."));
     } finally {
       setIsResettingWeek(false);
     }

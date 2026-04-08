@@ -11,6 +11,49 @@ interface RequestOptions extends RequestInit {
   adminPassword?: string;
 }
 
+interface ErrorIssue {
+  path?: string;
+  message: string;
+}
+
+interface ErrorPayload {
+  message?: string;
+  requestId?: string;
+  issues?: ErrorIssue[];
+}
+
+export class ApiError extends Error {
+  status?: number;
+  path: string;
+  requestId?: string;
+  issues: ErrorIssue[];
+  isNetworkError: boolean;
+
+  constructor({
+    message,
+    path,
+    status,
+    requestId,
+    issues = [],
+    isNetworkError = false
+  }: {
+    message: string;
+    path: string;
+    status?: number;
+    requestId?: string;
+    issues?: ErrorIssue[];
+    isNetworkError?: boolean;
+  }) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.path = path;
+    this.requestId = requestId;
+    this.issues = issues;
+    this.isNetworkError = isNetworkError;
+  }
+}
+
 function buildQuery(filters?: Partial<RegistrationFilters>) {
   const params = new URLSearchParams();
 
@@ -45,14 +88,36 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     headers.set("x-admin-password", options.adminPassword);
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
+      headers
+    });
+  } catch (error) {
+    const apiError = new ApiError({
+      message: "The API is unreachable. Check the server connection and try again.",
+      path,
+      isNetworkError: true
+    });
+
+    logApiError(apiError, error);
+    throw apiError;
+  }
 
   if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(payload?.message || "The request failed.");
+    const payload = (await response.json().catch(() => null)) as ErrorPayload | null;
+    const apiError = new ApiError({
+      message: buildErrorMessage(path, response.status, payload),
+      path,
+      status: response.status,
+      requestId: payload?.requestId ?? response.headers.get("x-request-id") ?? undefined,
+      issues: payload?.issues ?? []
+    });
+
+    logApiError(apiError);
+    throw apiError;
   }
 
   if (response.status === 204) {
@@ -60,6 +125,41 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 
   return (await response.json()) as T;
+}
+
+function buildErrorMessage(path: string, status: number, payload: ErrorPayload | null) {
+  const requestId = payload?.requestId;
+  const baseMessage = payload?.message?.trim() || "The request failed.";
+
+  if (status === 400 && payload?.issues?.length) {
+    const issueSummary = payload.issues
+      .slice(0, 2)
+      .map((issue) => issue.message)
+      .join(" ");
+
+    return issueSummary ? `${baseMessage} ${issueSummary}` : baseMessage;
+  }
+
+  if (status >= 500) {
+    return requestId ? `${baseMessage} Reference: ${requestId}.` : baseMessage;
+  }
+
+  if (status === 404 && path !== "/registrations") {
+    return `${baseMessage} Endpoint: ${path}.`;
+  }
+
+  return baseMessage;
+}
+
+function logApiError(error: ApiError, cause?: unknown) {
+  console.error("[api]", {
+    path: error.path,
+    status: error.status ?? "network",
+    requestId: error.requestId ?? null,
+    issues: error.issues,
+    message: error.message,
+    cause
+  });
 }
 
 export const api = {
@@ -103,15 +203,38 @@ export const api = {
     });
   },
   async exportCsv(adminPassword: string, filters: RegistrationFilters) {
-    const response = await fetch(`${API_BASE_URL}/admin/export.csv${buildQuery(filters)}`, {
-      headers: {
-        "x-admin-password": adminPassword
-      }
-    });
+    const path = `/admin/export.csv${buildQuery(filters)}`;
+    let response: Response;
+
+    try {
+      response = await fetch(`${API_BASE_URL}${path}`, {
+        headers: {
+          "x-admin-password": adminPassword
+        }
+      });
+    } catch (error) {
+      const apiError = new ApiError({
+        message: "The API is unreachable. Check the server connection and try again.",
+        path,
+        isNetworkError: true
+      });
+
+      logApiError(apiError, error);
+      throw apiError;
+    }
 
     if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-      throw new Error(payload?.message || "Unable to export CSV.");
+      const payload = (await response.json().catch(() => null)) as ErrorPayload | null;
+      const apiError = new ApiError({
+        message: buildErrorMessage(path, response.status, payload),
+        path,
+        status: response.status,
+        requestId: payload?.requestId ?? response.headers.get("x-request-id") ?? undefined,
+        issues: payload?.issues ?? []
+      });
+
+      logApiError(apiError);
+      throw apiError;
     }
 
     return response.blob();
