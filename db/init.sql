@@ -12,6 +12,19 @@ CREATE TABLE IF NOT EXISTS registrations (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  action VARCHAR(50) NOT NULL,
+  target_type VARCHAR(50) NOT NULL,
+  target_id UUID,
+  summary TEXT NOT NULL,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  request_id UUID,
+  ip_address INET,
+  user_agent TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -35,3 +48,9 @@ CREATE INDEX IF NOT EXISTS idx_registrations_partner_name_lower
 
 CREATE INDEX IF NOT EXISTS idx_registrations_is_available
   ON registrations (is_available);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action_created_at
+  ON audit_logs (action, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at
+  ON audit_logs (created_at DESC);

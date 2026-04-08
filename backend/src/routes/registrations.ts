@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { requireAdmin } from "../middleware/admin-auth";
+import { buildAuditContext } from "../services/audit-service";
 import {
   createRegistration,
   deleteRegistration,
@@ -100,7 +101,7 @@ registrationsRouter.delete(
   requireAdmin,
   asyncHandler(async (req, res) => {
     const { id } = idSchema.parse(req.params);
-    await deleteRegistration(id);
+    await deleteRegistration(id, buildAuditContext(req, res));
     res.status(204).send();
   })
 );

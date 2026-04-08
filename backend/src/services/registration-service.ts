@@ -1,11 +1,13 @@
 import { QueryResult } from "pg";
 import { pool } from "../db/pool";
+import type { AuditContext } from "../types/audit";
 import {
   RegistrationFilters,
   RegistrationInput,
   RegistrationRecord,
   RegistrationStats
 } from "../types/registration";
+import { insertAuditLog } from "./audit-service";
 import { HttpError } from "../utils/http-error";
 
 const selectColumns = `
@@ -175,25 +177,90 @@ export async function updateRegistration(id: string, input: RegistrationInput) {
   return registration;
 }
 
-export async function deleteRegistration(id: string) {
-  const result = await pool.query("DELETE FROM registrations WHERE id = $1", [id]);
+export async function deleteRegistration(id: string, auditContext: AuditContext) {
+  const client = await pool.connect();
 
-  if (result.rowCount === 0) {
-    throw new HttpError(404, "Registration not found.");
+  try {
+    await client.query("BEGIN");
+
+    const result = await client.query<RegistrationRecord>(
+      `
+        DELETE FROM registrations
+        WHERE id = $1
+        RETURNING ${selectColumns}
+      `,
+      [id]
+    );
+
+    const registration = mapRow(result);
+
+    if (!registration) {
+      throw new HttpError(404, "Registration not found.");
+    }
+
+    await insertAuditLog(client, {
+      action: "registration_deleted",
+      targetType: "registration",
+      targetId: registration.id,
+      summary: `Deleted registration for ${registration.nickname}.`,
+      metadata: {
+        nickname: registration.nickname,
+        partnerName: registration.partnerName,
+        troopCount: registration.troopCount,
+        troopLevel: registration.troopLevel,
+        isAvailable: registration.isAvailable
+      },
+      context: auditContext
+    });
+
+    await client.query("COMMIT");
+    return registration;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
   }
 }
 
-export async function resetRegistrations() {
-  const result = await pool.query<{ deletedCount: string }>(
-    `
-      WITH deleted AS (
-        DELETE FROM registrations
-        RETURNING id
-      )
-      SELECT COUNT(*)::text AS "deletedCount"
-      FROM deleted
-    `
-  );
+export async function resetRegistrations(auditContext: AuditContext) {
+  const client = await pool.connect();
 
-  return Number(result.rows[0]?.deletedCount ?? 0);
+  try {
+    await client.query("BEGIN");
+
+    const result = await client.query<{ deletedCount: string }>(
+      `
+        WITH deleted AS (
+          DELETE FROM registrations
+          RETURNING id
+        )
+        SELECT COUNT(*)::text AS "deletedCount"
+        FROM deleted
+      `
+    );
+
+    const deletedCount = Number(result.rows[0]?.deletedCount ?? 0);
+
+    await insertAuditLog(client, {
+      action: "weekly_reset",
+      targetType: "registrations",
+      summary:
+        deletedCount === 1
+          ? "Started a new week and cleared 1 registration."
+          : `Started a new week and cleared ${deletedCount} registrations.`,
+      metadata: {
+        deletedCount
+      },
+      context: auditContext
+    });
+
+    await client.query("COMMIT");
+    return deletedCount;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }

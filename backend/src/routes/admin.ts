@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { requireAdmin } from "../middleware/admin-auth";
+import { buildAuditContext } from "../services/audit-service";
 import { buildRegistrationsCsv } from "../utils/csv";
 import { asyncHandler } from "../utils/async-handler";
 import { getRegistrationStats, listRegistrations, resetRegistrations } from "../services/registration-service";
@@ -61,8 +62,8 @@ adminRouter.get(
 adminRouter.post(
   "/reset",
   requireAdmin,
-  asyncHandler(async (_req, res) => {
-    const deletedCount = await resetRegistrations();
+  asyncHandler(async (req, res) => {
+    const deletedCount = await resetRegistrations(buildAuditContext(req, res));
     res.json({ deletedCount });
   })
 );
