@@ -1,10 +1,12 @@
-import { startTransition, useEffect, useState } from "react";
-import { AlertTriangle, Crown, Github, RefreshCw } from "lucide-react";
+import { startTransition, useCallback, useEffect, useRef, useState } from "react";
+import { Crown, Github, RefreshCw } from "lucide-react";
 import { AdminPanel } from "./components/AdminPanel";
 import { FiltersBar } from "./components/FiltersBar";
 import { RegistrationForm } from "./components/RegistrationForm";
 import { RegistrationList } from "./components/RegistrationList";
 import { StatsCards } from "./components/StatsCards";
+import { ToastStack } from "./components/ToastStack";
+import type { ToastItem } from "./components/ToastStack";
 import { useDebouncedValue } from "./hooks/useDebouncedValue";
 import { api } from "./lib/api";
 import type {
@@ -56,10 +58,27 @@ export default function App() {
   const [isResettingWeek, setIsResettingWeek] = useState(false);
   const [adminPassword, setAdminPassword] = useState(() => localStorage.getItem(adminStorageKey) || "");
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(() => Boolean(localStorage.getItem(adminStorageKey)));
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const toastIdRef = useRef(0);
 
   const debouncedSearch = useDebouncedValue(filters.search, 250);
+
+  const dismissToast = useCallback((id: number) => {
+    setToasts((current) => current.filter((toast) => toast.id !== id));
+  }, []);
+
+  const pushToast = useCallback((tone: ToastItem["tone"], message: string) => {
+    toastIdRef.current += 1;
+
+    setToasts((current) => [
+      ...current.slice(-2),
+      {
+        id: toastIdRef.current,
+        message,
+        tone
+      }
+    ]);
+  }, []);
 
   async function loadPartners() {
     setIsLoadingPartners(true);
@@ -74,7 +93,6 @@ export default function App() {
 
   async function loadDashboard(currentFilters: RegistrationFilters) {
     setIsLoading(true);
-    setErrorMessage("");
 
     try {
       const [nextRegistrations, nextStats] = await Promise.all([
@@ -87,7 +105,7 @@ export default function App() {
         setStats(nextStats);
       });
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to load registrations.");
+      pushToast("error", error instanceof Error ? error.message : "Unable to load registrations.");
     } finally {
       setIsLoading(false);
     }
@@ -95,9 +113,9 @@ export default function App() {
 
   useEffect(() => {
     loadPartners().catch(() => {
-      setErrorMessage("Unable to load the partners list.");
+      pushToast("error", "Unable to load the partners list.");
     });
-  }, []);
+  }, [pushToast]);
 
   useEffect(() => {
     if (!adminPassword) {
@@ -132,22 +150,20 @@ export default function App() {
 
   async function handleSubmit(payload: RegistrationPayload) {
     setIsSubmitting(true);
-    setErrorMessage("");
-    setSuccessMessage("");
 
     try {
       if (editingRegistration) {
         await api.updateRegistration(editingRegistration.id, payload);
-        setSuccessMessage("Registration updated.");
+        pushToast("success", "Registration updated.");
       } else {
         await api.createRegistration(payload);
-        setSuccessMessage("Registration added.");
+        pushToast("success", "Registration added.");
       }
 
       setEditingRegistration(null);
       await refreshAll();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to save the registration.");
+      pushToast("error", error instanceof Error ? error.message : "Unable to save the registration.");
       throw error;
     } finally {
       setIsSubmitting(false);
@@ -156,7 +172,7 @@ export default function App() {
 
   async function handleDelete(registration: Registration) {
     if (!isAdminUnlocked) {
-      setErrorMessage("Unlock the admin panel before deleting a registration.");
+      pushToast("error", "Unlock the admin panel before deleting a registration.");
       return;
     }
 
@@ -164,12 +180,9 @@ export default function App() {
       return;
     }
 
-    setErrorMessage("");
-    setSuccessMessage("");
-
     try {
       await api.deleteRegistration(registration.id, adminPassword);
-      setSuccessMessage("Registration deleted.");
+      pushToast("success", "Registration deleted.");
 
       if (editingRegistration?.id === registration.id) {
         setEditingRegistration(null);
@@ -177,24 +190,22 @@ export default function App() {
 
       await refreshAll();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to delete the registration.");
+      pushToast("error", error instanceof Error ? error.message : "Unable to delete the registration.");
     }
   }
 
   async function handleUnlockAdmin() {
     setIsUnlockingAdmin(true);
-    setErrorMessage("");
-    setSuccessMessage("");
 
     try {
       await api.verifyAdminPassword(adminPassword);
       setIsAdminUnlocked(true);
       localStorage.setItem(adminStorageKey, adminPassword);
-      setSuccessMessage("Admin panel unlocked.");
+      pushToast("success", "Admin panel unlocked.");
     } catch (error) {
       setIsAdminUnlocked(false);
       localStorage.removeItem(adminStorageKey);
-      setErrorMessage(error instanceof Error ? error.message : "Invalid admin password.");
+      pushToast("error", error instanceof Error ? error.message : "Invalid admin password.");
     } finally {
       setIsUnlockingAdmin(false);
     }
@@ -203,7 +214,7 @@ export default function App() {
   function handleLockAdmin() {
     setIsAdminUnlocked(false);
     localStorage.removeItem(adminStorageKey);
-    setSuccessMessage("Admin panel locked.");
+    pushToast("success", "Admin panel locked.");
   }
 
   async function handleExportCsv() {
@@ -212,14 +223,13 @@ export default function App() {
     }
 
     setIsExportingCsv(true);
-    setErrorMessage("");
 
     try {
       const blob = await api.exportCsv(adminPassword, { ...filters, search: debouncedSearch });
       downloadBlob(blob, "kingshot-vikings-registrations.csv");
-      setSuccessMessage("CSV export generated.");
+      pushToast("success", "CSV export generated.");
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to export CSV.");
+      pushToast("error", error instanceof Error ? error.message : "Unable to export CSV.");
     } finally {
       setIsExportingCsv(false);
     }
@@ -235,17 +245,15 @@ export default function App() {
     }
 
     setIsResettingWeek(true);
-    setErrorMessage("");
-    setSuccessMessage("");
 
     try {
       await api.resetRegistrations(adminPassword);
       setEditingRegistration(null);
       setFilters(defaultFilters);
-      setSuccessMessage("The list has been reset.");
+      pushToast("success", "The list has been reset.");
       await refreshAll(defaultFilters);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to reset the list.");
+      pushToast("error", error instanceof Error ? error.message : "Unable to reset the list.");
     } finally {
       setIsResettingWeek(false);
     }
@@ -253,6 +261,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-abyss bg-hero-glow text-mist">
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
       <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
         <header className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/70 p-6 shadow-panel backdrop-blur">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
@@ -294,21 +303,6 @@ export default function App() {
         </header>
 
         <StatsCards stats={stats} />
-
-        {(errorMessage || successMessage) && (
-          <section
-            className={`rounded-2xl border px-4 py-3 text-sm shadow-panel ${
-              errorMessage
-                ? "border-rose-500/30 bg-rose-500/10 text-rose-100"
-                : "border-emerald-500/30 bg-emerald-500/10 text-emerald-100"
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              {errorMessage ? <AlertTriangle className="h-4 w-4" /> : null}
-              <span>{errorMessage || successMessage}</span>
-            </div>
-          </section>
-        )}
 
         <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
           <div className="space-y-6">
