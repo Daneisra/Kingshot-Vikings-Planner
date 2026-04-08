@@ -25,7 +25,9 @@ const defaultFilters: RegistrationFilters = {
 
 const emptyStats: StatsResponse = {
   totalParticipants: 0,
+  availableParticipants: 0,
   totalTroops: 0,
+  availableTroops: 0,
   averageTroopLevel: 0,
   topPartners: []
 };

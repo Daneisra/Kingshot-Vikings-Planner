@@ -13,21 +13,25 @@ export function StatsCards({ stats, warningMessage }: StatsCardsProps) {
     {
       label: "Participants",
       value: formatter.format(stats.totalParticipants),
+      detail: `${formatter.format(stats.availableParticipants)} available`,
       icon: Users
     },
     {
       label: "Total Troops",
       value: formatter.format(stats.totalTroops),
+      detail: `${formatter.format(stats.availableTroops)} from available players`,
       icon: Swords
     },
     {
       label: "Average Level",
       value: stats.averageTroopLevel.toFixed(1),
+      detail: "Based on the current filtered board",
       icon: Shield
     },
     {
       label: "Top Partners",
       value: formatter.format(stats.topPartners.length),
+      detail: "Most selected partner names",
       icon: BarChart3
     }
   ];
@@ -44,6 +48,7 @@ export function StatsCards({ stats, warningMessage }: StatsCardsProps) {
               <div>
                 <p className="text-sm uppercase tracking-[0.2em] text-slate-400">{card.label}</p>
                 <p className="mt-3 text-3xl font-semibold text-frost">{card.value}</p>
+                <p className="mt-2 text-xs text-slate-500">{card.detail}</p>
               </div>
               <card.icon className="h-8 w-8 text-amber-300" />
             </div>

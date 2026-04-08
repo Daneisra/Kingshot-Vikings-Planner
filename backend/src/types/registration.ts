@@ -27,11 +27,12 @@ export interface RegistrationFilters {
 
 export interface RegistrationStats {
   totalParticipants: number;
+  availableParticipants: number;
   totalTroops: number;
+  availableTroops: number;
   averageTroopLevel: number;
   topPartners: Array<{
     partnerName: string;
     count: number;
   }>;
 }
-

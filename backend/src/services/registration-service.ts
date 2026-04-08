@@ -83,13 +83,17 @@ export async function getRegistrationStats(filters: RegistrationFilters): Promis
   const { whereClause, values } = buildWhereClause(filters);
   const aggregateQuery = await pool.query<{
     totalParticipants: string;
+    availableParticipants: string;
     totalTroops: string | null;
+    availableTroops: string | null;
     averageTroopLevel: string | null;
   }>(
     `
       SELECT
         COUNT(*)::text AS "totalParticipants",
+        COUNT(*) FILTER (WHERE is_available = TRUE)::text AS "availableParticipants",
         COALESCE(SUM(troop_count), 0)::text AS "totalTroops",
+        COALESCE(SUM(troop_count) FILTER (WHERE is_available = TRUE), 0)::text AS "availableTroops",
         ROUND(COALESCE(AVG(troop_level), 0), 1)::text AS "averageTroopLevel"
       FROM registrations
       ${whereClause}
@@ -115,7 +119,9 @@ export async function getRegistrationStats(filters: RegistrationFilters): Promis
 
   return {
     totalParticipants: Number(aggregate.totalParticipants ?? 0),
+    availableParticipants: Number(aggregate.availableParticipants ?? 0),
     totalTroops: Number(aggregate.totalTroops ?? 0),
+    availableTroops: Number(aggregate.availableTroops ?? 0),
     averageTroopLevel: Number(aggregate.averageTroopLevel ?? 0),
     topPartners: topPartnersQuery.rows.map((row) => ({
       partnerName: row.partnerName,
