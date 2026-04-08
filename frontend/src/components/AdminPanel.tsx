@@ -6,6 +6,7 @@ interface AdminPanelProps {
   isUnlocking: boolean;
   isExporting: boolean;
   isResetting: boolean;
+  sessionHint: string;
   onPasswordChange: (value: string) => void;
   onUnlock: () => Promise<void>;
   onLock: () => void;
@@ -19,6 +20,7 @@ export function AdminPanel({
   isUnlocking,
   isExporting,
   isResetting,
+  sessionHint,
   onPasswordChange,
   onUnlock,
   onLock,
@@ -34,6 +36,7 @@ export function AdminPanel({
           <p className="mt-2 text-sm text-slate-400">
             The admin password unlocks deletion, CSV export, and weekly reset actions.
           </p>
+          <p className="mt-2 text-xs text-slate-500">{sessionHint}</p>
         </div>
 
         <div

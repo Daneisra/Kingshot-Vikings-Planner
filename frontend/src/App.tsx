@@ -31,6 +31,8 @@ const emptyStats: StatsResponse = {
 };
 
 const adminStorageKey = "kingshot-vikings-admin-password";
+const ADMIN_SESSION_TIMEOUT_MINUTES = 20;
+const ADMIN_SESSION_TIMEOUT_MS = ADMIN_SESSION_TIMEOUT_MINUTES * 60 * 1000;
 const githubIssuesUrl = "https://github.com/Daneisra/Kingshot-Vikings-Planner/issues";
 
 interface ConfirmDialogState {
@@ -40,6 +42,11 @@ interface ConfirmDialogState {
   tone: "danger" | "default";
   isConfirming: boolean;
   onConfirm: () => Promise<void>;
+}
+
+interface StoredAdminSession {
+  password: string;
+  expiresAt: number;
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -53,7 +60,66 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+function readStoredAdminSession(): StoredAdminSession | null {
+  const rawValue = localStorage.getItem(adminStorageKey);
+
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    const parsedValue = JSON.parse(rawValue) as StoredAdminSession;
+
+    if (
+      typeof parsedValue.password !== "string" ||
+      typeof parsedValue.expiresAt !== "number" ||
+      parsedValue.expiresAt <= Date.now()
+    ) {
+      localStorage.removeItem(adminStorageKey);
+      return null;
+    }
+
+    return parsedValue;
+  } catch {
+    return {
+      password: rawValue,
+      expiresAt: Date.now() + ADMIN_SESSION_TIMEOUT_MS
+    };
+  }
+}
+
+function writeStoredAdminSession(password: string, expiresAt: number) {
+  localStorage.setItem(
+    adminStorageKey,
+    JSON.stringify({
+      password,
+      expiresAt
+    } satisfies StoredAdminSession)
+  );
+}
+
+function clearStoredAdminSession() {
+  localStorage.removeItem(adminStorageKey);
+}
+
+function formatSessionHint(isAdminUnlocked: boolean, remainingMs: number | null) {
+  if (!isAdminUnlocked || remainingMs === null) {
+    return `Admin access auto-locks after ${ADMIN_SESSION_TIMEOUT_MINUTES} minutes of inactivity.`;
+  }
+
+  const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  if (minutes > 0) {
+    return `Admin session active. Auto-lock in ${minutes}m ${String(seconds).padStart(2, "0")}s.`;
+  }
+
+  return `Admin session active. Auto-lock in ${seconds}s.`;
+}
+
 export default function App() {
+  const initialAdminSessionRef = useRef<StoredAdminSession | null>(readStoredAdminSession());
   const formPanelRef = useRef<HTMLDivElement | null>(null);
   const hasRegistrationsRef = useRef(false);
   const [filters, setFilters] = useState<RegistrationFilters>(defaultFilters);
@@ -69,14 +135,23 @@ export default function App() {
   const [isUnlockingAdmin, setIsUnlockingAdmin] = useState(false);
   const [isExportingCsv, setIsExportingCsv] = useState(false);
   const [isResettingWeek, setIsResettingWeek] = useState(false);
-  const [adminPassword, setAdminPassword] = useState(() => localStorage.getItem(adminStorageKey) || "");
-  const [isAdminUnlocked, setIsAdminUnlocked] = useState(() => Boolean(localStorage.getItem(adminStorageKey)));
+  const [adminPassword, setAdminPassword] = useState(() => initialAdminSessionRef.current?.password ?? "");
+  const [isAdminUnlocked, setIsAdminUnlocked] = useState(() => Boolean(initialAdminSessionRef.current));
+  const [adminSessionExpiresAt, setAdminSessionExpiresAt] = useState<number | null>(
+    () => initialAdminSessionRef.current?.expiresAt ?? null
+  );
   const [partnersErrorMessage, setPartnersErrorMessage] = useState("");
   const [registrationsErrorMessage, setRegistrationsErrorMessage] = useState("");
   const [statsErrorMessage, setStatsErrorMessage] = useState("");
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const toastIdRef = useRef(0);
+  const [adminSessionRemainingMs, setAdminSessionRemainingMs] = useState<number | null>(
+    () =>
+      initialAdminSessionRef.current
+        ? Math.max(0, initialAdminSessionRef.current.expiresAt - Date.now())
+        : null
+  );
 
   const debouncedSearch = useDebouncedValue(filters.search, 250);
 
@@ -111,6 +186,31 @@ export default function App() {
 
   const hasActiveFilters =
     Boolean(filters.search.trim()) || Boolean(filters.partner.trim()) || filters.available !== "all";
+
+  const adminSessionHint = formatSessionHint(isAdminUnlocked, adminSessionRemainingMs);
+
+  const refreshAdminSession = useCallback((password: string) => {
+    const nextExpiresAt = Date.now() + ADMIN_SESSION_TIMEOUT_MS;
+    setAdminSessionExpiresAt(nextExpiresAt);
+    setAdminSessionRemainingMs(ADMIN_SESSION_TIMEOUT_MS);
+    writeStoredAdminSession(password, nextExpiresAt);
+  }, []);
+
+  const lockAdminSession = useCallback(
+    (message?: string, tone: ToastItem["tone"] = "success") => {
+      setIsAdminUnlocked(false);
+      setAdminSessionExpiresAt(null);
+      setAdminSessionRemainingMs(null);
+      setConfirmDialog(null);
+      setDeletingRegistrationId(null);
+      clearStoredAdminSession();
+
+      if (message) {
+        pushToast(tone, message);
+      }
+    },
+    [pushToast]
+  );
 
   async function loadPartners() {
     setIsLoadingPartners(true);
@@ -180,20 +280,23 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!adminPassword) {
+    const storedSession = initialAdminSessionRef.current;
+
+    if (!storedSession?.password) {
       setIsAdminUnlocked(false);
       return;
     }
 
-    api.verifyAdminPassword(adminPassword)
+    api.verifyAdminPassword(storedSession.password)
       .then(() => {
         setIsAdminUnlocked(true);
+        refreshAdminSession(storedSession.password);
       })
       .catch(() => {
-        setIsAdminUnlocked(false);
-        localStorage.removeItem(adminStorageKey);
+        setAdminPassword("");
+        lockAdminSession();
       });
-  }, []);
+  }, [lockAdminSession, refreshAdminSession]);
 
   useEffect(() => {
     void loadDashboard({ ...filters, search: debouncedSearch });
@@ -213,6 +316,49 @@ export default function App() {
 
     return () => window.cancelAnimationFrame(frameId);
   }, [editingRegistration]);
+
+  useEffect(() => {
+    if (!isAdminUnlocked || !adminSessionExpiresAt) {
+      return;
+    }
+
+    const syncSessionTimer = () => {
+      const remaining = adminSessionExpiresAt - Date.now();
+
+      if (remaining <= 0) {
+        lockAdminSession(
+          `Admin session timed out after ${ADMIN_SESSION_TIMEOUT_MINUTES} minutes of inactivity.`,
+          "error"
+        );
+        return;
+      }
+
+      setAdminSessionRemainingMs(remaining);
+    };
+
+    syncSessionTimer();
+    const intervalId = window.setInterval(syncSessionTimer, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [adminSessionExpiresAt, isAdminUnlocked, lockAdminSession]);
+
+  useEffect(() => {
+    if (!isAdminUnlocked || !adminPassword.trim()) {
+      return;
+    }
+
+    const extendSession = () => {
+      refreshAdminSession(adminPassword);
+    };
+
+    window.addEventListener("pointerdown", extendSession);
+    window.addEventListener("keydown", extendSession);
+
+    return () => {
+      window.removeEventListener("pointerdown", extendSession);
+      window.removeEventListener("keydown", extendSession);
+    };
+  }, [adminPassword, isAdminUnlocked, refreshAdminSession]);
 
   async function refreshAll(nextFilters?: RegistrationFilters) {
     const activeFilters = nextFilters ?? { ...filters, search: debouncedSearch };
@@ -288,11 +434,10 @@ export default function App() {
     try {
       await api.verifyAdminPassword(adminPassword);
       setIsAdminUnlocked(true);
-      localStorage.setItem(adminStorageKey, adminPassword);
+      refreshAdminSession(adminPassword);
       pushToast("success", "Admin panel unlocked.");
     } catch (error) {
-      setIsAdminUnlocked(false);
-      localStorage.removeItem(adminStorageKey);
+      lockAdminSession();
       pushToast("error", getDisplayMessage(error, "Invalid admin password."));
     } finally {
       setIsUnlockingAdmin(false);
@@ -300,9 +445,7 @@ export default function App() {
   }
 
   function handleLockAdmin() {
-    setIsAdminUnlocked(false);
-    localStorage.removeItem(adminStorageKey);
-    pushToast("success", "Admin panel locked.");
+    lockAdminSession("Admin panel locked.");
   }
 
   async function handleExportCsv() {
@@ -458,6 +601,7 @@ export default function App() {
               isUnlocking={isUnlockingAdmin}
               isExporting={isExportingCsv}
               isResetting={isResettingWeek}
+              sessionHint={adminSessionHint}
               onPasswordChange={setAdminPassword}
               onUnlock={handleUnlockAdmin}
               onLock={handleLockAdmin}
