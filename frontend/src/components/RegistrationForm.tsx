@@ -272,55 +272,67 @@ export function RegistrationForm({
                 </div>
               </div>
 
-              <div className="mt-4 grid gap-4 md:grid-cols-[180px_minmax(0,1fr)]">
-                <label>
-                  <span className="mb-2 block text-sm font-medium text-slate-300">Tier</span>
-                  <select
-                    value={group.tier}
-                    onChange={(event) => updateTierGroup(index as 0 | 1, { tier: Number(event.target.value) })}
-                    onBlur={() => handleBlur(tierField)}
-                    aria-invalid={Boolean(fieldErrors[tierField]) && (hasSubmitted || touched[tierField])}
-                    className={getInputClassName(tierField)}
-                  >
-                    {troopTierOptions.map((tier) => (
-                      <option key={tier} value={tier}>
-                        T{tier}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-2 text-xs text-slate-500">
-                    T7+ only. T11 is available for late-game War Academy players.
-                  </p>
-                  {renderFieldError(tierField)}
-                </label>
-
-                <div className="grid gap-4 md:grid-cols-3">
+              <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_170px] lg:items-start">
+                <div className="space-y-3">
                   {troopTypeOrder.map((troopType) => {
                     const field = `tierGroups.${index}.${troopType}` as const;
 
                     return (
-                      <label key={troopType}>
-                        <span className="mb-2 block text-sm font-medium text-slate-300">{troopTypeLabels[troopType]}</span>
-                        <input
-                          type="number"
-                          min={0}
-                          value={group[troopType]}
-                          onChange={(event) =>
-                            updateTierGroup(index as 0 | 1, {
-                              [troopType]: Math.max(0, Number(event.target.value) || 0)
-                            } as Partial<TierGroupDraft>)
-                          }
-                          onBlur={() => handleBlur(field)}
-                          aria-invalid={Boolean(fieldErrors[field]) && (hasSubmitted || touched[field])}
-                          className={getInputClassName(field)}
-                        />
-                        <p className="mt-2 text-xs text-slate-500">
-                          {isOptional ? "Use 0 if this type is not part of the block." : "Enter the count for this type."}
-                        </p>
-                        {renderFieldError(field)}
+                      <label
+                        key={troopType}
+                        className="grid gap-2 rounded-2xl border border-white/10 bg-slate-950/45 px-4 py-3 sm:grid-cols-[120px_minmax(0,1fr)] sm:items-center"
+                      >
+                        <div>
+                          <span className="block text-sm font-medium text-slate-200">{troopTypeLabels[troopType]}</span>
+                          <span className="mt-1 block text-xs text-slate-500">
+                            {isOptional ? "0 if unused in this tier." : "Count for this troop type."}
+                          </span>
+                        </div>
+
+                        <div>
+                          <input
+                            type="number"
+                            min={0}
+                            value={group[troopType]}
+                            onChange={(event) =>
+                              updateTierGroup(index as 0 | 1, {
+                                [troopType]: Math.max(0, Number(event.target.value) || 0)
+                              } as Partial<TierGroupDraft>)
+                            }
+                            onBlur={() => handleBlur(field)}
+                            aria-invalid={Boolean(fieldErrors[field]) && (hasSubmitted || touched[field])}
+                            className={getInputClassName(field)}
+                          />
+                          {renderFieldError(field)}
+                        </div>
                       </label>
                     );
                   })}
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4 lg:sticky lg:top-4">
+                  <label>
+                    <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                      Tier
+                    </span>
+                    <select
+                      value={group.tier}
+                      onChange={(event) => updateTierGroup(index as 0 | 1, { tier: Number(event.target.value) })}
+                      onBlur={() => handleBlur(tierField)}
+                      aria-invalid={Boolean(fieldErrors[tierField]) && (hasSubmitted || touched[tierField])}
+                      className={getInputClassName(tierField)}
+                    >
+                      {troopTierOptions.map((tier) => (
+                        <option key={tier} value={tier}>
+                          T{tier}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-2 text-xs text-slate-500">
+                      T7+ only. T11 is available for late-game War Academy players.
+                    </p>
+                    {renderFieldError(tierField)}
+                  </label>
                 </div>
               </div>
             </section>
