@@ -97,6 +97,9 @@ export default function App() {
     hasRegistrationsRef.current = registrations.length > 0;
   }, [registrations.length]);
 
+  const hasActiveFilters =
+    Boolean(filters.search.trim()) || Boolean(filters.partner.trim()) || filters.available !== "all";
+
   async function loadPartners() {
     setIsLoadingPartners(true);
     setPartnersErrorMessage("");
@@ -302,17 +305,34 @@ export default function App() {
       return;
     }
 
-    if (!window.confirm("Reset the entire list for a new week?")) {
-      return;
-    }
-
     setIsResettingWeek(true);
 
     try {
-      await api.resetRegistrations(adminPassword);
+      const currentWeekStats = await api.getStats(defaultFilters);
+
+      if (currentWeekStats.totalParticipants === 0) {
+        pushToast("success", "The list is already empty. No reset was needed.");
+        return;
+      }
+
+      const confirmationMessage =
+        currentWeekStats.totalParticipants === 1
+          ? "Reset the board for a new week? This will delete 1 registration."
+          : `Reset the board for a new week? This will delete ${currentWeekStats.totalParticipants} registrations.`;
+
+      if (!window.confirm(confirmationMessage)) {
+        return;
+      }
+
+      const result = await api.resetRegistrations(adminPassword);
       setEditingRegistration(null);
       setFilters(defaultFilters);
-      pushToast("success", "The list has been reset.");
+      pushToast(
+        "success",
+        result.deletedCount === 1
+          ? "The list has been reset. 1 registration was removed."
+          : `The list has been reset. ${result.deletedCount} registrations were removed.`
+      );
       await refreshAll(defaultFilters);
     } catch (error) {
       pushToast("error", getDisplayMessage(error, "Unable to reset the list."));
@@ -405,6 +425,7 @@ export default function App() {
               isAdminUnlocked={isAdminUnlocked}
               editingRegistrationId={editingRegistration?.id ?? null}
               errorMessage={registrationsErrorMessage}
+              hasActiveFilters={hasActiveFilters}
               onEdit={setEditingRegistration}
               onDelete={handleDelete}
             />

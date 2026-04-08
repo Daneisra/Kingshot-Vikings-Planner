@@ -62,7 +62,7 @@ adminRouter.post(
   "/reset",
   requireAdmin,
   asyncHandler(async (_req, res) => {
-    await resetRegistrations();
-    res.status(204).send();
+    const deletedCount = await resetRegistrations();
+    res.json({ deletedCount });
   })
 );

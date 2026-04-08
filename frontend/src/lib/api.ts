@@ -197,7 +197,7 @@ export const api = {
     });
   },
   resetRegistrations(adminPassword: string) {
-    return request<void>("/admin/reset", {
+    return request<{ deletedCount: number }>("/admin/reset", {
       method: "POST",
       adminPassword
     });

@@ -23,6 +23,7 @@ interface RegistrationListProps {
   isAdminUnlocked: boolean;
   editingRegistrationId: string | null;
   errorMessage?: string;
+  hasActiveFilters: boolean;
   onEdit: (registration: Registration) => void;
   onDelete: (registration: Registration) => void;
 }
@@ -37,6 +38,7 @@ export function RegistrationList({
   isAdminUnlocked,
   editingRegistrationId,
   errorMessage,
+  hasActiveFilters,
   onEdit,
   onDelete
 }: RegistrationListProps) {
@@ -75,9 +77,13 @@ export function RegistrationList({
     return (
       <section className="rounded-3xl border border-dashed border-white/15 bg-white/5 p-8 text-center shadow-panel">
         <Users className="mx-auto h-10 w-10 text-slate-400" />
-        <h3 className="mt-4 text-xl font-semibold text-frost">No registrations match</h3>
+        <h3 className="mt-4 text-xl font-semibold text-frost">
+          {hasActiveFilters ? "No registrations match these filters" : "No registrations yet"}
+        </h3>
         <p className="mt-2 text-slate-400">
-          Add a player or adjust the filters to display this week's list.
+          {hasActiveFilters
+            ? "Try resetting the filters or adjust them to display the current week."
+            : "Start the new week by adding the first player to the board."}
         </p>
       </section>
     );

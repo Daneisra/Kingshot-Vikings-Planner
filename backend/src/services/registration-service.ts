@@ -184,5 +184,16 @@ export async function deleteRegistration(id: string) {
 }
 
 export async function resetRegistrations() {
-  await pool.query("TRUNCATE TABLE registrations");
+  const result = await pool.query<{ deletedCount: string }>(
+    `
+      WITH deleted AS (
+        DELETE FROM registrations
+        RETURNING id
+      )
+      SELECT COUNT(*)::text AS "deletedCount"
+      FROM deleted
+    `
+  );
+
+  return Number(result.rows[0]?.deletedCount ?? 0);
 }
