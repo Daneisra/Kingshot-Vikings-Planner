@@ -48,8 +48,12 @@ export default function App() {
   const [stats, setStats] = useState<StatsResponse>(emptyStats);
   const [editingRegistration, setEditingRegistration] = useState<Registration | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingPartners, setIsLoadingPartners] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAdminBusy, setIsAdminBusy] = useState(false);
+  const [isUnlockingAdmin, setIsUnlockingAdmin] = useState(false);
+  const [isExportingCsv, setIsExportingCsv] = useState(false);
+  const [isResettingWeek, setIsResettingWeek] = useState(false);
   const [adminPassword, setAdminPassword] = useState(() => localStorage.getItem(adminStorageKey) || "");
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(() => Boolean(localStorage.getItem(adminStorageKey)));
   const [errorMessage, setErrorMessage] = useState("");
@@ -58,8 +62,14 @@ export default function App() {
   const debouncedSearch = useDebouncedValue(filters.search, 250);
 
   async function loadPartners() {
-    const nextPartners = await api.getPartners();
-    setPartners(nextPartners);
+    setIsLoadingPartners(true);
+
+    try {
+      const nextPartners = await api.getPartners();
+      setPartners(nextPartners);
+    } finally {
+      setIsLoadingPartners(false);
+    }
   }
 
   async function loadDashboard(currentFilters: RegistrationFilters) {
@@ -111,7 +121,13 @@ export default function App() {
 
   async function refreshAll(nextFilters?: RegistrationFilters) {
     const activeFilters = nextFilters ?? { ...filters, search: debouncedSearch };
-    await Promise.all([loadPartners(), loadDashboard(activeFilters)]);
+    setIsRefreshing(true);
+
+    try {
+      await Promise.all([loadPartners(), loadDashboard(activeFilters)]);
+    } finally {
+      setIsRefreshing(false);
+    }
   }
 
   async function handleSubmit(payload: RegistrationPayload) {
@@ -166,7 +182,7 @@ export default function App() {
   }
 
   async function handleUnlockAdmin() {
-    setIsAdminBusy(true);
+    setIsUnlockingAdmin(true);
     setErrorMessage("");
     setSuccessMessage("");
 
@@ -180,7 +196,7 @@ export default function App() {
       localStorage.removeItem(adminStorageKey);
       setErrorMessage(error instanceof Error ? error.message : "Invalid admin password.");
     } finally {
-      setIsAdminBusy(false);
+      setIsUnlockingAdmin(false);
     }
   }
 
@@ -195,7 +211,7 @@ export default function App() {
       return;
     }
 
-    setIsAdminBusy(true);
+    setIsExportingCsv(true);
     setErrorMessage("");
 
     try {
@@ -205,7 +221,7 @@ export default function App() {
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Unable to export CSV.");
     } finally {
-      setIsAdminBusy(false);
+      setIsExportingCsv(false);
     }
   }
 
@@ -218,7 +234,7 @@ export default function App() {
       return;
     }
 
-    setIsAdminBusy(true);
+    setIsResettingWeek(true);
     setErrorMessage("");
     setSuccessMessage("");
 
@@ -231,7 +247,7 @@ export default function App() {
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Unable to reset the list.");
     } finally {
-      setIsAdminBusy(false);
+      setIsResettingWeek(false);
     }
   }
 
@@ -265,9 +281,14 @@ export default function App() {
               </div>
             </div>
 
-            <button type="button" className="secondary-button w-full xl:w-auto" onClick={() => refreshAll()}>
-              <RefreshCw className="h-4 w-4" />
-              Refresh
+            <button
+              type="button"
+              className="secondary-button w-full xl:w-auto"
+              onClick={() => refreshAll()}
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+              {isRefreshing ? "Refreshing..." : "Refresh"}
             </button>
           </div>
         </header>
@@ -301,7 +322,9 @@ export default function App() {
             <AdminPanel
               adminPassword={adminPassword}
               isAdminUnlocked={isAdminUnlocked}
-              isBusy={isAdminBusy}
+              isUnlocking={isUnlockingAdmin}
+              isExporting={isExportingCsv}
+              isResetting={isResettingWeek}
               onPasswordChange={setAdminPassword}
               onUnlock={handleUnlockAdmin}
               onLock={handleLockAdmin}
@@ -314,6 +337,7 @@ export default function App() {
             <FiltersBar
               filters={filters}
               partners={partners}
+              isLoadingPartners={isLoadingPartners}
               onChange={setFilters}
               onReset={() => setFilters(defaultFilters)}
             />

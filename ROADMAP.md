@@ -25,7 +25,7 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 - [x] Add helper copy near troop inputs:
   `Only count your strongest 2 troop tiers.`
 - [x] Improve inline validation before submit
-- [ ] Add better loading states for partner refresh and CSV export
+- [x] Add better loading states for partner refresh and CSV export
 
 ### Ops / Deployment
 

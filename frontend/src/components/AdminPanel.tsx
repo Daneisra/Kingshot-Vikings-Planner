@@ -3,7 +3,9 @@ import { Download, LockKeyhole, RotateCcw, ShieldCheck } from "lucide-react";
 interface AdminPanelProps {
   adminPassword: string;
   isAdminUnlocked: boolean;
-  isBusy: boolean;
+  isUnlocking: boolean;
+  isExporting: boolean;
+  isResetting: boolean;
   onPasswordChange: (value: string) => void;
   onUnlock: () => Promise<void>;
   onLock: () => void;
@@ -14,7 +16,9 @@ interface AdminPanelProps {
 export function AdminPanel({
   adminPassword,
   isAdminUnlocked,
-  isBusy,
+  isUnlocking,
+  isExporting,
+  isResetting,
   onPasswordChange,
   onUnlock,
   onLock,
@@ -60,13 +64,18 @@ export function AdminPanel({
             type="button"
             className="primary-button"
             onClick={onUnlock}
-            disabled={isBusy || adminPassword.trim().length === 0}
+            disabled={isUnlocking || isExporting || isResetting || adminPassword.trim().length === 0}
           >
             <ShieldCheck className="h-4 w-4" />
-            Unlock
+            {isUnlocking ? "Unlocking..." : "Unlock"}
           </button>
 
-          <button type="button" className="secondary-button" onClick={onLock}>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={onLock}
+            disabled={isUnlocking || isExporting || isResetting}
+          >
             Lock
           </button>
         </div>
@@ -77,20 +86,20 @@ export function AdminPanel({
           type="button"
           className="secondary-button"
           onClick={onExport}
-          disabled={!isAdminUnlocked || isBusy}
+          disabled={!isAdminUnlocked || isUnlocking || isExporting || isResetting}
         >
           <Download className="h-4 w-4" />
-          Export CSV
+          {isExporting ? "Exporting..." : "Export CSV"}
         </button>
 
         <button
           type="button"
           className="danger-button"
           onClick={onReset}
-          disabled={!isAdminUnlocked || isBusy}
+          disabled={!isAdminUnlocked || isUnlocking || isExporting || isResetting}
         >
           <RotateCcw className="h-4 w-4" />
-          New week
+          {isResetting ? "Resetting..." : "New week"}
         </button>
       </div>
     </section>
