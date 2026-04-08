@@ -10,6 +10,7 @@ import { ToastStack } from "./components/ToastStack";
 import type { ToastItem } from "./components/ToastStack";
 import { useDebouncedValue } from "./hooks/useDebouncedValue";
 import { ApiError, api } from "./lib/api";
+import { APP_VERSION_LABEL } from "./lib/app-version";
 import type {
   Registration,
   RegistrationFilters,
@@ -562,6 +563,9 @@ export default function App() {
                 and protected admin actions.
               </p>
               <div className="mt-5 flex flex-wrap gap-3">
+                <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-300">
+                  Version {APP_VERSION_LABEL}
+                </span>
                 <a
                   href={githubIssuesUrl}
                   target="_blank"

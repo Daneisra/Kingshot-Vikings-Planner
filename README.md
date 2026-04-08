@@ -26,6 +26,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 - Shared registration list for the current Vikings cycle
 - Create, edit, and delete player registrations
 - Track up to 2 strongest troop tiers with a shared tier and separate Infantry, Lancer, and Marksman counts
+- Visible app version in the UI for easier support and deployment checks
 - Search by nickname
 - Filter by partner and weekly availability
 - Quick stats:
@@ -147,6 +148,8 @@ The repository includes an SSH-based GitHub Actions production deployment flow t
 - runs an API health check
 
 Full setup details are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+The current deployed version is visible in the app UI and exposed by `/api/health`.
 
 ## Roadmap
 

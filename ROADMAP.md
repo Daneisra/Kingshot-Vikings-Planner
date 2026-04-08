@@ -32,6 +32,7 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 - [x] Ship SSH-based GitHub Actions deployment flow
 - [x] Improve deploy-time diagnostics and failure visibility
 - [x] Validate the deployment flow end to end in production
+- [x] Expose the current deployed version in the UI and health check
 - [ ] Add a production smoke test after deployment
 
 ## Next
