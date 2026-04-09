@@ -1,7 +1,8 @@
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
-import { Crown, Github, RefreshCw } from "lucide-react";
+import { BookOpen, Crown, Github, RefreshCw } from "lucide-react";
 import { AdminPanel } from "./components/AdminPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
+import { EventGuidePanel } from "./components/EventGuidePanel";
 import { FiltersBar } from "./components/FiltersBar";
 import { RegistrationForm } from "./components/RegistrationForm";
 import { RegistrationList } from "./components/RegistrationList";
@@ -37,6 +38,8 @@ const adminStorageKey = "kingshot-vikings-admin-password";
 const ADMIN_SESSION_TIMEOUT_MINUTES = 20;
 const ADMIN_SESSION_TIMEOUT_MS = ADMIN_SESSION_TIMEOUT_MINUTES * 60 * 1000;
 const githubIssuesUrl = "https://github.com/Daneisra/Kingshot-Vikings-Planner/issues";
+const vikingVengeanceGuideUrl =
+  "https://github.com/Daneisra/Kingshot-Vikings-Planner/blob/main/docs/VIKING_VENGEANCE_GUIDE.md";
 
 interface ConfirmDialogState {
   title: string;
@@ -575,6 +578,15 @@ export default function App() {
                   <Github className="h-4 w-4" />
                   Report bugs or request features
                 </a>
+                <a
+                  href={vikingVengeanceGuideUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="secondary-button"
+                >
+                  <BookOpen className="h-4 w-4" />
+                  Viking Vengeance guide
+                </a>
               </div>
             </div>
 
@@ -617,6 +629,8 @@ export default function App() {
           </div>
 
           <div className="space-y-6">
+            <EventGuidePanel guideUrl={vikingVengeanceGuideUrl} />
+
             <FiltersBar
               filters={filters}
               partners={partners}

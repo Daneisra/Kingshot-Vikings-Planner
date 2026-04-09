@@ -61,7 +61,7 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 
 - [ ] Allow selecting multiple regular partners for Viking Vengeance coordination
 - [ ] Generate optimized reinforcement groups automatically
-- [ ] Expose an in-app guide for the Viking Vengeance event
+- [x] Expose an in-app guide for the Viking Vengeance event
 
 ## Later
 
