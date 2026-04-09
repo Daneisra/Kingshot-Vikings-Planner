@@ -155,6 +155,8 @@ The current deployed version is visible in the app UI and exposed by `/api/healt
 
 Planned fixes, UX improvements, admin work, data/reporting changes, and ops tasks are tracked in [ROADMAP.md](ROADMAP.md).
 
+Event-specific planning notes for future features are documented in [docs/VIKING_VENGEANCE_GUIDE.md](docs/VIKING_VENGEANCE_GUIDE.md).
+
 ## Contributing
 
 Issues and feature requests are welcome:

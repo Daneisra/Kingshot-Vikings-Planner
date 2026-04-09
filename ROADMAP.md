@@ -42,6 +42,7 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 - [x] Replace the shared status banner with lightweight toast notifications
 - [x] Add list sorting options
 - [x] Refine mobile editing flow for faster updates
+- [ ] Add animated warning banners to remind players to empty troops from their city before the event
 
 ### Admin
 
@@ -55,6 +56,12 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 - [x] Add available-only totals in stats
 - [x] Add per-partner troop totals
 - [x] Improve CSV export formatting
+
+### Event Planning
+
+- [ ] Allow selecting multiple regular partners for Viking Vengeance coordination
+- [ ] Generate optimized reinforcement groups automatically
+- [ ] Expose an in-app guide for the Viking Vengeance event
 
 ## Later
 
