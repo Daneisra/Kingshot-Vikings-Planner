@@ -3,6 +3,7 @@ import { BookOpen, Crown, Github, RefreshCw } from "lucide-react";
 import { AdminPanel } from "./components/AdminPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { EventGuidePanel } from "./components/EventGuidePanel";
+import { EventWarningBanner } from "./components/EventWarningBanner";
 import { FiltersBar } from "./components/FiltersBar";
 import { RegistrationForm } from "./components/RegistrationForm";
 import { RegistrationList } from "./components/RegistrationList";
@@ -603,6 +604,8 @@ export default function App() {
         </header>
 
         <StatsCards stats={stats} warningMessage={statsErrorMessage} />
+
+        <EventWarningBanner />
 
         <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
           <div ref={formPanelRef} className="space-y-6">

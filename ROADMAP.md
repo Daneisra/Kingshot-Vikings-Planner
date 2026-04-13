@@ -42,7 +42,7 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 - [x] Replace the shared status banner with lightweight toast notifications
 - [x] Add list sorting options
 - [x] Refine mobile editing flow for faster updates
-- [ ] Add animated warning banners to remind players to empty troops from their city before the event
+- [x] Add animated warning banners to remind players to empty troops from their city before the event
 
 ### Admin
 

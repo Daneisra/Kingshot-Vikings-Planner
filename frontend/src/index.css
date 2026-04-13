@@ -39,6 +39,40 @@
   button {
     @apply inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60;
   }
+
+  @keyframes warning-sheen {
+    0% {
+      transform: translateX(-40%);
+      opacity: 0;
+    }
+
+    18% {
+      opacity: 0.22;
+    }
+
+    40% {
+      transform: translateX(140%);
+      opacity: 0;
+    }
+
+    100% {
+      transform: translateX(140%);
+      opacity: 0;
+    }
+  }
+
+  @keyframes warning-dot-pulse {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+
+    50% {
+      transform: scale(0.72);
+      opacity: 0.45;
+    }
+  }
 }
 
 @layer components {
@@ -52,5 +86,18 @@
 
   .danger-button {
     @apply bg-rose-500/15 text-rose-100 hover:bg-rose-500/25;
+  }
+
+  .warning-banner::before {
+    content: "";
+    position: absolute;
+    inset: -20%;
+    background: linear-gradient(120deg, transparent 35%, rgba(255, 255, 255, 0.16) 50%, transparent 65%);
+    animation: warning-sheen 8s linear infinite;
+    pointer-events: none;
+  }
+
+  .warning-dot {
+    animation: warning-dot-pulse 1.5s ease-in-out infinite;
   }
 }
