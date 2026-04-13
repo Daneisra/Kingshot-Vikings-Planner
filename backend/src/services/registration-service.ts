@@ -15,6 +15,7 @@ const selectColumns = `
   id,
   nickname,
   partner_name AS "partnerName",
+  partner_names AS "partnerNames",
   troop_count AS "troopCount",
   troop_level AS "troopLevel",
   troop_loadout AS "troopLoadout",
@@ -35,7 +36,13 @@ function buildWhereClause(filters: RegistrationFilters) {
 
   if (filters.partner) {
     values.push(filters.partner.toLowerCase());
-    conditions.push(`LOWER(partner_name) = $${values.length}`);
+    conditions.push(`
+      EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements_text(partner_names) AS partner_name_value
+        WHERE LOWER(partner_name_value) = $${values.length}
+      )
+    `);
   }
 
   if (typeof filters.available === "boolean") {
@@ -58,8 +65,36 @@ function mapRow(result: QueryResult<RegistrationRecord>) {
 
   return {
     ...row,
+    partnerNames: normalizePartnerNames(row.partnerNames, row.partnerName),
     troopLoadout: normalizeTroopLoadout(row.troopLoadout)
   };
+}
+
+function normalizePartnerNames(value: unknown, fallbackPartnerName?: string): string[] {
+  const partnerNames = Array.isArray(value)
+    ? value.flatMap((entry) => (typeof entry === "string" ? [entry.trim()] : []))
+    : [];
+
+  const dedupedPartnerNames: string[] = [];
+
+  partnerNames.forEach((partnerName) => {
+    if (
+      partnerName &&
+      !dedupedPartnerNames.some((existingPartnerName) => existingPartnerName.toLowerCase() === partnerName.toLowerCase())
+    ) {
+      dedupedPartnerNames.push(partnerName);
+    }
+  });
+
+  if (dedupedPartnerNames.length > 0) {
+    return dedupedPartnerNames;
+  }
+
+  if (fallbackPartnerName?.trim()) {
+    return [fallbackPartnerName.trim()];
+  }
+
+  return [];
 }
 
 function normalizeTroopLoadout(value: unknown): TroopLoadoutEntry[] {
@@ -117,6 +152,7 @@ export async function listRegistrations(filters: RegistrationFilters) {
 
   return result.rows.map((row) => ({
     ...row,
+    partnerNames: normalizePartnerNames(row.partnerNames, row.partnerName),
     troopLoadout: normalizeTroopLoadout(row.troopLoadout)
   }));
 }
@@ -124,10 +160,10 @@ export async function listRegistrations(filters: RegistrationFilters) {
 export async function listPartners() {
   const result = await pool.query<{ partnerName: string }>(
     `
-      SELECT partner_name AS "partnerName"
+      SELECT DISTINCT partner_name_value AS "partnerName"
       FROM registrations
-      GROUP BY partner_name
-      ORDER BY LOWER(partner_name) ASC
+      CROSS JOIN LATERAL jsonb_array_elements_text(partner_names) AS partner_name_value
+      ORDER BY LOWER(partner_name_value) ASC
     `
   );
 
@@ -164,14 +200,15 @@ export async function getRegistrationStats(filters: RegistrationFilters): Promis
   }>(
     `
       SELECT
-        partner_name AS "partnerName",
+        partner_name_value AS "partnerName",
         COUNT(*)::text AS "count",
         COALESCE(SUM(troop_count), 0)::text AS "totalTroops",
         COALESCE(SUM(troop_count) FILTER (WHERE is_available = TRUE), 0)::text AS "availableTroops"
       FROM registrations
+      CROSS JOIN LATERAL jsonb_array_elements_text(partner_names) AS partner_name_value
       ${whereClause}
-      GROUP BY partner_name
-      ORDER BY COUNT(*) DESC, COALESCE(SUM(troop_count), 0) DESC, LOWER(partner_name) ASC
+      GROUP BY partner_name_value
+      ORDER BY COUNT(*) DESC, COALESCE(SUM(troop_count), 0) DESC, LOWER(partner_name_value) ASC
       LIMIT 5
     `,
     values
@@ -195,6 +232,13 @@ export async function getRegistrationStats(filters: RegistrationFilters): Promis
 }
 
 export async function createRegistration(input: RegistrationInput) {
+  const partnerNames = normalizePartnerNames(input.partnerNames);
+  const primaryPartnerName = partnerNames[0];
+
+  if (!primaryPartnerName) {
+    throw new HttpError(400, "At least one partner is required.");
+  }
+
   const troopLoadout = normalizeTroopLoadout(input.troopLoadout);
   const { troopCount, troopLevel } = summarizeTroopLoadout(troopLoadout);
   const result = await pool.query<RegistrationRecord>(
@@ -202,18 +246,20 @@ export async function createRegistration(input: RegistrationInput) {
       INSERT INTO registrations (
         nickname,
         partner_name,
+        partner_names,
         troop_count,
         troop_level,
         troop_loadout,
         comment,
         is_available
       )
-      VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7)
+      VALUES ($1, $2, $3::jsonb, $4, $5, $6::jsonb, $7, $8)
       RETURNING ${selectColumns}
     `,
     [
       input.nickname,
-      input.partnerName,
+      primaryPartnerName,
+      JSON.stringify(partnerNames),
       troopCount,
       troopLevel,
       JSON.stringify(troopLoadout),
@@ -226,6 +272,13 @@ export async function createRegistration(input: RegistrationInput) {
 }
 
 export async function updateRegistration(id: string, input: RegistrationInput) {
+  const partnerNames = normalizePartnerNames(input.partnerNames);
+  const primaryPartnerName = partnerNames[0];
+
+  if (!primaryPartnerName) {
+    throw new HttpError(400, "At least one partner is required.");
+  }
+
   const troopLoadout = normalizeTroopLoadout(input.troopLoadout);
   const { troopCount, troopLevel } = summarizeTroopLoadout(troopLoadout);
   const result = await pool.query<RegistrationRecord>(
@@ -234,18 +287,20 @@ export async function updateRegistration(id: string, input: RegistrationInput) {
       SET
         nickname = $2,
         partner_name = $3,
-        troop_count = $4,
-        troop_level = $5,
-        troop_loadout = $6::jsonb,
-        comment = $7,
-        is_available = $8
+        partner_names = $4::jsonb,
+        troop_count = $5,
+        troop_level = $6,
+        troop_loadout = $7::jsonb,
+        comment = $8,
+        is_available = $9
       WHERE id = $1
       RETURNING ${selectColumns}
     `,
     [
       id,
       input.nickname,
-      input.partnerName,
+      primaryPartnerName,
+      JSON.stringify(partnerNames),
       troopCount,
       troopLevel,
       JSON.stringify(troopLoadout),
@@ -292,6 +347,7 @@ export async function deleteRegistration(id: string, auditContext: AuditContext)
       metadata: {
         nickname: registration.nickname,
         partnerName: registration.partnerName,
+        partnerNames: registration.partnerNames,
         troopCount: registration.troopCount,
         troopLevel: registration.troopLevel,
         troopLoadout: registration.troopLoadout,

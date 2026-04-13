@@ -22,7 +22,21 @@ const troopLoadoutEntrySchema = z.object({
 
 const registrationSchema = z.object({
   nickname: z.string().trim().min(2, "Nickname is required.").max(40),
-  partnerName: z.string().trim().min(2, "Partner name is required.").max(40),
+  partnerNames: z
+    .array(z.string().trim().min(2, "Partner name is required.").max(40))
+    .min(1, "At least one partner is required.")
+    .max(4, "Use up to 4 regular partners.")
+    .transform((names) => {
+      const uniqueNames: string[] = [];
+
+      names.forEach((name) => {
+        if (!uniqueNames.some((existingName) => existingName.toLowerCase() === name.toLowerCase())) {
+          uniqueNames.push(name);
+        }
+      });
+
+      return uniqueNames;
+    }),
   troopLoadout: z
     .array(troopLoadoutEntrySchema)
     .min(1, "At least one troop line is required.")

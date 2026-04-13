@@ -10,6 +10,7 @@ export interface Registration {
   id: string;
   nickname: string;
   partnerName: string;
+  partnerNames: string[];
   troopCount: number;
   troopLevel: number;
   troopLoadout: TroopLoadoutEntry[];
@@ -21,7 +22,7 @@ export interface Registration {
 
 export interface RegistrationPayload {
   nickname: string;
-  partnerName: string;
+  partnerNames: string[];
   troopLoadout: TroopLoadoutEntry[];
   comment?: string;
   isAvailable: boolean;

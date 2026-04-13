@@ -40,7 +40,7 @@ export function buildRegistrationsCsv(
 
   const header = [
     "Nickname",
-    "Partner",
+    "Partners",
     "Primary Tier",
     "Primary Infantry",
     "Primary Lancer",
@@ -64,7 +64,7 @@ export function buildRegistrationsCsv(
 
     return [
       registration.nickname,
-      registration.partnerName,
+      registration.partnerNames.join(" | "),
       formatTierGroupTier(primaryGroup),
       primaryGroup?.counts.infantry ?? "",
       primaryGroup?.counts.lancer ?? "",

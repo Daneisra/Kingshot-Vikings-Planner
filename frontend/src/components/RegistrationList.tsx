@@ -182,7 +182,7 @@ export function RegistrationList({
 
                 <div className="grid gap-3 text-sm text-slate-300 sm:grid-cols-2 xl:grid-cols-4">
                   <p>
-                    <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Partner</span>
+                    <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Primary Partner</span>
                     {registration.partnerName}
                   </p>
                   <p>
@@ -198,6 +198,23 @@ export function RegistrationList({
                     {formatAvailabilityLabel(registration.isAvailable)}
                   </p>
                 </div>
+
+                {registration.partnerNames.length > 1 ? (
+                  <div>
+                    <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Partner Pool</span>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {registration.partnerNames.map((partnerName, index) => (
+                        <span
+                          key={`${registration.id}-${partnerName}`}
+                          className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-slate-200"
+                        >
+                          {partnerName}
+                          {index === 0 ? " · Primary" : ""}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
                 {tierGroups.length > 0 ? (
                   <div className="grid gap-3 text-sm text-slate-300 sm:grid-cols-2">

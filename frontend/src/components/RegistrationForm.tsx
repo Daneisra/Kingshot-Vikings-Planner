@@ -23,7 +23,8 @@ interface TierGroupDraft {
 
 interface RegistrationFormState {
   nickname: string;
-  partnerName: string;
+  partnerInput: string;
+  partnerNames: string[];
   tierGroups: [TierGroupDraft, TierGroupDraft];
   comment: string;
   isAvailable: boolean;
@@ -35,7 +36,7 @@ type TierFieldName =
   | `tierGroups.${number}.lancer`
   | `tierGroups.${number}.marksman`;
 
-type FieldName = "nickname" | "partnerName" | "comment" | TierFieldName;
+type FieldName = "nickname" | "partnerInput" | "partnerNames" | "comment" | TierFieldName;
 type FieldErrors = Partial<Record<FieldName, string>>;
 type TouchedState = Partial<Record<FieldName, boolean>>;
 
@@ -55,7 +56,8 @@ const defaultTierGroup = (): TierGroupDraft => ({
 
 const initialState = (): RegistrationFormState => ({
   nickname: "",
-  partnerName: "",
+  partnerInput: "",
+  partnerNames: [],
   tierGroups: [defaultTierGroup(), defaultTierGroup()],
   comment: "",
   isAvailable: true
@@ -84,7 +86,8 @@ export function RegistrationForm({
     if (editingRegistration) {
       setForm({
         nickname: editingRegistration.nickname,
-        partnerName: editingRegistration.partnerName,
+        partnerInput: "",
+        partnerNames: buildPartnerNames(editingRegistration),
         tierGroups: buildTierGroups(editingRegistration),
         comment: editingRegistration.comment ?? "",
         isAvailable: editingRegistration.isAvailable
@@ -127,7 +130,7 @@ export function RegistrationForm({
     try {
       await onSubmit({
         nickname: form.nickname.trim(),
-        partnerName: form.partnerName.trim(),
+        partnerNames: form.partnerNames,
         troopLoadout: flattenTierGroups(form.tierGroups),
         comment: form.comment.trim(),
         isAvailable: form.isAvailable
@@ -178,6 +181,46 @@ export function RegistrationForm({
     });
   }
 
+  function addPartner() {
+    const nextPartnerName = form.partnerInput.trim();
+
+    if (!nextPartnerName) {
+      setTouched((current) => ({ ...current, partnerInput: true, partnerNames: true }));
+      return;
+    }
+
+    if (nextPartnerName.length < 2 || nextPartnerName.length > MAX_TEXT_LENGTH) {
+      setTouched((current) => ({ ...current, partnerInput: true, partnerNames: true }));
+      return;
+    }
+
+    if (form.partnerNames.some((partnerName) => partnerName.toLowerCase() === nextPartnerName.toLowerCase())) {
+      setFormError("That partner is already in the list.");
+      return;
+    }
+
+    if (form.partnerNames.length >= 4) {
+      setFormError("Use up to 4 regular partners.");
+      return;
+    }
+
+    setFormError("");
+    setForm((current) => ({
+      ...current,
+      partnerInput: "",
+      partnerNames: [...current.partnerNames, nextPartnerName]
+    }));
+    setTouched((current) => ({ ...current, partnerInput: true, partnerNames: true }));
+  }
+
+  function removePartner(partnerNameToRemove: string) {
+    setForm((current) => ({
+      ...current,
+      partnerNames: current.partnerNames.filter((partnerName) => partnerName !== partnerNameToRemove)
+    }));
+    setTouched((current) => ({ ...current, partnerNames: true }));
+  }
+
   return (
     <section className="rounded-[2rem] border border-amber-400/15 bg-slate-950/70 p-6 shadow-panel backdrop-blur">
       <div className="mb-5 flex items-center justify-between gap-3">
@@ -223,25 +266,62 @@ export function RegistrationForm({
           {renderFieldError("nickname")}
         </label>
 
-        <label>
-          <span className="mb-2 block text-sm font-medium text-slate-300">Usual partner</span>
-          <input
-            type="text"
-            value={form.partnerName}
-            onChange={(event) => setForm((current) => ({ ...current, partnerName: event.target.value }))}
-            onBlur={() => handleBlur("partnerName")}
-            placeholder="Partner nickname"
-            maxLength={MAX_TEXT_LENGTH}
-            aria-invalid={Boolean(fieldErrors.partnerName) && (hasSubmitted || touched.partnerName)}
-            className={getInputClassName("partnerName")}
-            required
-          />
-          <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-500">
-            <span>Keep partner names consistent for cleaner stats.</span>
-            <span>{form.partnerName.trim().length}/{MAX_TEXT_LENGTH}</span>
+        <div>
+          <span className="mb-2 block text-sm font-medium text-slate-300">Regular partners</span>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={form.partnerInput}
+              onChange={(event) => {
+                setFormError("");
+                setForm((current) => ({ ...current, partnerInput: event.target.value }));
+              }}
+              onBlur={() => handleBlur("partnerInput")}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  addPartner();
+                }
+              }}
+              placeholder="Partner nickname"
+              maxLength={MAX_TEXT_LENGTH}
+              aria-invalid={Boolean(fieldErrors.partnerNames) && (hasSubmitted || touched.partnerNames)}
+              className={getInputClassName("partnerNames")}
+            />
+            <button type="button" className="secondary-button shrink-0" onClick={addPartner}>
+              Add
+            </button>
           </div>
-          {renderFieldError("partnerName")}
-        </label>
+          <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-500">
+            <span>Add up to 4 partners. The first one becomes the primary partner.</span>
+            <span>{form.partnerInput.trim().length}/{MAX_TEXT_LENGTH}</span>
+          </div>
+          {form.partnerNames.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {form.partnerNames.map((partnerName, index) => (
+                <div
+                  key={partnerName}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-frost"
+                >
+                  <span>{partnerName}</span>
+                  {index === 0 ? (
+                    <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-200">
+                      Primary
+                    </span>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="rounded-full border border-white/10 bg-slate-950/50 px-2 py-1 text-xs text-slate-300"
+                    onClick={() => removePartner(partnerName)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {renderFieldError("partnerNames")}
+        </div>
 
         <div className="md:col-span-2 rounded-2xl border border-amber-400/15 bg-amber-400/5 px-4 py-3 text-sm text-amber-100">
           <p className="font-medium text-amber-100">Only count your strongest 2 troop tiers.</p>
@@ -439,6 +519,18 @@ function buildTierGroups(registration: Registration): [TierGroupDraft, TierGroup
   return [orderedGroups[0] ?? defaultTierGroup(), orderedGroups[1] ?? defaultTierGroup()];
 }
 
+function buildPartnerNames(registration: Registration) {
+  if (registration.partnerNames.length > 0) {
+    return registration.partnerNames;
+  }
+
+  if (registration.partnerName.trim()) {
+    return [registration.partnerName.trim()];
+  }
+
+  return [];
+}
+
 function flattenTierGroups(tierGroups: [TierGroupDraft, TierGroupDraft]): TroopLoadoutEntry[] {
   return tierGroups.flatMap((group) =>
     troopTypeOrder.flatMap((troopType) => {
@@ -462,7 +554,6 @@ function flattenTierGroups(tierGroups: [TierGroupDraft, TierGroupDraft]): TroopL
 function getFieldErrors(form: RegistrationFormState): FieldErrors {
   const errors: FieldErrors = {};
   const nicknameLength = form.nickname.trim().length;
-  const partnerNameLength = form.partnerName.trim().length;
   const commentLength = form.comment.length;
   const [primaryGroup, secondaryGroup] = form.tierGroups;
   const primaryTotal = getTierGroupTotal(primaryGroup);
@@ -474,11 +565,27 @@ function getFieldErrors(form: RegistrationFormState): FieldErrors {
     errors.nickname = `Nickname must be ${MAX_TEXT_LENGTH} characters or less.`;
   }
 
-  if (partnerNameLength < 2) {
-    errors.partnerName = "Partner name must be at least 2 characters.";
-  } else if (partnerNameLength > MAX_TEXT_LENGTH) {
-    errors.partnerName = `Partner name must be ${MAX_TEXT_LENGTH} characters or less.`;
+  if (form.partnerNames.length < 1) {
+    errors.partnerNames = "Add at least one regular partner.";
+  } else if (form.partnerNames.length > 4) {
+    errors.partnerNames = "Use up to 4 regular partners.";
   }
+
+  const duplicatePartnerNames = new Set<string>();
+
+  form.partnerNames.forEach((partnerName) => {
+    const normalizedPartnerName = partnerName.trim().toLowerCase();
+
+    if (duplicatePartnerNames.has(normalizedPartnerName)) {
+      errors.partnerNames = "Duplicate partners are not allowed.";
+    }
+
+    duplicatePartnerNames.add(normalizedPartnerName);
+
+    if (partnerName.trim().length < 2 || partnerName.trim().length > MAX_TEXT_LENGTH) {
+      errors.partnerNames = `Each partner must be between 2 and ${MAX_TEXT_LENGTH} characters.`;
+    }
+  });
 
   validateTierGroup(primaryGroup, 0, errors, true);
   validateTierGroup(secondaryGroup, 1, errors, false);
