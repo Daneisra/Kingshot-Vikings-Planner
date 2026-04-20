@@ -7,6 +7,7 @@ import { EventWarningBanner } from "./components/EventWarningBanner";
 import { FiltersBar } from "./components/FiltersBar";
 import { RegistrationForm } from "./components/RegistrationForm";
 import { RegistrationList } from "./components/RegistrationList";
+import { ReinforcementGroupsPanel } from "./components/ReinforcementGroupsPanel";
 import { StatsCards } from "./components/StatsCards";
 import { ToastStack } from "./components/ToastStack";
 import type { ToastItem } from "./components/ToastStack";
@@ -642,6 +643,8 @@ export default function App() {
               onChange={setFilters}
               onReset={() => setFilters(defaultFilters)}
             />
+
+            <ReinforcementGroupsPanel registrations={registrations} hasActiveFilters={hasActiveFilters} />
 
             <RegistrationList
               registrations={registrations}
