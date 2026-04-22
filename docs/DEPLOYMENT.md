@@ -55,6 +55,11 @@ The repository includes:
 - remote deploy script: `deploy/scripts/deploy.sh`
 - server bootstrap helper: `deploy/scripts/bootstrap-server-files.sh`
 
+The workflow now has two phases:
+
+1. a GitHub-hosted `verify` job that installs dependencies, typechecks, and builds both apps
+2. the SSH `deploy` job, which only runs if verification passed
+
 ## Deployment Strategy
 
 The production server checkout is treated as disposable for tracked files.
@@ -72,6 +77,7 @@ At deploy time the workflow:
 9. runs production smoke tests on core API endpoints
 
 This avoids drift in tracked files while keeping server-only files outside the repository.
+It also prevents obviously broken TypeScript or build regressions from reaching the VPS.
 
 ## Server-Only Files
 

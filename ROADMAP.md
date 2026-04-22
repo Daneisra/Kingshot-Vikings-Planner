@@ -34,6 +34,7 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 - [x] Validate the deployment flow end to end in production
 - [x] Expose the current deployed version in the UI and health check
 - [x] Add a production smoke test after deployment
+- [x] Add CI build and type validation before deploy
 
 ## Next
 
@@ -80,7 +81,7 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 
 - [ ] Add automated PostgreSQL backup guidance or scripts
 - [ ] Add structured logging and log rotation guidance
-- [ ] Add CI checks for linting and type validation before deploy
+- [ ] Add linting to CI before deploy
 
 ## Notes
 
