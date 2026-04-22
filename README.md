@@ -149,7 +149,7 @@ The repository includes an SSH-based GitHub Actions production deployment flow t
 - rebuilds backend and frontend
 - syncs `frontend/dist` to the Nginx web root
 - restarts PM2
-- runs an API health check
+- runs an API health check and production smoke tests
 
 Full setup details are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 

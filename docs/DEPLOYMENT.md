@@ -69,6 +69,7 @@ At deploy time the workflow:
 6. syncs frontend assets to Nginx web root
 7. restarts PM2
 8. checks `http://127.0.0.1:4000/api/health`
+9. runs production smoke tests on core API endpoints
 
 This avoids drift in tracked files while keeping server-only files outside the repository.
 
@@ -169,6 +170,8 @@ The deploy user must be able to:
 - syncs frontend build output with `rsync --delete`
 - restarts PM2
 - retries the API health check until the app is ready
+- verifies the frontend artifact exists in the web root
+- smoke-tests `/api/health`, `/api/registrations?available=true`, and `/api/registrations/partners`
 
 ## Troubleshooting
 

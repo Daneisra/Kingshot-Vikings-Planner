@@ -10,6 +10,7 @@ BRANCH="${BRANCH:-main}"
 BACKEND_ENV_FILE="${BACKEND_ENV_FILE:-/etc/kingshot-vikings-planner/backend.env}"
 FRONTEND_ENV_FILE="${FRONTEND_ENV_FILE:-/etc/kingshot-vikings-planner/frontend.env}"
 HEALTHCHECK_URL="${HEALTHCHECK_URL:-http://127.0.0.1:4000/api/health}"
+API_BASE_URL="${API_BASE_URL:-${HEALTHCHECK_URL%/health}}"
 STATE_DIR="${STATE_DIR:-/var/tmp/kingshot-vikings-planner-deploy-state}"
 
 bootstrap_runtime() {
@@ -147,6 +148,38 @@ restart_pm2() {
   pm2 save
 }
 
+run_json_smoke_test() {
+  local label="$1"
+  local url="$2"
+  local validator="$3"
+  local response
+
+  log "Smoke test: $label"
+  response="$(curl --fail --silent --show-error "$url")"
+
+  node -e "$validator" "$response"
+}
+
+run_production_smoke_tests() {
+  [ -f "$FRONTEND_DIR/index.html" ] || fail "Frontend smoke test failed: missing $FRONTEND_DIR/index.html"
+  log "Smoke test: frontend index present"
+
+  run_json_smoke_test \
+    "health endpoint" \
+    "$HEALTHCHECK_URL" \
+    'const payload = JSON.parse(process.argv[1]); if (payload.status !== "ok" || typeof payload.version !== "string" || payload.version.length === 0) { console.error("Invalid health payload", payload); process.exit(1); }'
+
+  run_json_smoke_test \
+    "registrations endpoint" \
+    "$API_BASE_URL/registrations?available=true" \
+    'const payload = JSON.parse(process.argv[1]); if (!Array.isArray(payload)) { console.error("Registrations payload is not an array", payload); process.exit(1); }'
+
+  run_json_smoke_test \
+    "partners endpoint" \
+    "$API_BASE_URL/registrations/partners" \
+    'const payload = JSON.parse(process.argv[1]); if (!Array.isArray(payload) || !payload.every((entry) => typeof entry === "string")) { console.error("Partners payload is invalid", payload); process.exit(1); }'
+}
+
 main() {
   load_runtime_env
 
@@ -214,6 +247,8 @@ main() {
     log "API not ready yet, retrying in 2 seconds... ($i/15)"
     sleep 2
   done
+
+  run_production_smoke_tests
 
   log "Deployment completed successfully"
 }
