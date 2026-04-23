@@ -11,6 +11,7 @@ export async function ensureRegistrationSchema() {
       alliance_score INTEGER,
       difficulty_level VARCHAR(40),
       difficulty_note TEXT,
+      event_log TEXT,
       registrations JSONB NOT NULL DEFAULT '[]'::jsonb
     )
   `);
@@ -33,6 +34,11 @@ export async function ensureRegistrationSchema() {
   await pool.query(`
     ALTER TABLE weekly_archives
     ADD COLUMN IF NOT EXISTS difficulty_note TEXT
+  `);
+
+  await pool.query(`
+    ALTER TABLE weekly_archives
+    ADD COLUMN IF NOT EXISTS event_log TEXT
   `);
 
   await pool.query(`

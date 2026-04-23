@@ -238,6 +238,7 @@ export const api = {
       allianceScore: number | null;
       difficultyLevel: string | null;
       difficultyNote: string | null;
+      eventLog: string | null;
     }
   ) {
     return request<WeeklyArchiveSummary>(`/admin/archives/${archiveId}`, {

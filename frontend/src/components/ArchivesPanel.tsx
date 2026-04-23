@@ -1,11 +1,12 @@
 import { Archive, Download, RefreshCw, Save } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { WeeklyArchiveSummary } from "../types/registration";
 
 interface ArchiveDraft {
   allianceScore: string;
   difficultyLevel: string;
   difficultyNote: string;
+  eventLog: string;
 }
 
 interface ArchivesPanelProps {
@@ -23,6 +24,7 @@ interface ArchivesPanelProps {
       allianceScore: number | null;
       difficultyLevel: string | null;
       difficultyNote: string | null;
+      eventLog: string | null;
     }
   ) => Promise<void>;
 }
@@ -136,8 +138,9 @@ export function ArchivesPanel({
                 parsedAllianceScore > 1000000000);
             const hasDifficultyLevelError = draft.difficultyLevel.trim().length > 40;
             const hasDifficultyNoteError = draft.difficultyNote.trim().length > 300;
+            const hasEventLogError = draft.eventLog.trim().length > 1200;
             const hasValidationError =
-              hasAllianceScoreError || hasDifficultyLevelError || hasDifficultyNoteError;
+              hasAllianceScoreError || hasDifficultyLevelError || hasDifficultyNoteError || hasEventLogError;
 
             return (
               <article
@@ -167,7 +170,8 @@ export function ArchivesPanel({
                         onSave(archive.id, {
                           allianceScore: draft.allianceScore.trim() ? Number(draft.allianceScore) : null,
                           difficultyLevel: normalizeTextInput(draft.difficultyLevel),
-                          difficultyNote: normalizeTextInput(draft.difficultyNote)
+                          difficultyNote: normalizeTextInput(draft.difficultyNote),
+                          eventLog: normalizeTextInput(draft.eventLog)
                         })
                       }
                       disabled={!isDirty || hasValidationError || isBusy}
@@ -266,6 +270,31 @@ export function ArchivesPanel({
                   </label>
                 </div>
 
+                <label className="mt-3 block">
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    Weekly event log
+                  </span>
+                  <textarea
+                    rows={4}
+                    value={draft.eventLog}
+                    onChange={(event) => updateDraft(archive.id, { eventLog: event.target.value })}
+                    placeholder="Leadership notes, score context, changed calls, HQ issues, online wave coverage, healing instructions..."
+                    maxLength={1200}
+                    className={
+                      hasEventLogError
+                        ? "border-rose-400/40 bg-rose-500/5 focus:border-rose-400/60 focus:ring-rose-400/15"
+                        : ""
+                    }
+                  />
+                  <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-500">
+                    <span>Optional weekly context for leadership decisions and archive review.</span>
+                    <span>{draft.eventLog.length}/1200</span>
+                  </div>
+                  {hasEventLogError ? (
+                    <p className="mt-2 text-xs text-rose-300">Weekly event log must be 1200 characters or less.</p>
+                  ) : null}
+                </label>
+
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                   <div className="text-xs text-slate-500">
                     {isDirty ? "Unsaved archive metadata changes." : "Archive metadata is up to date."}
@@ -293,7 +322,8 @@ function emptyArchiveDraft(): ArchiveDraft {
   return {
     allianceScore: "",
     difficultyLevel: "",
-    difficultyNote: ""
+    difficultyNote: "",
+    eventLog: ""
   };
 }
 
@@ -301,7 +331,8 @@ function toArchiveDraft(archive: WeeklyArchiveSummary): ArchiveDraft {
   return {
     allianceScore: archive.allianceScore === null ? "" : String(archive.allianceScore),
     difficultyLevel: archive.difficultyLevel ?? "",
-    difficultyNote: archive.difficultyNote ?? ""
+    difficultyNote: archive.difficultyNote ?? "",
+    eventLog: archive.eventLog ?? ""
   };
 }
 
@@ -314,7 +345,8 @@ function isDraftEqual(left: ArchiveDraft, right: ArchiveDraft) {
   return (
     left.allianceScore === right.allianceScore &&
     left.difficultyLevel === right.difficultyLevel &&
-    left.difficultyNote === right.difficultyNote
+    left.difficultyNote === right.difficultyNote &&
+    left.eventLog === right.eventLog
   );
 }
 

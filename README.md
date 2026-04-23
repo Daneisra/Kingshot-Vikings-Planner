@@ -29,7 +29,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 - Optional personal Viking Vengeance score tracking per player
 - Personal score trend comparison across archived weeks
 - Alliance score trend comparison across archived weeks
-- Archive metadata editing for alliance score and event difficulty
+- Archive metadata editing for alliance score, event difficulty, and weekly leadership notes
 - Automatic reinforcement group suggestions based on availability, troop strength, and partner preferences
 - Track up to 2 strongest troop tiers with a shared tier and separate Infantry, Lancer, and Marksman counts
 - Visible app version in the UI for easier support and deployment checks

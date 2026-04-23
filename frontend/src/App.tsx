@@ -555,6 +555,7 @@ export default function App() {
       allianceScore: number | null;
       difficultyLevel: string | null;
       difficultyNote: string | null;
+      eventLog: string | null;
     }
   ) {
     if (!isAdminUnlocked) {

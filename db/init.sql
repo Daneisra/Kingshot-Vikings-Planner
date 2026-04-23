@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS weekly_archives (
   alliance_score INTEGER,
   difficulty_level VARCHAR(40),
   difficulty_note TEXT,
+  event_log TEXT,
   registrations JSONB NOT NULL DEFAULT '[]'::jsonb
 );
 

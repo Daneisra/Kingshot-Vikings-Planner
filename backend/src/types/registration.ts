@@ -59,6 +59,7 @@ export interface WeeklyArchiveSummary {
   allianceScore: number | null;
   difficultyLevel: string | null;
   difficultyNote: string | null;
+  eventLog: string | null;
 }
 
 export interface WeeklyArchiveDetail extends WeeklyArchiveSummary {

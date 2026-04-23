@@ -18,7 +18,8 @@ export async function listWeeklyArchives(): Promise<WeeklyArchiveSummary[]> {
         available_participants AS "availableParticipants",
         alliance_score AS "allianceScore",
         difficulty_level AS "difficultyLevel",
-        difficulty_note AS "difficultyNote"
+        difficulty_note AS "difficultyNote",
+        event_log AS "eventLog"
       FROM weekly_archives
       ORDER BY archived_at DESC
       LIMIT 30
@@ -40,6 +41,7 @@ export async function getWeeklyArchive(id: string): Promise<WeeklyArchiveDetail>
         alliance_score AS "allianceScore",
         difficulty_level AS "difficultyLevel",
         difficulty_note AS "difficultyNote",
+        event_log AS "eventLog",
         registrations
       FROM weekly_archives
       WHERE id = $1
@@ -75,6 +77,7 @@ export async function listPersonalScoreTrends(): Promise<PersonalScoreTrend[]> {
         alliance_score AS "allianceScore",
         difficulty_level AS "difficultyLevel",
         difficulty_note AS "difficultyNote",
+        event_log AS "eventLog",
         registrations
       FROM weekly_archives
       ORDER BY archived_at DESC
@@ -124,11 +127,12 @@ export async function listPersonalScoreTrends(): Promise<PersonalScoreTrend[]> {
 
 export async function updateWeeklyArchiveMetadata(
   id: string,
-  input: {
-    allianceScore: number | null;
-    difficultyLevel: string | null;
-    difficultyNote: string | null;
-  }
+    input: {
+      allianceScore: number | null;
+      difficultyLevel: string | null;
+      difficultyNote: string | null;
+      eventLog: string | null;
+    }
 ): Promise<WeeklyArchiveSummary> {
   const result = await pool.query<WeeklyArchiveSummary>(
     `
@@ -136,7 +140,8 @@ export async function updateWeeklyArchiveMetadata(
       SET
         alliance_score = $2,
         difficulty_level = $3,
-        difficulty_note = $4
+        difficulty_note = $4,
+        event_log = $5
       WHERE id = $1
       RETURNING
         id,
@@ -146,9 +151,10 @@ export async function updateWeeklyArchiveMetadata(
         available_participants AS "availableParticipants",
         alliance_score AS "allianceScore",
         difficulty_level AS "difficultyLevel",
-        difficulty_note AS "difficultyNote"
+        difficulty_note AS "difficultyNote",
+        event_log AS "eventLog"
     `,
-    [id, input.allianceScore, input.difficultyLevel, input.difficultyNote]
+    [id, input.allianceScore, input.difficultyLevel, input.difficultyNote, input.eventLog]
   );
 
   const archive = result.rows[0];

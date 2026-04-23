@@ -59,6 +59,13 @@ const archiveMetadataSchema = z.object({
     .max(300, "Difficulty note is too long.")
     .nullable()
     .optional()
+    .transform((value) => (value ? value : null)),
+  eventLog: z
+    .string()
+    .trim()
+    .max(1200, "Weekly event log is too long.")
+    .nullable()
+    .optional()
     .transform((value) => (value ? value : null))
 });
 
