@@ -22,6 +22,14 @@ interface ScoredArchive {
   difficultyLevel: string | null;
 }
 
+interface ArchiveHighlights {
+  totalArchivedWeeks: number;
+  scoredWeeks: number;
+  averageAvailabilityRate: number | null;
+  bestScoreArchive: ScoredArchive | null;
+  biggestGain: number | null;
+}
+
 export function ArchiveAnalyticsPanel({
   archives,
   isAdminUnlocked,
@@ -31,6 +39,7 @@ export function ArchiveAnalyticsPanel({
   const scoredArchives = getScoredArchives(archives);
   const timeline = scoredArchives.slice(0, 8).reverse();
   const difficultySummaries = buildDifficultySummaries(scoredArchives);
+  const highlights = buildArchiveHighlights(archives, scoredArchives);
   const maxScore = timeline.reduce((currentMax, archive) => Math.max(currentMax, archive.allianceScore), 0);
 
   return (
@@ -63,6 +72,46 @@ export function ArchiveAnalyticsPanel({
         </p>
       ) : (
         <div className="mt-4 space-y-5">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <article className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Archived weeks</p>
+              <p className="mt-2 text-2xl font-semibold text-frost">{highlights.totalArchivedWeeks}</p>
+              <p className="mt-1 text-xs text-slate-400">Weekly snapshots currently retained in the archive.</p>
+            </article>
+
+            <article className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Scored weeks</p>
+              <p className="mt-2 text-2xl font-semibold text-frost">{highlights.scoredWeeks}</p>
+              <p className="mt-1 text-xs text-slate-400">Archived weeks with a recorded alliance score.</p>
+            </article>
+
+            <article className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Best score</p>
+              <p className="mt-2 text-2xl font-semibold text-frost">
+                {highlights.bestScoreArchive
+                  ? compactScore(highlights.bestScoreArchive.allianceScore)
+                  : "N/A"}
+              </p>
+              <p className="mt-1 text-xs text-slate-400">
+                {highlights.bestScoreArchive
+                  ? `Reached on ${formatArchiveDateLong(highlights.bestScoreArchive.archivedAt)}`
+                  : "Add scored archives to unlock this highlight."}
+              </p>
+            </article>
+
+            <article className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Average availability</p>
+              <p className="mt-2 text-2xl font-semibold text-frost">
+                {highlights.averageAvailabilityRate === null
+                  ? "N/A"
+                  : `${Math.round(highlights.averageAvailabilityRate)}%`}
+              </p>
+              <p className="mt-1 text-xs text-slate-400">
+                Based on archived player availability across all saved weeks.
+              </p>
+            </article>
+          </div>
+
           <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
             <div className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-amber-300" />
@@ -92,6 +141,38 @@ export function ArchiveAnalyticsPanel({
                   </div>
                 );
               })}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-amber-300" />
+              <p className="text-sm font-semibold text-frost">Cross-week highlights</p>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <article className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Biggest weekly gain</p>
+                <p className="mt-2 text-xl font-semibold text-frost">
+                  {highlights.biggestGain === null
+                    ? "N/A"
+                    : `${highlights.biggestGain >= 0 ? "+" : ""}${Math.round(highlights.biggestGain).toLocaleString(
+                        "en-US"
+                      )}`}
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  Largest score jump measured between two consecutive scored archive weeks.
+                </p>
+              </article>
+
+              <article className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Tracked scope</p>
+                <p className="mt-2 text-xl font-semibold text-frost">
+                  {timeline.length > 0 ? `${timeline.length} recent scored weeks` : "No scored weeks"}
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  Timeline visual uses the latest scored archives while difficulty averages use the full scored history.
+                </p>
+              </article>
             </div>
           </div>
 
@@ -150,6 +231,41 @@ export function ArchiveAnalyticsPanel({
       )}
     </section>
   );
+}
+
+function buildArchiveHighlights(
+  archives: WeeklyArchiveSummary[],
+  scoredArchives: ScoredArchive[]
+): ArchiveHighlights {
+  const archivesWithParticipants = archives.filter((archive) => archive.registrationCount > 0);
+  const bestScoreArchive = scoredArchives.reduce<ScoredArchive | null>(
+    (currentBest, archive) =>
+      !currentBest || archive.allianceScore > currentBest.allianceScore ? archive : currentBest,
+    null
+  );
+
+  const averageAvailabilityRate =
+    archivesWithParticipants.length > 0
+      ? archivesWithParticipants.reduce(
+          (totalRate, archive) => totalRate + (archive.availableParticipants / archive.registrationCount) * 100,
+          0
+        ) / archivesWithParticipants.length
+      : null;
+
+  let biggestGain: number | null = null;
+
+  for (let index = 0; index < scoredArchives.length - 1; index += 1) {
+    const gain = scoredArchives[index].allianceScore - scoredArchives[index + 1].allianceScore;
+    biggestGain = biggestGain === null ? gain : Math.max(biggestGain, gain);
+  }
+
+  return {
+    totalArchivedWeeks: archives.length,
+    scoredWeeks: scoredArchives.length,
+    averageAvailabilityRate,
+    bestScoreArchive,
+    biggestGain
+  };
 }
 
 function getScoredArchives(archives: WeeklyArchiveSummary[]): ScoredArchive[] {
@@ -228,5 +344,13 @@ function formatTimelineDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric"
+  }).format(new Date(value));
+}
+
+function formatArchiveDateLong(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
   }).format(new Date(value));
 }

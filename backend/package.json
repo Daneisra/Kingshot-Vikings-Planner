@@ -1,6 +1,6 @@
 {
   "name": "kingshot-vikings-planner-backend",
-  "version": "0.4.14",
+  "version": "0.4.15",
   "private": true,
   "main": "dist/index.js",
   "scripts": {
