@@ -38,7 +38,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 - CSV export
 - Weekly reset action
 - Responsive mobile-first UI
-- Simple admin-protected actions
+- Admin-protected actions using temporary signed tokens
 - REST API backed by PostgreSQL
 
 ## Live Demo

@@ -1,12 +1,20 @@
 import { NextFunction, Request, Response } from "express";
 import { config } from "../config/env";
+import { isValidAdminToken } from "../services/admin-token-service";
 
 export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  const providedToken = req.header("x-admin-token");
   const providedPassword = req.header("x-admin-password");
 
-  if (!providedPassword || providedPassword !== config.adminPassword) {
-    return res.status(401).json({ message: "Invalid admin password." });
+  if (isValidAdminToken(providedToken)) {
+    res.locals.adminAuthMethod = "token";
+    return next();
   }
 
-  next();
+  if (providedPassword === config.adminPassword) {
+    res.locals.adminAuthMethod = "password";
+    return next();
+  }
+
+  return res.status(401).json({ message: "Invalid admin credentials." });
 }

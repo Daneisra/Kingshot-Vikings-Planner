@@ -34,7 +34,7 @@ export function AdminPanel({
           <p className="text-sm uppercase tracking-[0.2em] text-amber-300">Admin</p>
           <h2 className="mt-2 text-xl font-semibold text-frost">Protected actions</h2>
           <p className="mt-2 text-sm text-slate-400">
-            The admin password unlocks deletion, CSV export, and weekly reset actions.
+            The admin password is exchanged for a temporary token used for protected actions.
           </p>
           <p className="mt-2 text-xs text-slate-500">{sessionHint}</p>
         </div>
@@ -58,7 +58,8 @@ export function AdminPanel({
             type="password"
             value={adminPassword}
             onChange={(event) => onPasswordChange(event.target.value)}
-            placeholder="Enter admin password"
+            placeholder={isAdminUnlocked ? "Session token active" : "Enter admin password"}
+            disabled={isAdminUnlocked}
           />
         </label>
 

@@ -9,6 +9,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
 interface RequestOptions extends RequestInit {
   adminPassword?: string;
+  adminToken?: string;
 }
 
 interface ErrorIssue {
@@ -20,6 +21,12 @@ interface ErrorPayload {
   message?: string;
   requestId?: string;
   issues?: ErrorIssue[];
+}
+
+export interface AdminSessionResponse {
+  ok: true;
+  token: string;
+  expiresAt: string;
 }
 
 export class ApiError extends Error {
@@ -86,6 +93,10 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   if (options.adminPassword) {
     headers.set("x-admin-password", options.adminPassword);
+  }
+
+  if (options.adminToken) {
+    headers.set("x-admin-token", options.adminToken);
   }
 
   let response: Response;
@@ -184,32 +195,38 @@ export const api = {
       body: JSON.stringify(payload)
     });
   },
-  deleteRegistration(id: string, adminPassword: string) {
+  deleteRegistration(id: string, adminToken: string) {
     return request<void>(`/registrations/${id}`, {
       method: "DELETE",
-      adminPassword
+      adminToken
     });
   },
   verifyAdminPassword(password: string) {
-    return request<{ ok: true }>("/admin/verify", {
+    return request<AdminSessionResponse>("/admin/verify", {
       method: "POST",
       adminPassword: password
     });
   },
-  resetRegistrations(adminPassword: string) {
-    return request<{ deletedCount: number }>("/admin/reset", {
+  verifyAdminToken(token: string) {
+    return request<AdminSessionResponse>("/admin/verify", {
       method: "POST",
-      adminPassword
+      adminToken: token
     });
   },
-  async exportCsv(adminPassword: string, filters: RegistrationFilters) {
+  resetRegistrations(adminToken: string) {
+    return request<{ deletedCount: number }>("/admin/reset", {
+      method: "POST",
+      adminToken
+    });
+  },
+  async exportCsv(adminToken: string, filters: RegistrationFilters) {
     const path = `/admin/export.csv${buildQuery(filters)}`;
     let response: Response;
 
     try {
       response = await fetch(`${API_BASE_URL}${path}`, {
         headers: {
-          "x-admin-password": adminPassword
+          "x-admin-token": adminToken
         }
       });
     } catch (error) {

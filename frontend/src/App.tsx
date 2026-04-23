@@ -14,6 +14,7 @@ import type { ToastItem } from "./components/ToastStack";
 import { useDebouncedValue } from "./hooks/useDebouncedValue";
 import { ApiError, api } from "./lib/api";
 import { APP_VERSION_LABEL } from "./lib/app-version";
+import type { AdminSessionResponse } from "./lib/api";
 import type {
   Registration,
   RegistrationFilters,
@@ -53,7 +54,7 @@ interface ConfirmDialogState {
 }
 
 interface StoredAdminSession {
-  password: string;
+  token: string;
   expiresAt: number;
 }
 
@@ -79,7 +80,7 @@ function readStoredAdminSession(): StoredAdminSession | null {
     const parsedValue = JSON.parse(rawValue) as StoredAdminSession;
 
     if (
-      typeof parsedValue.password !== "string" ||
+      typeof parsedValue.token !== "string" ||
       typeof parsedValue.expiresAt !== "number" ||
       parsedValue.expiresAt <= Date.now()
     ) {
@@ -89,18 +90,16 @@ function readStoredAdminSession(): StoredAdminSession | null {
 
     return parsedValue;
   } catch {
-    return {
-      password: rawValue,
-      expiresAt: Date.now() + ADMIN_SESSION_TIMEOUT_MS
-    };
+    localStorage.removeItem(adminStorageKey);
+    return null;
   }
 }
 
-function writeStoredAdminSession(password: string, expiresAt: number) {
+function writeStoredAdminSession(token: string, expiresAt: number) {
   localStorage.setItem(
     adminStorageKey,
     JSON.stringify({
-      password,
+      token,
       expiresAt
     } satisfies StoredAdminSession)
   );
@@ -112,7 +111,7 @@ function clearStoredAdminSession() {
 
 function formatSessionHint(isAdminUnlocked: boolean, remainingMs: number | null) {
   if (!isAdminUnlocked || remainingMs === null) {
-    return `Admin access auto-locks after ${ADMIN_SESSION_TIMEOUT_MINUTES} minutes of inactivity.`;
+    return `Admin access creates a temporary token and auto-locks after ${ADMIN_SESSION_TIMEOUT_MINUTES} minutes.`;
   }
 
   const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
@@ -120,10 +119,10 @@ function formatSessionHint(isAdminUnlocked: boolean, remainingMs: number | null)
   const seconds = totalSeconds % 60;
 
   if (minutes > 0) {
-    return `Admin session active. Auto-lock in ${minutes}m ${String(seconds).padStart(2, "0")}s.`;
+    return `Temporary admin token active. Auto-lock in ${minutes}m ${String(seconds).padStart(2, "0")}s.`;
   }
 
-  return `Admin session active. Auto-lock in ${seconds}s.`;
+  return `Temporary admin token active. Auto-lock in ${seconds}s.`;
 }
 
 export default function App() {
@@ -143,7 +142,8 @@ export default function App() {
   const [isUnlockingAdmin, setIsUnlockingAdmin] = useState(false);
   const [isExportingCsv, setIsExportingCsv] = useState(false);
   const [isResettingWeek, setIsResettingWeek] = useState(false);
-  const [adminPassword, setAdminPassword] = useState(() => initialAdminSessionRef.current?.password ?? "");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminToken, setAdminToken] = useState(() => initialAdminSessionRef.current?.token ?? "");
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(() => Boolean(initialAdminSessionRef.current));
   const [adminSessionExpiresAt, setAdminSessionExpiresAt] = useState<number | null>(
     () => initialAdminSessionRef.current?.expiresAt ?? null
@@ -197,11 +197,13 @@ export default function App() {
 
   const adminSessionHint = formatSessionHint(isAdminUnlocked, adminSessionRemainingMs);
 
-  const refreshAdminSession = useCallback((password: string) => {
-    const nextExpiresAt = Date.now() + ADMIN_SESSION_TIMEOUT_MS;
+  const refreshAdminSession = useCallback((session: AdminSessionResponse) => {
+    const serverExpiresAt = Date.parse(session.expiresAt);
+    const nextExpiresAt = Math.min(Date.now() + ADMIN_SESSION_TIMEOUT_MS, serverExpiresAt);
+    setAdminToken(session.token);
     setAdminSessionExpiresAt(nextExpiresAt);
-    setAdminSessionRemainingMs(ADMIN_SESSION_TIMEOUT_MS);
-    writeStoredAdminSession(password, nextExpiresAt);
+    setAdminSessionRemainingMs(Math.max(0, nextExpiresAt - Date.now()));
+    writeStoredAdminSession(session.token, nextExpiresAt);
   }, []);
 
   const lockAdminSession = useCallback(
@@ -209,6 +211,7 @@ export default function App() {
       setIsAdminUnlocked(false);
       setAdminSessionExpiresAt(null);
       setAdminSessionRemainingMs(null);
+      setAdminToken("");
       setConfirmDialog(null);
       setDeletingRegistrationId(null);
       clearStoredAdminSession();
@@ -290,15 +293,15 @@ export default function App() {
   useEffect(() => {
     const storedSession = initialAdminSessionRef.current;
 
-    if (!storedSession?.password) {
+    if (!storedSession?.token) {
       setIsAdminUnlocked(false);
       return;
     }
 
-    api.verifyAdminPassword(storedSession.password)
-      .then(() => {
+    api.verifyAdminToken(storedSession.token)
+      .then((session) => {
         setIsAdminUnlocked(true);
-        refreshAdminSession(storedSession.password);
+        refreshAdminSession(session);
       })
       .catch(() => {
         setAdminPassword("");
@@ -351,12 +354,16 @@ export default function App() {
   }, [adminSessionExpiresAt, isAdminUnlocked, lockAdminSession]);
 
   useEffect(() => {
-    if (!isAdminUnlocked || !adminPassword.trim()) {
+    if (!isAdminUnlocked || !adminToken.trim()) {
       return;
     }
 
     const extendSession = () => {
-      refreshAdminSession(adminPassword);
+      const expiresAt = adminSessionExpiresAt ?? Date.now();
+      const nextExpiresAt = Math.min(Date.now() + ADMIN_SESSION_TIMEOUT_MS, expiresAt);
+      setAdminSessionExpiresAt(nextExpiresAt);
+      setAdminSessionRemainingMs(Math.max(0, nextExpiresAt - Date.now()));
+      writeStoredAdminSession(adminToken, nextExpiresAt);
     };
 
     window.addEventListener("pointerdown", extendSession);
@@ -366,7 +373,7 @@ export default function App() {
       window.removeEventListener("pointerdown", extendSession);
       window.removeEventListener("keydown", extendSession);
     };
-  }, [adminPassword, isAdminUnlocked, refreshAdminSession]);
+  }, [adminSessionExpiresAt, adminToken, isAdminUnlocked]);
 
   async function refreshAll(nextFilters?: RegistrationFilters) {
     const activeFilters = nextFilters ?? { ...filters, search: debouncedSearch };
@@ -417,7 +424,7 @@ export default function App() {
         setDeletingRegistrationId(registration.id);
 
         try {
-          await api.deleteRegistration(registration.id, adminPassword);
+          await api.deleteRegistration(registration.id, adminToken);
           pushToast("success", "Registration deleted.");
 
           if (editingRegistration?.id === registration.id) {
@@ -440,10 +447,11 @@ export default function App() {
     setIsUnlockingAdmin(true);
 
     try {
-      await api.verifyAdminPassword(adminPassword);
+      const session = await api.verifyAdminPassword(adminPassword);
       setIsAdminUnlocked(true);
-      refreshAdminSession(adminPassword);
-      pushToast("success", "Admin panel unlocked.");
+      setAdminPassword("");
+      refreshAdminSession(session);
+      pushToast("success", "Admin panel unlocked with a temporary token.");
     } catch (error) {
       lockAdminSession();
       pushToast("error", getDisplayMessage(error, "Invalid admin password."));
@@ -464,7 +472,7 @@ export default function App() {
     setIsExportingCsv(true);
 
     try {
-      const { blob, filename } = await api.exportCsv(adminPassword, { ...filters, search: debouncedSearch });
+      const { blob, filename } = await api.exportCsv(adminToken, { ...filters, search: debouncedSearch });
       downloadBlob(blob, filename);
       pushToast("success", "CSV export generated.");
     } catch (error) {
@@ -502,7 +510,7 @@ export default function App() {
           setIsResettingWeek(true);
 
           try {
-            const result = await api.resetRegistrations(adminPassword);
+            const result = await api.resetRegistrations(adminToken);
             setEditingRegistration(null);
             setFilters(defaultFilters);
             pushToast(

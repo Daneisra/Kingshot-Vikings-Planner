@@ -139,6 +139,8 @@ PORT=4000
 DATABASE_URL=postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings
 CORS_ORIGIN=https://vikings.example.com
 ADMIN_PASSWORD=change-this-admin-password
+ADMIN_TOKEN_SECRET=change-this-token-secret-with-at-least-16-chars
+ADMIN_TOKEN_TTL_MINUTES=120
 ```
 
 Example frontend values:

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAdmin } from "../middleware/admin-auth";
 import { buildAuditContext } from "../services/audit-service";
+import { createAdminToken } from "../services/admin-token-service";
 import { buildRegistrationsCsv } from "../utils/csv";
 import { asyncHandler } from "../utils/async-handler";
 import { getRegistrationStats, listRegistrations, resetRegistrations } from "../services/registration-service";
@@ -31,7 +32,7 @@ adminRouter.post(
   "/verify",
   requireAdmin,
   asyncHandler(async (_req, res) => {
-    res.json({ ok: true });
+    res.json({ ok: true, ...createAdminToken() });
   })
 );
 

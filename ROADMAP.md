@@ -50,6 +50,7 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 - [x] Add audit metadata for destructive actions
 - [x] Add optional admin session timeout
 - [x] Improve confirmation flow around resets and deletions
+- [x] Replace the single password header with a stronger admin authentication flow
 
 ### Data / Reporting
 
@@ -68,7 +69,6 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 
 ### Admin
 
-- [ ] Replace the single password header with a stronger admin authentication flow
 - [ ] Add bulk import support for registrations
 
 ### Data / Reporting
