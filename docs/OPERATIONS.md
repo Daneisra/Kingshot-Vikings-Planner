@@ -41,11 +41,75 @@ Logs:
 pm2 logs kingshot-vikings-planner-api
 ```
 
+Recent logs without streaming:
+
+```bash
+pm2 logs kingshot-vikings-planner-api --lines 100 --nostream
+```
+
 Restart:
 
 ```bash
 pm2 restart kingshot-vikings-planner-api --update-env
 ```
+
+## Logging
+
+### Backend HTTP Logs
+
+In production, the backend writes one JSON log line per HTTP request through PM2 stdout.
+
+Each request log includes:
+
+- `timestamp`
+- `requestId`
+- `method`
+- `url`
+- `status`
+- `responseTimeMs`
+- `contentLength`
+- `remoteAddress`
+- `userAgent`
+
+Example:
+
+```json
+{"timestamp":"2026-04-23T12:00:00.000Z","requestId":"...","method":"GET","url":"/api/health","status":200,"responseTimeMs":12.3,"contentLength":"33","remoteAddress":"127.0.0.1","userAgent":"curl/8.0.0"}
+```
+
+When the frontend displays an API error reference, search PM2 logs with that `requestId`:
+
+```bash
+pm2 logs kingshot-vikings-planner-api --lines 500 --nostream | grep "request-id-here"
+```
+
+### PM2 Log Rotation
+
+Install PM2 logrotate once on the VPS:
+
+```bash
+pm2 install pm2-logrotate
+pm2 set pm2-logrotate:max_size 10M
+pm2 set pm2-logrotate:retain 14
+pm2 set pm2-logrotate:compress true
+pm2 set pm2-logrotate:dateFormat YYYY-MM-DD_HH-mm-ss
+pm2 save
+```
+
+This keeps PM2 logs bounded while preserving enough recent history for deployment and API debugging.
+
+### Nginx Logs
+
+Nginx logs are managed by Debian's default `logrotate` integration.
+
+Useful commands:
+
+```bash
+sudo tail -n 100 /var/log/nginx/access.log
+sudo tail -n 100 /var/log/nginx/error.log
+```
+
+If this VPS hosts multiple projects, consider giving this site its own access and error log files in the active Nginx config.
 
 ## Nginx
 

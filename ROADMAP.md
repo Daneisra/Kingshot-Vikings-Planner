@@ -81,7 +81,7 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 ### Ops / Deployment
 
 - [x] Add automated PostgreSQL backup guidance or scripts
-- [ ] Add structured logging and log rotation guidance
+- [x] Add structured logging and log rotation guidance
 - [ ] Add linting to CI before deploy
 
 ## Notes
