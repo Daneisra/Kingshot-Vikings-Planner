@@ -1,4 +1,5 @@
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
+import { AllianceScoreTrendPanel } from "./components/AllianceScoreTrendPanel";
 import { BookOpen, Crown, Github, RefreshCw } from "lucide-react";
 import { AdminPanel } from "./components/AdminPanel";
 import { ArchivesPanel } from "./components/ArchivesPanel";
@@ -743,6 +744,13 @@ export default function App() {
               onRefresh={loadArchives}
               onExport={handleExportArchiveCsv}
               onSave={handleUpdateArchiveMetadata}
+            />
+
+            <AllianceScoreTrendPanel
+              archives={archives}
+              isAdminUnlocked={isAdminUnlocked}
+              isLoading={isLoadingArchives}
+              errorMessage={archivesErrorMessage}
             />
 
             <PersonalScoreTrendPanel
