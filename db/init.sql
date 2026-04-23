@@ -27,6 +27,15 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS weekly_archives (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  archived_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  registration_count INTEGER NOT NULL DEFAULT 0,
+  total_troops INTEGER NOT NULL DEFAULT 0,
+  available_participants INTEGER NOT NULL DEFAULT 0,
+  registrations JSONB NOT NULL DEFAULT '[]'::jsonb
+);
+
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -56,3 +65,6 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_action_created_at
 
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at
   ON audit_logs (created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_weekly_archives_archived_at
+  ON weekly_archives (archived_at DESC);

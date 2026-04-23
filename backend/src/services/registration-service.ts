@@ -373,6 +373,54 @@ export async function resetRegistrations(auditContext: AuditContext) {
   try {
     await client.query("BEGIN");
 
+    const archiveResult = await client.query<{
+      archiveId: string;
+      registrationCount: number;
+      totalTroops: number;
+      availableParticipants: number;
+    }>(
+      `
+        INSERT INTO weekly_archives (
+          registration_count,
+          total_troops,
+          available_participants,
+          registrations
+        )
+        SELECT
+          COUNT(*)::integer AS registration_count,
+          COALESCE(SUM(troop_count), 0)::integer AS total_troops,
+          COUNT(*) FILTER (WHERE is_available = TRUE)::integer AS available_participants,
+          COALESCE(
+            jsonb_agg(
+              jsonb_build_object(
+                'id', id,
+                'nickname', nickname,
+                'partnerName', partner_name,
+                'partnerNames', partner_names,
+                'troopCount', troop_count,
+                'troopLevel', troop_level,
+                'troopLoadout', troop_loadout,
+                'comment', comment,
+                'isAvailable', is_available,
+                'createdAt', created_at,
+                'updatedAt', updated_at
+              )
+              ORDER BY is_available DESC, LOWER(nickname) ASC, created_at DESC
+            ),
+            '[]'::jsonb
+          ) AS registrations
+        FROM registrations
+        HAVING COUNT(*) > 0
+        RETURNING
+          id AS "archiveId",
+          registration_count AS "registrationCount",
+          total_troops AS "totalTroops",
+          available_participants AS "availableParticipants"
+      `
+    );
+
+    const archive = archiveResult.rows[0] ?? null;
+
     const result = await client.query<{ deletedCount: string }>(
       `
         WITH deleted AS (
@@ -394,13 +442,19 @@ export async function resetRegistrations(auditContext: AuditContext) {
           ? "Started a new week and cleared 1 registration."
           : `Started a new week and cleared ${deletedCount} registrations.`,
       metadata: {
-        deletedCount
+        deletedCount,
+        archiveId: archive?.archiveId ?? null,
+        totalTroops: archive?.totalTroops ?? 0,
+        availableParticipants: archive?.availableParticipants ?? 0
       },
       context: auditContext
     });
 
     await client.query("COMMIT");
-    return deletedCount;
+    return {
+      deletedCount,
+      archiveId: archive?.archiveId ?? null
+    };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;

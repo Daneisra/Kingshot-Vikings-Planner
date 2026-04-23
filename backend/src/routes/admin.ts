@@ -68,7 +68,7 @@ adminRouter.post(
   "/reset",
   requireAdmin,
   asyncHandler(async (req, res) => {
-    const deletedCount = await resetRegistrations(buildAuditContext(req, res));
-    res.json({ deletedCount });
+    const result = await resetRegistrations(buildAuditContext(req, res));
+    res.json(result);
   })
 );

@@ -214,7 +214,7 @@ export const api = {
     });
   },
   resetRegistrations(adminToken: string) {
-    return request<{ deletedCount: number }>("/admin/reset", {
+    return request<{ deletedCount: number; archiveId: string | null }>("/admin/reset", {
       method: "POST",
       adminToken
     });

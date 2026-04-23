@@ -74,7 +74,7 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 
 ### Data / Reporting
 
-- [ ] Add weekly archive snapshots instead of reset-only workflow
+- [x] Add weekly archive snapshots instead of reset-only workflow
 - [ ] Add archive browsing and date-based exports
 - [ ] Add richer analytics across past weeks
 

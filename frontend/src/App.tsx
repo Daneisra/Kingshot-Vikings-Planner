@@ -516,8 +516,8 @@ export default function App() {
             pushToast(
               "success",
               result.deletedCount === 1
-                ? "The list has been reset. 1 registration was removed."
-                : `The list has been reset. ${result.deletedCount} registrations were removed.`
+                ? `The list has been reset. 1 registration was archived and removed.`
+                : `The list has been reset. ${result.deletedCount} registrations were archived and removed.`
             );
             setConfirmDialog(null);
             await refreshAll(defaultFilters);
