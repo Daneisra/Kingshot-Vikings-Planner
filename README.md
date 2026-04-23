@@ -31,6 +31,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 - Alliance score trend comparison across archived weeks
 - Historical score analytics with difficulty-based averages
 - Archive metadata editing for alliance score, event difficulty, and weekly leadership notes
+- Manual archive stat fields for alliance metrics outside the sign-up sheet
 - Automatic reinforcement group suggestions based on availability, troop strength, and partner preferences
 - Track up to 2 strongest troop tiers with a shared tier and separate Infantry, Lancer, and Marksman counts
 - Visible app version in the UI for easier support and deployment checks

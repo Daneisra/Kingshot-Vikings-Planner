@@ -1,4 +1,5 @@
 import type {
+  ManualArchiveStat,
   Registration,
   RegistrationFilters,
   RegistrationPayload,
@@ -239,6 +240,7 @@ export const api = {
       difficultyLevel: string | null;
       difficultyNote: string | null;
       eventLog: string | null;
+      manualStats: ManualArchiveStat[];
     }
   ) {
     return request<WeeklyArchiveSummary>(`/admin/archives/${archiveId}`, {

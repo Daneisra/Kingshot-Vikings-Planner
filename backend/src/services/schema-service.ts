@@ -12,6 +12,7 @@ export async function ensureRegistrationSchema() {
       difficulty_level VARCHAR(40),
       difficulty_note TEXT,
       event_log TEXT,
+      manual_stats JSONB NOT NULL DEFAULT '[]'::jsonb,
       registrations JSONB NOT NULL DEFAULT '[]'::jsonb
     )
   `);
@@ -39,6 +40,17 @@ export async function ensureRegistrationSchema() {
   await pool.query(`
     ALTER TABLE weekly_archives
     ADD COLUMN IF NOT EXISTS event_log TEXT
+  `);
+
+  await pool.query(`
+    ALTER TABLE weekly_archives
+    ADD COLUMN IF NOT EXISTS manual_stats JSONB NOT NULL DEFAULT '[]'::jsonb
+  `);
+
+  await pool.query(`
+    UPDATE weekly_archives
+    SET manual_stats = '[]'::jsonb
+    WHERE manual_stats IS NULL
   `);
 
   await pool.query(`

@@ -20,6 +20,7 @@ import { ApiError, api } from "./lib/api";
 import { APP_VERSION_LABEL } from "./lib/app-version";
 import type { AdminSessionResponse } from "./lib/api";
 import type {
+  ManualArchiveStat,
   Registration,
   RegistrationFilters,
   RegistrationPayload,
@@ -557,6 +558,7 @@ export default function App() {
       difficultyLevel: string | null;
       difficultyNote: string | null;
       eventLog: string | null;
+      manualStats: ManualArchiveStat[];
     }
   ) {
     if (!isAdminUnlocked) {

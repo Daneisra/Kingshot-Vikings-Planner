@@ -1,12 +1,18 @@
 import { Archive, Download, RefreshCw, Save } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { WeeklyArchiveSummary } from "../types/registration";
+import type { ManualArchiveStat, WeeklyArchiveSummary } from "../types/registration";
+
+interface ManualStatDraft {
+  label: string;
+  value: string;
+}
 
 interface ArchiveDraft {
   allianceScore: string;
   difficultyLevel: string;
   difficultyNote: string;
   eventLog: string;
+  manualStats: ManualStatDraft[];
 }
 
 interface ArchivesPanelProps {
@@ -25,6 +31,7 @@ interface ArchivesPanelProps {
       difficultyLevel: string | null;
       difficultyNote: string | null;
       eventLog: string | null;
+      manualStats: ManualArchiveStat[];
     }
   ) => Promise<void>;
 }
@@ -77,6 +84,28 @@ export function ArchivesPanel({
         ...patch
       }
     }));
+  }
+
+  function updateManualStatDraft(archiveId: string, index: number, patch: Partial<ManualStatDraft>) {
+    setDrafts((current) => {
+      const archiveDraft = current[archiveId] ?? emptyArchiveDraft();
+      const nextManualStats = archiveDraft.manualStats.map((manualStat, manualStatIndex) =>
+        manualStatIndex === index
+          ? {
+              ...manualStat,
+              ...patch
+            }
+          : manualStat
+      );
+
+      return {
+        ...current,
+        [archiveId]: {
+          ...archiveDraft,
+          manualStats: nextManualStats
+        }
+      };
+    });
   }
 
   function resetDraft(archive: WeeklyArchiveSummary) {
@@ -139,8 +168,14 @@ export function ArchivesPanel({
             const hasDifficultyLevelError = draft.difficultyLevel.trim().length > 40;
             const hasDifficultyNoteError = draft.difficultyNote.trim().length > 300;
             const hasEventLogError = draft.eventLog.trim().length > 1200;
+            const manualStatErrors = draft.manualStats.map((manualStat) => getManualStatError(manualStat));
+            const hasManualStatError = manualStatErrors.some(Boolean);
             const hasValidationError =
-              hasAllianceScoreError || hasDifficultyLevelError || hasDifficultyNoteError || hasEventLogError;
+              hasAllianceScoreError ||
+              hasDifficultyLevelError ||
+              hasDifficultyNoteError ||
+              hasEventLogError ||
+              hasManualStatError;
 
             return (
               <article
@@ -171,7 +206,8 @@ export function ArchivesPanel({
                           allianceScore: draft.allianceScore.trim() ? Number(draft.allianceScore) : null,
                           difficultyLevel: normalizeTextInput(draft.difficultyLevel),
                           difficultyNote: normalizeTextInput(draft.difficultyNote),
-                          eventLog: normalizeTextInput(draft.eventLog)
+                          eventLog: normalizeTextInput(draft.eventLog),
+                          manualStats: normalizeManualStatDrafts(draft.manualStats)
                         })
                       }
                       disabled={!isDirty || hasValidationError || isBusy}
@@ -295,6 +331,55 @@ export function ArchivesPanel({
                   ) : null}
                 </label>
 
+                <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    Manual alliance stats
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Add up to 4 extra metrics that are not captured by the sign-up sheet.
+                  </p>
+                  <div className="mt-4 space-y-3">
+                    {draft.manualStats.map((manualStat, index) => (
+                      <div
+                        key={`${archive.id}-manual-stat-${index}`}
+                        className="grid gap-3 rounded-2xl border border-white/10 bg-slate-950/45 p-3 md:grid-cols-[minmax(0,1fr)_180px]"
+                      >
+                        <label>
+                          <span className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-500">Label</span>
+                          <input
+                            type="text"
+                            value={manualStat.label}
+                            onChange={(event) =>
+                              updateManualStatDraft(archive.id, index, {
+                                label: event.target.value
+                              })
+                            }
+                            placeholder="e.g. HQ defenders"
+                            maxLength={30}
+                          />
+                        </label>
+                        <label>
+                          <span className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-500">Value</span>
+                          <input
+                            type="number"
+                            min={0}
+                            value={manualStat.value}
+                            onChange={(event) =>
+                              updateManualStatDraft(archive.id, index, {
+                                value: event.target.value
+                              })
+                            }
+                            placeholder="e.g. 24"
+                          />
+                        </label>
+                        {manualStatErrors[index] ? (
+                          <p className="md:col-span-2 text-xs text-rose-300">{manualStatErrors[index]}</p>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                   <div className="text-xs text-slate-500">
                     {isDirty ? "Unsaved archive metadata changes." : "Archive metadata is up to date."}
@@ -323,7 +408,8 @@ function emptyArchiveDraft(): ArchiveDraft {
     allianceScore: "",
     difficultyLevel: "",
     difficultyNote: "",
-    eventLog: ""
+    eventLog: "",
+    manualStats: createEmptyManualStatDrafts()
   };
 }
 
@@ -332,7 +418,8 @@ function toArchiveDraft(archive: WeeklyArchiveSummary): ArchiveDraft {
     allianceScore: archive.allianceScore === null ? "" : String(archive.allianceScore),
     difficultyLevel: archive.difficultyLevel ?? "",
     difficultyNote: archive.difficultyNote ?? "",
-    eventLog: archive.eventLog ?? ""
+    eventLog: archive.eventLog ?? "",
+    manualStats: mapManualStatsToDrafts(archive.manualStats)
   };
 }
 
@@ -346,8 +433,79 @@ function isDraftEqual(left: ArchiveDraft, right: ArchiveDraft) {
     left.allianceScore === right.allianceScore &&
     left.difficultyLevel === right.difficultyLevel &&
     left.difficultyNote === right.difficultyNote &&
-    left.eventLog === right.eventLog
+    left.eventLog === right.eventLog &&
+    left.manualStats.every(
+      (manualStat, index) =>
+        manualStat.label === right.manualStats[index]?.label && manualStat.value === right.manualStats[index]?.value
+    )
   );
+}
+
+function createEmptyManualStatDrafts(): ManualStatDraft[] {
+  return Array.from({ length: 4 }, () => ({
+    label: "",
+    value: ""
+  }));
+}
+
+function mapManualStatsToDrafts(manualStats: ManualArchiveStat[]): ManualStatDraft[] {
+  const nextDrafts = createEmptyManualStatDrafts();
+
+  manualStats.slice(0, 4).forEach((manualStat, index) => {
+    nextDrafts[index] = {
+      label: manualStat.label,
+      value: String(manualStat.value)
+    };
+  });
+
+  return nextDrafts;
+}
+
+function getManualStatError(manualStat: ManualStatDraft) {
+  const label = manualStat.label.trim();
+  const value = manualStat.value.trim();
+
+  if (!label && !value) {
+    return "";
+  }
+
+  if (!label) {
+    return "Manual stat label is required when a value is set.";
+  }
+
+  if (label.length > 30) {
+    return "Manual stat label must be 30 characters or less.";
+  }
+
+  if (!value) {
+    return "Manual stat value is required when a label is set.";
+  }
+
+  const numericValue = Number(value);
+
+  if (!Number.isInteger(numericValue) || numericValue < 0 || numericValue > 1000000000) {
+    return "Manual stat value must be a whole number between 0 and 1,000,000,000.";
+  }
+
+  return "";
+}
+
+function normalizeManualStatDrafts(manualStats: ManualStatDraft[]): ManualArchiveStat[] {
+  return manualStats.flatMap((manualStat) => {
+    const label = manualStat.label.trim();
+    const value = manualStat.value.trim();
+
+    if (!label && !value) {
+      return [];
+    }
+
+    return [
+      {
+        label,
+        value: Number(value)
+      }
+    ];
+  });
 }
 
 function formatArchiveDate(value: string) {

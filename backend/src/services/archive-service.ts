@@ -1,5 +1,6 @@
 import { pool } from "../db/pool";
 import type {
+  ManualArchiveStat,
   PersonalScoreTrend,
   RegistrationRecord,
   WeeklyArchiveDetail,
@@ -19,14 +20,18 @@ export async function listWeeklyArchives(): Promise<WeeklyArchiveSummary[]> {
         alliance_score AS "allianceScore",
         difficulty_level AS "difficultyLevel",
         difficulty_note AS "difficultyNote",
-        event_log AS "eventLog"
+        event_log AS "eventLog",
+        manual_stats AS "manualStats"
       FROM weekly_archives
       ORDER BY archived_at DESC
       LIMIT 30
     `
   );
 
-  return result.rows;
+  return result.rows.map((archive) => ({
+    ...archive,
+    manualStats: normalizeManualStats(archive.manualStats)
+  }));
 }
 
 export async function getWeeklyArchive(id: string): Promise<WeeklyArchiveDetail> {
@@ -42,6 +47,7 @@ export async function getWeeklyArchive(id: string): Promise<WeeklyArchiveDetail>
         difficulty_level AS "difficultyLevel",
         difficulty_note AS "difficultyNote",
         event_log AS "eventLog",
+        manual_stats AS "manualStats",
         registrations
       FROM weekly_archives
       WHERE id = $1
@@ -57,6 +63,7 @@ export async function getWeeklyArchive(id: string): Promise<WeeklyArchiveDetail>
 
   return {
     ...archive,
+    manualStats: normalizeManualStats(archive.manualStats),
     registrations: normalizeArchivedRegistrations(archive.registrations)
   };
 }
@@ -78,6 +85,7 @@ export async function listPersonalScoreTrends(): Promise<PersonalScoreTrend[]> {
         difficulty_level AS "difficultyLevel",
         difficulty_note AS "difficultyNote",
         event_log AS "eventLog",
+        manual_stats AS "manualStats",
         registrations
       FROM weekly_archives
       ORDER BY archived_at DESC
@@ -127,12 +135,13 @@ export async function listPersonalScoreTrends(): Promise<PersonalScoreTrend[]> {
 
 export async function updateWeeklyArchiveMetadata(
   id: string,
-    input: {
-      allianceScore: number | null;
-      difficultyLevel: string | null;
-      difficultyNote: string | null;
-      eventLog: string | null;
-    }
+  input: {
+    allianceScore: number | null;
+    difficultyLevel: string | null;
+    difficultyNote: string | null;
+    eventLog: string | null;
+    manualStats: ManualArchiveStat[];
+  }
 ): Promise<WeeklyArchiveSummary> {
   const result = await pool.query<WeeklyArchiveSummary>(
     `
@@ -141,7 +150,8 @@ export async function updateWeeklyArchiveMetadata(
         alliance_score = $2,
         difficulty_level = $3,
         difficulty_note = $4,
-        event_log = $5
+        event_log = $5,
+        manual_stats = $6::jsonb
       WHERE id = $1
       RETURNING
         id,
@@ -152,9 +162,17 @@ export async function updateWeeklyArchiveMetadata(
         alliance_score AS "allianceScore",
         difficulty_level AS "difficultyLevel",
         difficulty_note AS "difficultyNote",
-        event_log AS "eventLog"
+        event_log AS "eventLog",
+        manual_stats AS "manualStats"
     `,
-    [id, input.allianceScore, input.difficultyLevel, input.difficultyNote, input.eventLog]
+    [
+      id,
+      input.allianceScore,
+      input.difficultyLevel,
+      input.difficultyNote,
+      input.eventLog,
+      JSON.stringify(input.manualStats)
+    ]
   );
 
   const archive = result.rows[0];
@@ -163,7 +181,41 @@ export async function updateWeeklyArchiveMetadata(
     throw new HttpError(404, "Archive not found.");
   }
 
-  return archive;
+  return {
+    ...archive,
+    manualStats: normalizeManualStats(archive.manualStats)
+  };
+}
+
+function normalizeManualStats(value: unknown): ManualArchiveStat[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((entry) => {
+    if (typeof entry !== "object" || entry === null) {
+      return [];
+    }
+
+    const stat = entry as Partial<ManualArchiveStat>;
+
+    if (typeof stat.label !== "string" || typeof stat.value !== "number" || !Number.isFinite(stat.value)) {
+      return [];
+    }
+
+    const label = stat.label.trim();
+
+    if (!label) {
+      return [];
+    }
+
+    return [
+      {
+        label,
+        value: stat.value
+      }
+    ];
+  });
 }
 
 function normalizeArchivedRegistrations(value: unknown): RegistrationRecord[] {

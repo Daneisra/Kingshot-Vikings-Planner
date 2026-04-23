@@ -50,6 +50,11 @@ export interface StatsResponse {
   }>;
 }
 
+export interface ManualArchiveStat {
+  label: string;
+  value: number;
+}
+
 export interface WeeklyArchiveSummary {
   id: string;
   archivedAt: string;
@@ -60,6 +65,7 @@ export interface WeeklyArchiveSummary {
   difficultyLevel: string | null;
   difficultyNote: string | null;
   eventLog: string | null;
+  manualStats: ManualArchiveStat[];
 }
 
 export interface PersonalScoreTrend {

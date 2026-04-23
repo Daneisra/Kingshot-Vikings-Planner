@@ -66,7 +66,26 @@ const archiveMetadataSchema = z.object({
     .max(1200, "Weekly event log is too long.")
     .nullable()
     .optional()
-    .transform((value) => (value ? value : null))
+    .transform((value) => (value ? value : null)),
+  manualStats: z
+    .array(
+      z.object({
+        label: z
+          .string()
+          .trim()
+          .min(1, "Manual stat label is required.")
+          .max(30, "Manual stat label is too long."),
+        value: z
+          .coerce
+          .number()
+          .int("Manual stat value must be a whole number.")
+          .min(0, "Manual stat value must be 0 or higher.")
+          .max(1000000000, "Manual stat value is unrealistically high.")
+      })
+    )
+    .max(4, "Use up to 4 manual stat fields.")
+    .optional()
+    .transform((value) => value ?? [])
 });
 
 export const adminRouter = Router();

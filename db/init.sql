@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS weekly_archives (
   difficulty_level VARCHAR(40),
   difficulty_note TEXT,
   event_log TEXT,
+  manual_stats JSONB NOT NULL DEFAULT '[]'::jsonb,
   registrations JSONB NOT NULL DEFAULT '[]'::jsonb
 );
 
