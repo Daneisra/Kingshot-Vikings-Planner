@@ -6,6 +6,7 @@ import { ConfirmDialog } from "./components/ConfirmDialog";
 import { EventGuidePanel } from "./components/EventGuidePanel";
 import { EventWarningBanner } from "./components/EventWarningBanner";
 import { FiltersBar } from "./components/FiltersBar";
+import { PersonalScoreTrendPanel } from "./components/PersonalScoreTrendPanel";
 import { RegistrationForm } from "./components/RegistrationForm";
 import { RegistrationList } from "./components/RegistrationList";
 import { ReinforcementGroupsPanel } from "./components/ReinforcementGroupsPanel";
@@ -21,6 +22,7 @@ import type {
   RegistrationFilters,
   RegistrationPayload,
   StatsResponse,
+  PersonalScoreTrend,
   WeeklyArchiveSummary
 } from "./types/registration";
 
@@ -157,6 +159,8 @@ export default function App() {
   const [statsErrorMessage, setStatsErrorMessage] = useState("");
   const [archivesErrorMessage, setArchivesErrorMessage] = useState("");
   const [archives, setArchives] = useState<WeeklyArchiveSummary[]>([]);
+  const [scoreTrendErrorMessage, setScoreTrendErrorMessage] = useState("");
+  const [scoreTrends, setScoreTrends] = useState<PersonalScoreTrend[]>([]);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const toastIdRef = useRef(0);
@@ -299,12 +303,19 @@ export default function App() {
 
     setIsLoadingArchives(true);
     setArchivesErrorMessage("");
+    setScoreTrendErrorMessage("");
 
     try {
-      const nextArchives = await api.listArchives(adminToken);
+      const [nextArchives, nextTrends] = await Promise.all([
+        api.listArchives(adminToken),
+        api.listPersonalScoreTrends(adminToken)
+      ]);
       setArchives(nextArchives);
+      setScoreTrends(nextTrends);
     } catch (error) {
-      setArchivesErrorMessage(getDisplayMessage(error, "Unable to load weekly archives."));
+      const message = getDisplayMessage(error, "Unable to load weekly archives.");
+      setArchivesErrorMessage(message);
+      setScoreTrendErrorMessage(message);
     } finally {
       setIsLoadingArchives(false);
     }
@@ -337,6 +348,8 @@ export default function App() {
     if (!isAdminUnlocked || !adminToken.trim()) {
       setArchives([]);
       setArchivesErrorMessage("");
+      setScoreTrends([]);
+      setScoreTrendErrorMessage("");
       return;
     }
 
@@ -700,6 +713,13 @@ export default function App() {
               errorMessage={archivesErrorMessage}
               onRefresh={loadArchives}
               onExport={handleExportArchiveCsv}
+            />
+
+            <PersonalScoreTrendPanel
+              trends={scoreTrends}
+              isAdminUnlocked={isAdminUnlocked}
+              isLoading={isLoadingArchives}
+              errorMessage={scoreTrendErrorMessage}
             />
           </div>
 

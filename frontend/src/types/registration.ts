@@ -57,3 +57,12 @@ export interface WeeklyArchiveSummary {
   totalTroops: number;
   availableParticipants: number;
 }
+
+export interface PersonalScoreTrend {
+  nickname: string;
+  currentScore: number;
+  previousScore: number;
+  scoreDelta: number;
+  currentArchivedAt: string;
+  previousArchivedAt: string;
+}

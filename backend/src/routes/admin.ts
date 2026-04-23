@@ -2,7 +2,7 @@ import { Router } from "express";
 import { requireAdmin } from "../middleware/admin-auth";
 import { buildAuditContext } from "../services/audit-service";
 import { createAdminToken } from "../services/admin-token-service";
-import { getWeeklyArchive, listWeeklyArchives } from "../services/archive-service";
+import { getWeeklyArchive, listPersonalScoreTrends, listWeeklyArchives } from "../services/archive-service";
 import { buildRegistrationsCsv } from "../utils/csv";
 import { asyncHandler } from "../utils/async-handler";
 import { getRegistrationStats, listRegistrations, resetRegistrations } from "../services/registration-service";
@@ -75,6 +75,15 @@ adminRouter.get(
   asyncHandler(async (_req, res) => {
     const archives = await listWeeklyArchives();
     res.json(archives);
+  })
+);
+
+adminRouter.get(
+  "/archives/personal-score-trends",
+  requireAdmin,
+  asyncHandler(async (_req, res) => {
+    const trends = await listPersonalScoreTrends();
+    res.json(trends);
   })
 );
 

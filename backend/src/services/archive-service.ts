@@ -1,5 +1,10 @@
 import { pool } from "../db/pool";
-import type { RegistrationRecord, WeeklyArchiveDetail, WeeklyArchiveSummary } from "../types/registration";
+import type {
+  PersonalScoreTrend,
+  RegistrationRecord,
+  WeeklyArchiveDetail,
+  WeeklyArchiveSummary
+} from "../types/registration";
 import { HttpError } from "../utils/http-error";
 
 export async function listWeeklyArchives(): Promise<WeeklyArchiveSummary[]> {
@@ -46,6 +51,66 @@ export async function getWeeklyArchive(id: string): Promise<WeeklyArchiveDetail>
     ...archive,
     registrations: normalizeArchivedRegistrations(archive.registrations)
   };
+}
+
+export async function listPersonalScoreTrends(): Promise<PersonalScoreTrend[]> {
+  const result = await pool.query<
+    WeeklyArchiveSummary & {
+      registrations: unknown;
+    }
+  >(
+    `
+      SELECT
+        id,
+        archived_at AS "archivedAt",
+        registration_count AS "registrationCount",
+        total_troops AS "totalTroops",
+        available_participants AS "availableParticipants",
+        registrations
+      FROM weekly_archives
+      ORDER BY archived_at DESC
+      LIMIT 2
+    `
+  );
+
+  const [currentArchive, previousArchive] = result.rows;
+
+  if (!currentArchive || !previousArchive) {
+    return [];
+  }
+
+  const currentRegistrations = normalizeArchivedRegistrations(currentArchive.registrations);
+  const previousRegistrations = normalizeArchivedRegistrations(previousArchive.registrations);
+  const previousScoresByNickname = new Map(
+    previousRegistrations
+      .filter((registration) => registration.personalScore !== null)
+      .map((registration) => [registration.nickname.trim().toLowerCase(), registration.personalScore as number])
+  );
+
+  return currentRegistrations
+    .filter((registration) => registration.personalScore !== null)
+    .flatMap((registration) => {
+      const previousScore = previousScoresByNickname.get(registration.nickname.trim().toLowerCase());
+
+      if (typeof previousScore !== "number") {
+        return [];
+      }
+
+      const currentScore = registration.personalScore as number;
+
+      return [
+        {
+          nickname: registration.nickname,
+          currentScore,
+          previousScore,
+          scoreDelta: currentScore - previousScore,
+          currentArchivedAt: currentArchive.archivedAt,
+          previousArchivedAt: previousArchive.archivedAt
+        }
+      ];
+    })
+    .sort((left, right) => right.scoreDelta - left.scoreDelta || right.currentScore - left.currentScore)
+    .slice(0, 10);
 }
 
 function normalizeArchivedRegistrations(value: unknown): RegistrationRecord[] {

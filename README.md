@@ -27,6 +27,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 - Create, edit, and delete player registrations
 - Support multiple regular partners for Viking Vengeance coordination
 - Optional personal Viking Vengeance score tracking per player
+- Personal score trend comparison across archived weeks
 - Automatic reinforcement group suggestions based on availability, troop strength, and partner preferences
 - Track up to 2 strongest troop tiers with a shared tier and separate Infantry, Lancer, and Marksman counts
 - Visible app version in the UI for easier support and deployment checks

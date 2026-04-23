@@ -3,6 +3,7 @@ import type {
   RegistrationFilters,
   RegistrationPayload,
   StatsResponse,
+  PersonalScoreTrend,
   WeeklyArchiveSummary
 } from "../types/registration";
 
@@ -222,6 +223,11 @@ export const api = {
   },
   listArchives(adminToken: string) {
     return request<WeeklyArchiveSummary[]>("/admin/archives", {
+      adminToken
+    });
+  },
+  listPersonalScoreTrends(adminToken: string) {
+    return request<PersonalScoreTrend[]>("/admin/archives/personal-score-trends", {
       adminToken
     });
   },

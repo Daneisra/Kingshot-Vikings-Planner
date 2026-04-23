@@ -61,3 +61,12 @@ export interface WeeklyArchiveSummary {
 export interface WeeklyArchiveDetail extends WeeklyArchiveSummary {
   registrations: RegistrationRecord[];
 }
+
+export interface PersonalScoreTrend {
+  nickname: string;
+  currentScore: number;
+  previousScore: number;
+  scoreDelta: number;
+  currentArchivedAt: string;
+  previousArchivedAt: string;
+}
