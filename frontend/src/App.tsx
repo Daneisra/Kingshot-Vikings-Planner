@@ -1,8 +1,8 @@
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
+import { BookOpen, Crown, Github, House, RefreshCw, ShieldCheck } from "lucide-react";
+import { AdminPanel } from "./components/AdminPanel";
 import { AllianceScoreTrendPanel } from "./components/AllianceScoreTrendPanel";
 import { ArchiveAnalyticsPanel } from "./components/ArchiveAnalyticsPanel";
-import { BookOpen, Crown, Github, RefreshCw } from "lucide-react";
-import { AdminPanel } from "./components/AdminPanel";
 import { ArchivesPanel } from "./components/ArchivesPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { EventGuidePanel } from "./components/EventGuidePanel";
@@ -21,11 +21,11 @@ import { APP_VERSION_LABEL } from "./lib/app-version";
 import type { AdminSessionResponse } from "./lib/api";
 import type {
   ManualArchiveStat,
+  PersonalScoreTrend,
   Registration,
   RegistrationFilters,
   RegistrationPayload,
   StatsResponse,
-  PersonalScoreTrend,
   WeeklyArchiveSummary
 } from "./types/registration";
 
@@ -50,6 +50,8 @@ const ADMIN_SESSION_TIMEOUT_MS = ADMIN_SESSION_TIMEOUT_MINUTES * 60 * 1000;
 const githubIssuesUrl = "https://github.com/Daneisra/Kingshot-Vikings-Planner/issues";
 const vikingVengeanceGuideUrl =
   "https://github.com/Daneisra/Kingshot-Vikings-Planner/blob/main/docs/VIKING_VENGEANCE_GUIDE.md";
+
+type AppView = "planner" | "admin";
 
 interface ConfirmDialogState {
   title: string;
@@ -132,10 +134,24 @@ function formatSessionHint(isAdminUnlocked: boolean, remainingMs: number | null)
   return `Temporary admin token active. Auto-lock in ${seconds}s.`;
 }
 
+function readAppViewFromHash(): AppView {
+  const hashValue = window.location.hash.replace("#", "").trim().toLowerCase();
+  return hashValue === "admin" ? "admin" : "planner";
+}
+
+function writeAppViewHash(view: AppView) {
+  const nextHash = `#${view}`;
+
+  if (window.location.hash !== nextHash) {
+    window.history.replaceState(null, "", nextHash);
+  }
+}
+
 export default function App() {
   const initialAdminSessionRef = useRef<StoredAdminSession | null>(readStoredAdminSession());
   const formPanelRef = useRef<HTMLDivElement | null>(null);
   const hasRegistrationsRef = useRef(false);
+  const [appView, setAppView] = useState<AppView>(() => readAppViewFromHash());
   const [filters, setFilters] = useState<RegistrationFilters>(defaultFilters);
   const [partners, setPartners] = useState<string[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
@@ -206,10 +222,31 @@ export default function App() {
     hasRegistrationsRef.current = registrations.length > 0;
   }, [registrations.length]);
 
+  useEffect(() => {
+    writeAppViewHash(appView);
+  }, [appView]);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      setAppView(readAppViewFromHash());
+    };
+
+    window.addEventListener("hashchange", handleHashChange);
+
+    return () => {
+      window.removeEventListener("hashchange", handleHashChange);
+    };
+  }, []);
+
   const hasActiveFilters =
     Boolean(filters.search.trim()) || Boolean(filters.partner.trim()) || filters.available !== "all";
-
   const adminSessionHint = formatSessionHint(isAdminUnlocked, adminSessionRemainingMs);
+  const pageTitle =
+    appView === "admin" ? "Admin workspace for Vikings coordination." : "Organize Viking sign-ups without friction.";
+  const pageDescription =
+    appView === "admin"
+      ? "Archives, analytics, trends, protected tools, and planning helpers live here so the main board stays focused."
+      : "A shared sign-up board built for mobile, with troop tracking, availability filters, and protected admin actions.";
 
   const refreshAdminSession = useCallback((session: AdminSessionResponse) => {
     const serverExpiresAt = Date.parse(session.expiresAt);
@@ -365,7 +402,7 @@ export default function App() {
   }, [debouncedSearch, filters.available, filters.partner, getDisplayMessage]);
 
   useEffect(() => {
-    if (!editingRegistration) {
+    if (!editingRegistration || appView !== "planner") {
       return;
     }
 
@@ -377,7 +414,7 @@ export default function App() {
     });
 
     return () => window.cancelAnimationFrame(frameId);
-  }, [editingRegistration]);
+  }, [appView, editingRegistration]);
 
   useEffect(() => {
     if (!isAdminUnlocked || !adminSessionExpiresAt) {
@@ -435,6 +472,26 @@ export default function App() {
     } finally {
       setIsRefreshing(false);
     }
+  }
+
+  async function refreshCurrentView() {
+    if (appView === "admin") {
+      setIsRefreshing(true);
+
+      try {
+        await Promise.all([
+          loadPartners(),
+          loadDashboard({ ...filters, search: debouncedSearch }),
+          isAdminUnlocked ? loadArchives() : Promise.resolve()
+        ]);
+      } finally {
+        setIsRefreshing(false);
+      }
+
+      return;
+    }
+
+    await refreshAll();
   }
 
   async function handleSubmit(payload: RegistrationPayload) {
@@ -614,7 +671,7 @@ export default function App() {
             pushToast(
               "success",
               result.deletedCount === 1
-                ? `The list has been reset. 1 registration was archived and removed.`
+                ? "The list has been reset. 1 registration was archived and removed."
                 : `The list has been reset. ${result.deletedCount} registrations were archived and removed.`
             );
             setConfirmDialog(null);
@@ -659,177 +716,208 @@ export default function App() {
           void confirmDialog.onConfirm();
         }}
       />
+
       <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
         <header className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/70 p-6 shadow-panel backdrop-blur">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-amber-200">
-                <Crown className="h-4 w-4" />
-                Kingshot Vikings Planner
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+              <div className="max-w-3xl">
+                <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-amber-200">
+                  <Crown className="h-4 w-4" />
+                  Kingshot Vikings Planner
+                </div>
+                <h1 className="mt-4 text-4xl font-semibold tracking-tight text-frost sm:text-5xl">
+                  {pageTitle}
+                </h1>
+                <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">{pageDescription}</p>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-300">
+                    Version {APP_VERSION_LABEL}
+                  </span>
+                  <a
+                    href={githubIssuesUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="secondary-button"
+                  >
+                    <Github className="h-4 w-4" />
+                    Report bugs or request features
+                  </a>
+                  <a
+                    href={vikingVengeanceGuideUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="secondary-button"
+                  >
+                    <BookOpen className="h-4 w-4" />
+                    Viking Vengeance guide
+                  </a>
+                </div>
               </div>
-              <h1 className="mt-4 text-4xl font-semibold tracking-tight text-frost sm:text-5xl">
-                Organize Viking sign-ups without friction.
-              </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
-                A shared sign-up board built for mobile, with troop tracking, availability filters,
-                and protected admin actions.
-              </p>
-              <div className="mt-5 flex flex-wrap gap-3">
-                <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-300">
-                  Version {APP_VERSION_LABEL}
-                </span>
-                <a
-                  href={githubIssuesUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="secondary-button"
-                >
-                  <Github className="h-4 w-4" />
-                  Report bugs or request features
-                </a>
-                <a
-                  href={vikingVengeanceGuideUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="secondary-button"
-                >
-                  <BookOpen className="h-4 w-4" />
-                  Viking Vengeance guide
-                </a>
-              </div>
+
+              <button
+                type="button"
+                className="secondary-button w-full xl:w-auto"
+                onClick={() => void refreshCurrentView()}
+                disabled={isRefreshing}
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                {isRefreshing ? "Refreshing..." : "Refresh"}
+              </button>
             </div>
 
-            <button
-              type="button"
-              className="secondary-button w-full xl:w-auto"
-              onClick={() => refreshAll()}
-              disabled={isRefreshing}
-            >
-              <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-              {isRefreshing ? "Refreshing..." : "Refresh"}
-            </button>
+            <nav className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                className={appView === "planner" ? "primary-button" : "secondary-button"}
+                onClick={() => setAppView("planner")}
+              >
+                <House className="h-4 w-4" />
+                Planner
+              </button>
+              <button
+                type="button"
+                className={appView === "admin" ? "primary-button" : "secondary-button"}
+                onClick={() => setAppView("admin")}
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Admin
+              </button>
+            </nav>
           </div>
         </header>
 
-        <StatsCards stats={stats} warningMessage={statsErrorMessage} />
+        {appView === "planner" ? (
+          <>
+            <StatsCards stats={stats} warningMessage={statsErrorMessage} />
 
-        <EventWarningBanner />
+            <EventWarningBanner />
 
-        <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
-          <div ref={formPanelRef} className="space-y-6">
-            <RegistrationForm
-              editingRegistration={editingRegistration}
-              isSubmitting={isSubmitting}
-              onSubmit={handleSubmit}
-              onCancelEdit={() => setEditingRegistration(null)}
-            />
+            <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
+              <div ref={formPanelRef} className="space-y-6">
+                <RegistrationForm
+                  editingRegistration={editingRegistration}
+                  isSubmitting={isSubmitting}
+                  onSubmit={handleSubmit}
+                  onCancelEdit={() => setEditingRegistration(null)}
+                />
+              </div>
 
-            <AdminPanel
-              adminPassword={adminPassword}
-              isAdminUnlocked={isAdminUnlocked}
-              isUnlocking={isUnlockingAdmin}
-              isExporting={isExportingCsv}
-              isResetting={isResettingWeek}
-              sessionHint={adminSessionHint}
-              onPasswordChange={setAdminPassword}
-              onUnlock={handleUnlockAdmin}
-              onLock={handleLockAdmin}
-              onExport={handleExportCsv}
-              onReset={handleResetWeek}
-            />
+              <div className="space-y-6">
+                <FiltersBar
+                  filters={filters}
+                  partners={partners}
+                  isLoadingPartners={isLoadingPartners}
+                  partnerWarningMessage={partnersErrorMessage}
+                  onChange={setFilters}
+                  onReset={() => setFilters(defaultFilters)}
+                />
 
-            <ArchivesPanel
-              archives={archives}
-              isAdminUnlocked={isAdminUnlocked}
-              isLoading={isLoadingArchives}
-              exportingArchiveId={exportingArchiveId}
-              savingArchiveId={savingArchiveId}
-              errorMessage={archivesErrorMessage}
-              onRefresh={loadArchives}
-              onExport={handleExportArchiveCsv}
-              onSave={handleUpdateArchiveMetadata}
-            />
+                <RegistrationList
+                  registrations={registrations}
+                  isLoading={isLoading}
+                  isAdminUnlocked={isAdminUnlocked}
+                  editingRegistrationId={editingRegistration?.id ?? null}
+                  deletingRegistrationId={deletingRegistrationId}
+                  errorMessage={registrationsErrorMessage}
+                  hasActiveFilters={hasActiveFilters}
+                  onEdit={setEditingRegistration}
+                  onDelete={handleDelete}
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+            <div className="space-y-6">
+              <AdminPanel
+                adminPassword={adminPassword}
+                isAdminUnlocked={isAdminUnlocked}
+                isUnlocking={isUnlockingAdmin}
+                isExporting={isExportingCsv}
+                isResetting={isResettingWeek}
+                sessionHint={adminSessionHint}
+                onPasswordChange={setAdminPassword}
+                onUnlock={handleUnlockAdmin}
+                onLock={handleLockAdmin}
+                onExport={handleExportCsv}
+                onReset={handleResetWeek}
+              />
 
-            <AllianceScoreTrendPanel
-              archives={archives}
-              isAdminUnlocked={isAdminUnlocked}
-              isLoading={isLoadingArchives}
-              errorMessage={archivesErrorMessage}
-            />
+              <EventGuidePanel guideUrl={vikingVengeanceGuideUrl} />
+            </div>
 
-            <ArchiveAnalyticsPanel
-              archives={archives}
-              isAdminUnlocked={isAdminUnlocked}
-              isLoading={isLoadingArchives}
-              errorMessage={archivesErrorMessage}
-            />
+            <div className="space-y-6">
+              <ReinforcementGroupsPanel registrations={registrations} hasActiveFilters={hasActiveFilters} />
 
-            <PersonalScoreTrendPanel
-              trends={scoreTrends}
-              isAdminUnlocked={isAdminUnlocked}
-              isLoading={isLoadingArchives}
-              errorMessage={scoreTrendErrorMessage}
-            />
-          </div>
+              <ArchivesPanel
+                archives={archives}
+                isAdminUnlocked={isAdminUnlocked}
+                isLoading={isLoadingArchives}
+                exportingArchiveId={exportingArchiveId}
+                savingArchiveId={savingArchiveId}
+                errorMessage={archivesErrorMessage}
+                onRefresh={loadArchives}
+                onExport={handleExportArchiveCsv}
+                onSave={handleUpdateArchiveMetadata}
+              />
 
-          <div className="space-y-6">
-            <EventGuidePanel guideUrl={vikingVengeanceGuideUrl} />
+              <AllianceScoreTrendPanel
+                archives={archives}
+                isAdminUnlocked={isAdminUnlocked}
+                isLoading={isLoadingArchives}
+                errorMessage={archivesErrorMessage}
+              />
 
-            <FiltersBar
-              filters={filters}
-              partners={partners}
-              isLoadingPartners={isLoadingPartners}
-              partnerWarningMessage={partnersErrorMessage}
-              onChange={setFilters}
-              onReset={() => setFilters(defaultFilters)}
-            />
+              <ArchiveAnalyticsPanel
+                archives={archives}
+                isAdminUnlocked={isAdminUnlocked}
+                isLoading={isLoadingArchives}
+                errorMessage={archivesErrorMessage}
+              />
 
-            <ReinforcementGroupsPanel registrations={registrations} hasActiveFilters={hasActiveFilters} />
+              <PersonalScoreTrendPanel
+                trends={scoreTrends}
+                isAdminUnlocked={isAdminUnlocked}
+                isLoading={isLoadingArchives}
+                errorMessage={scoreTrendErrorMessage}
+              />
 
-            <RegistrationList
-              registrations={registrations}
-              isLoading={isLoading}
-              isAdminUnlocked={isAdminUnlocked}
-              editingRegistrationId={editingRegistration?.id ?? null}
-              deletingRegistrationId={deletingRegistrationId}
-              errorMessage={registrationsErrorMessage}
-              hasActiveFilters={hasActiveFilters}
-              onEdit={setEditingRegistration}
-              onDelete={handleDelete}
-            />
-
-            {stats.topPartners.length > 0 ? (
-              <section className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-panel backdrop-blur">
-                <p className="text-sm uppercase tracking-[0.2em] text-amber-300">Most selected partners</p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {stats.topPartners.map((partner) => (
-                    <div
-                      key={partner.partnerName}
-                      className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
-                    >
-                      <p className="text-base font-semibold text-frost">{partner.partnerName}</p>
-                      <p className="mt-1 text-sm text-slate-400">
-                        {partner.count} registration{partner.count > 1 ? "s" : ""}
-                      </p>
-                      <div className="mt-3 grid gap-2 text-sm text-slate-300 sm:grid-cols-2">
-                        <p>
-                          <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Total Troops</span>
-                          {partner.totalTroops.toLocaleString("en-US")}
+              {stats.topPartners.length > 0 ? (
+                <section className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-panel backdrop-blur">
+                  <p className="text-sm uppercase tracking-[0.2em] text-amber-300">Most selected partners</p>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {stats.topPartners.map((partner) => (
+                      <div
+                        key={partner.partnerName}
+                        className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
+                      >
+                        <p className="text-base font-semibold text-frost">{partner.partnerName}</p>
+                        <p className="mt-1 text-sm text-slate-400">
+                          {partner.count} registration{partner.count > 1 ? "s" : ""}
                         </p>
-                        <p>
-                          <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">
-                            Available Troops
-                          </span>
-                          {partner.availableTroops.toLocaleString("en-US")}
-                        </p>
+                        <div className="mt-3 grid gap-2 text-sm text-slate-300 sm:grid-cols-2">
+                          <p>
+                            <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">
+                              Total Troops
+                            </span>
+                            {partner.totalTroops.toLocaleString("en-US")}
+                          </p>
+                          <p>
+                            <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">
+                              Available Troops
+                            </span>
+                            {partner.availableTroops.toLocaleString("en-US")}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            ) : null}
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

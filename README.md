@@ -24,6 +24,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 ## Features
 
 - Shared registration list for the current Vikings cycle
+- Dedicated Planner and Admin workspaces to keep the main sign-up experience lighter
 - Create, edit, and delete player registrations
 - Support multiple regular partners for Viking Vengeance coordination
 - Optional personal Viking Vengeance score tracking per player

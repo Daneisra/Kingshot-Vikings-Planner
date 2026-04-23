@@ -44,8 +44,8 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 - [x] Add list sorting options
 - [x] Refine mobile editing flow for faster updates
 - [x] Add animated warning banners to remind players to empty troops from their city before the event
-- [ ] Split the app into multiple pages to reduce the density of the main screen
-- [ ] Keep the main sign-up page focused on casual users with registrations, filters, and core stats only
+- [x] Split the app into multiple pages to reduce the density of the main screen
+- [x] Keep the main sign-up page focused on casual users with registrations, filters, and core stats only
 
 ### Admin
 
@@ -54,8 +54,8 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 - [x] Improve confirmation flow around resets and deletions
 - [x] Replace the single password header with a stronger admin authentication flow
 - [x] Support an optional secondary admin password
-- [ ] Create a dedicated admin page for archives, score trends, analytics, manual metrics, and admin-only tools
-- [ ] Add clearer navigation between the main planner page and the admin workspace
+- [x] Create a dedicated admin page for archives, score trends, analytics, manual metrics, and admin-only tools
+- [x] Add clearer navigation between the main planner page and the admin workspace
 
 ### Data / Reporting
 
