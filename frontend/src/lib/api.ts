@@ -231,6 +231,21 @@ export const api = {
       adminToken
     });
   },
+  updateArchive(
+    adminToken: string,
+    archiveId: string,
+    payload: {
+      allianceScore: number | null;
+      difficultyLevel: string | null;
+      difficultyNote: string | null;
+    }
+  ) {
+    return request<WeeklyArchiveSummary>(`/admin/archives/${archiveId}`, {
+      method: "PATCH",
+      adminToken,
+      body: JSON.stringify(payload)
+    });
+  },
   async exportCsv(adminToken: string, filters: RegistrationFilters) {
     const path = `/admin/export.csv${buildQuery(filters)}`;
     let response: Response;

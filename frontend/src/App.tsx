@@ -147,6 +147,7 @@ export default function App() {
   const [isExportingCsv, setIsExportingCsv] = useState(false);
   const [isLoadingArchives, setIsLoadingArchives] = useState(false);
   const [exportingArchiveId, setExportingArchiveId] = useState<string | null>(null);
+  const [savingArchiveId, setSavingArchiveId] = useState<string | null>(null);
   const [isResettingWeek, setIsResettingWeek] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [adminToken, setAdminToken] = useState(() => initialAdminSessionRef.current?.token ?? "");
@@ -547,6 +548,33 @@ export default function App() {
     }
   }
 
+  async function handleUpdateArchiveMetadata(
+    archiveId: string,
+    payload: {
+      allianceScore: number | null;
+      difficultyLevel: string | null;
+      difficultyNote: string | null;
+    }
+  ) {
+    if (!isAdminUnlocked) {
+      return;
+    }
+
+    setSavingArchiveId(archiveId);
+
+    try {
+      const updatedArchive = await api.updateArchive(adminToken, archiveId, payload);
+      setArchives((current) =>
+        current.map((archive) => (archive.id === updatedArchive.id ? updatedArchive : archive))
+      );
+      pushToast("success", "Archive metadata updated.");
+    } catch (error) {
+      pushToast("error", getDisplayMessage(error, "Unable to update archive metadata."));
+    } finally {
+      setSavingArchiveId(null);
+    }
+  }
+
   async function handleResetWeek() {
     if (!isAdminUnlocked) {
       return;
@@ -710,9 +738,11 @@ export default function App() {
               isAdminUnlocked={isAdminUnlocked}
               isLoading={isLoadingArchives}
               exportingArchiveId={exportingArchiveId}
+              savingArchiveId={savingArchiveId}
               errorMessage={archivesErrorMessage}
               onRefresh={loadArchives}
               onExport={handleExportArchiveCsv}
+              onSave={handleUpdateArchiveMetadata}
             />
 
             <PersonalScoreTrendPanel

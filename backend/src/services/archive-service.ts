@@ -15,7 +15,10 @@ export async function listWeeklyArchives(): Promise<WeeklyArchiveSummary[]> {
         archived_at AS "archivedAt",
         registration_count AS "registrationCount",
         total_troops AS "totalTroops",
-        available_participants AS "availableParticipants"
+        available_participants AS "availableParticipants",
+        alliance_score AS "allianceScore",
+        difficulty_level AS "difficultyLevel",
+        difficulty_note AS "difficultyNote"
       FROM weekly_archives
       ORDER BY archived_at DESC
       LIMIT 30
@@ -34,6 +37,9 @@ export async function getWeeklyArchive(id: string): Promise<WeeklyArchiveDetail>
         registration_count AS "registrationCount",
         total_troops AS "totalTroops",
         available_participants AS "availableParticipants",
+        alliance_score AS "allianceScore",
+        difficulty_level AS "difficultyLevel",
+        difficulty_note AS "difficultyNote",
         registrations
       FROM weekly_archives
       WHERE id = $1
@@ -66,6 +72,9 @@ export async function listPersonalScoreTrends(): Promise<PersonalScoreTrend[]> {
         registration_count AS "registrationCount",
         total_troops AS "totalTroops",
         available_participants AS "availableParticipants",
+        alliance_score AS "allianceScore",
+        difficulty_level AS "difficultyLevel",
+        difficulty_note AS "difficultyNote",
         registrations
       FROM weekly_archives
       ORDER BY archived_at DESC
@@ -111,6 +120,44 @@ export async function listPersonalScoreTrends(): Promise<PersonalScoreTrend[]> {
     })
     .sort((left, right) => right.scoreDelta - left.scoreDelta || right.currentScore - left.currentScore)
     .slice(0, 10);
+}
+
+export async function updateWeeklyArchiveMetadata(
+  id: string,
+  input: {
+    allianceScore: number | null;
+    difficultyLevel: string | null;
+    difficultyNote: string | null;
+  }
+): Promise<WeeklyArchiveSummary> {
+  const result = await pool.query<WeeklyArchiveSummary>(
+    `
+      UPDATE weekly_archives
+      SET
+        alliance_score = $2,
+        difficulty_level = $3,
+        difficulty_note = $4
+      WHERE id = $1
+      RETURNING
+        id,
+        archived_at AS "archivedAt",
+        registration_count AS "registrationCount",
+        total_troops AS "totalTroops",
+        available_participants AS "availableParticipants",
+        alliance_score AS "allianceScore",
+        difficulty_level AS "difficultyLevel",
+        difficulty_note AS "difficultyNote"
+    `,
+    [id, input.allianceScore, input.difficultyLevel, input.difficultyNote]
+  );
+
+  const archive = result.rows[0];
+
+  if (!archive) {
+    throw new HttpError(404, "Archive not found.");
+  }
+
+  return archive;
 }
 
 function normalizeArchivedRegistrations(value: unknown): RegistrationRecord[] {

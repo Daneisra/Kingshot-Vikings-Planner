@@ -8,6 +8,9 @@ export async function ensureRegistrationSchema() {
       registration_count INTEGER NOT NULL DEFAULT 0,
       total_troops INTEGER NOT NULL DEFAULT 0,
       available_participants INTEGER NOT NULL DEFAULT 0,
+      alliance_score INTEGER,
+      difficulty_level VARCHAR(40),
+      difficulty_note TEXT,
       registrations JSONB NOT NULL DEFAULT '[]'::jsonb
     )
   `);
@@ -15,6 +18,21 @@ export async function ensureRegistrationSchema() {
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_weekly_archives_archived_at
       ON weekly_archives (archived_at DESC)
+  `);
+
+  await pool.query(`
+    ALTER TABLE weekly_archives
+    ADD COLUMN IF NOT EXISTS alliance_score INTEGER
+  `);
+
+  await pool.query(`
+    ALTER TABLE weekly_archives
+    ADD COLUMN IF NOT EXISTS difficulty_level VARCHAR(40)
+  `);
+
+  await pool.query(`
+    ALTER TABLE weekly_archives
+    ADD COLUMN IF NOT EXISTS difficulty_note TEXT
   `);
 
   await pool.query(`

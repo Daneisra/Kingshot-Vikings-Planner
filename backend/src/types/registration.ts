@@ -56,6 +56,9 @@ export interface WeeklyArchiveSummary {
   registrationCount: number;
   totalTroops: number;
   availableParticipants: number;
+  allianceScore: number | null;
+  difficultyLevel: string | null;
+  difficultyNote: string | null;
 }
 
 export interface WeeklyArchiveDetail extends WeeklyArchiveSummary {

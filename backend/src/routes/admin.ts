@@ -2,7 +2,12 @@ import { Router } from "express";
 import { requireAdmin } from "../middleware/admin-auth";
 import { buildAuditContext } from "../services/audit-service";
 import { createAdminToken } from "../services/admin-token-service";
-import { getWeeklyArchive, listPersonalScoreTrends, listWeeklyArchives } from "../services/archive-service";
+import {
+  getWeeklyArchive,
+  listPersonalScoreTrends,
+  listWeeklyArchives,
+  updateWeeklyArchiveMetadata
+} from "../services/archive-service";
 import { buildRegistrationsCsv } from "../utils/csv";
 import { asyncHandler } from "../utils/async-handler";
 import { getRegistrationStats, listRegistrations, resetRegistrations } from "../services/registration-service";
@@ -29,6 +34,32 @@ const filtersSchema = z.object({
 
 const archiveIdSchema = z.object({
   id: z.string().uuid("Invalid archive identifier.")
+});
+
+const archiveMetadataSchema = z.object({
+  allianceScore: z
+    .coerce
+    .number()
+    .int("Alliance score must be a whole number.")
+    .min(0, "Alliance score must be 0 or higher.")
+    .max(1000000000, "Alliance score is unrealistically high.")
+    .nullable()
+    .optional()
+    .transform((value) => (typeof value === "number" ? value : null)),
+  difficultyLevel: z
+    .string()
+    .trim()
+    .max(40, "Difficulty level is too long.")
+    .nullable()
+    .optional()
+    .transform((value) => (value ? value : null)),
+  difficultyNote: z
+    .string()
+    .trim()
+    .max(300, "Difficulty note is too long.")
+    .nullable()
+    .optional()
+    .transform((value) => (value ? value : null))
 });
 
 export const adminRouter = Router();
@@ -115,6 +146,17 @@ adminRouter.get(
       `attachment; filename="kingshot-vikings-archive-${archiveDate}-${archive.id}.csv"`
     );
     res.send(csv);
+  })
+);
+
+adminRouter.patch(
+  "/archives/:id",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { id } = archiveIdSchema.parse(req.params);
+    const payload = archiveMetadataSchema.parse(req.body);
+    const archive = await updateWeeklyArchiveMetadata(id, payload);
+    res.json(archive);
   })
 );
 
