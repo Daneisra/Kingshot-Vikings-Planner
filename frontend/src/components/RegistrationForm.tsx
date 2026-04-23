@@ -6,6 +6,7 @@ const MIN_TROOP_TIER = 7;
 const MAX_TROOP_TIER = 11;
 const MAX_TEXT_LENGTH = 40;
 const MAX_COMMENT_LENGTH = 300;
+const MAX_PERSONAL_SCORE = 1000000000;
 const troopTierOptions = [7, 8, 9, 10, 11];
 const troopTypeLabels: Record<TroopType, string> = {
   infantry: "Infantry",
@@ -26,6 +27,7 @@ interface RegistrationFormState {
   partnerInput: string;
   partnerNames: string[];
   tierGroups: [TierGroupDraft, TierGroupDraft];
+  personalScore: string;
   comment: string;
   isAvailable: boolean;
 }
@@ -36,7 +38,7 @@ type TierFieldName =
   | `tierGroups.${number}.lancer`
   | `tierGroups.${number}.marksman`;
 
-type FieldName = "nickname" | "partnerInput" | "partnerNames" | "comment" | TierFieldName;
+type FieldName = "nickname" | "partnerInput" | "partnerNames" | "personalScore" | "comment" | TierFieldName;
 type FieldErrors = Partial<Record<FieldName, string>>;
 type TouchedState = Partial<Record<FieldName, boolean>>;
 
@@ -59,6 +61,7 @@ const initialState = (): RegistrationFormState => ({
   partnerInput: "",
   partnerNames: [],
   tierGroups: [defaultTierGroup(), defaultTierGroup()],
+  personalScore: "",
   comment: "",
   isAvailable: true
 });
@@ -89,6 +92,7 @@ export function RegistrationForm({
         partnerInput: "",
         partnerNames: buildPartnerNames(editingRegistration),
         tierGroups: buildTierGroups(editingRegistration),
+        personalScore: editingRegistration.personalScore === null ? "" : String(editingRegistration.personalScore),
         comment: editingRegistration.comment ?? "",
         isAvailable: editingRegistration.isAvailable
       });
@@ -132,6 +136,7 @@ export function RegistrationForm({
         nickname: form.nickname.trim(),
         partnerNames: form.partnerNames,
         troopLoadout: flattenTierGroups(form.tierGroups),
+        personalScore: form.personalScore.trim() ? Number(form.personalScore) : null,
         comment: form.comment.trim(),
         isAvailable: form.isAvailable
       });
@@ -426,6 +431,25 @@ export function RegistrationForm({
         </div>
 
         <label className="md:col-span-2">
+          <span className="mb-2 block text-sm font-medium text-slate-300">Personal event score</span>
+          <input
+            type="number"
+            min={0}
+            max={MAX_PERSONAL_SCORE}
+            value={form.personalScore}
+            onChange={(event) => setForm((current) => ({ ...current, personalScore: event.target.value }))}
+            onBlur={() => handleBlur("personalScore")}
+            placeholder="Optional score after the event"
+            aria-invalid={Boolean(fieldErrors.personalScore) && (hasSubmitted || touched.personalScore)}
+            className={getInputClassName("personalScore")}
+          />
+          <p className="mt-2 text-xs text-slate-500">
+            Optional. Fill it after Viking Vengeance to compare your score across archived weeks.
+          </p>
+          {renderFieldError("personalScore")}
+        </label>
+
+        <label className="md:col-span-2">
           <span className="mb-2 block text-sm font-medium text-slate-300">Optional comment</span>
           <textarea
             rows={3}
@@ -555,6 +579,7 @@ function getFieldErrors(form: RegistrationFormState): FieldErrors {
   const errors: FieldErrors = {};
   const nicknameLength = form.nickname.trim().length;
   const commentLength = form.comment.length;
+  const personalScoreValue = form.personalScore.trim();
   const [primaryGroup, secondaryGroup] = form.tierGroups;
   const primaryTotal = getTierGroupTotal(primaryGroup);
   const secondaryTotal = getTierGroupTotal(secondaryGroup);
@@ -596,6 +621,16 @@ function getFieldErrors(form: RegistrationFormState): FieldErrors {
 
   if (commentLength > MAX_COMMENT_LENGTH) {
     errors.comment = `Comment must be ${MAX_COMMENT_LENGTH} characters or less.`;
+  }
+
+  if (personalScoreValue) {
+    const numericPersonalScore = Number(personalScoreValue);
+
+    if (!Number.isInteger(numericPersonalScore) || numericPersonalScore < 0) {
+      errors.personalScore = "Personal score must be a whole number greater than or equal to 0.";
+    } else if (numericPersonalScore > MAX_PERSONAL_SCORE) {
+      errors.personalScore = "Personal score is unrealistically high.";
+    }
   }
 
   return errors;

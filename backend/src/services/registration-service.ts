@@ -19,6 +19,7 @@ const selectColumns = `
   troop_count AS "troopCount",
   troop_level AS "troopLevel",
   troop_loadout AS "troopLoadout",
+  personal_score AS "personalScore",
   comment,
   is_available AS "isAvailable",
   created_at AS "createdAt",
@@ -251,10 +252,11 @@ export async function createRegistration(input: RegistrationInput) {
         troop_count,
         troop_level,
         troop_loadout,
+        personal_score,
         comment,
         is_available
       )
-      VALUES ($1, $2, $3::jsonb, $4, $5, $6::jsonb, $7, $8)
+      VALUES ($1, $2, $3::jsonb, $4, $5, $6::jsonb, $7, $8, $9)
       RETURNING ${selectColumns}
     `,
     [
@@ -264,6 +266,7 @@ export async function createRegistration(input: RegistrationInput) {
       troopCount,
       troopLevel,
       JSON.stringify(troopLoadout),
+      input.personalScore,
       input.comment,
       input.isAvailable
     ]
@@ -292,8 +295,9 @@ export async function updateRegistration(id: string, input: RegistrationInput) {
         troop_count = $5,
         troop_level = $6,
         troop_loadout = $7::jsonb,
-        comment = $8,
-        is_available = $9
+        personal_score = $8,
+        comment = $9,
+        is_available = $10
       WHERE id = $1
       RETURNING ${selectColumns}
     `,
@@ -305,6 +309,7 @@ export async function updateRegistration(id: string, input: RegistrationInput) {
       troopCount,
       troopLevel,
       JSON.stringify(troopLoadout),
+      input.personalScore,
       input.comment,
       input.isAvailable
     ]
@@ -352,6 +357,7 @@ export async function deleteRegistration(id: string, auditContext: AuditContext)
         troopCount: registration.troopCount,
         troopLevel: registration.troopLevel,
         troopLoadout: registration.troopLoadout,
+        personalScore: registration.personalScore,
         isAvailable: registration.isAvailable
       },
       context: auditContext
@@ -400,6 +406,7 @@ export async function resetRegistrations(auditContext: AuditContext) {
                 'troopCount', troop_count,
                 'troopLevel', troop_level,
                 'troopLoadout', troop_loadout,
+                'personalScore', personal_score,
                 'comment', comment,
                 'isAvailable', is_available,
                 'createdAt', created_at,

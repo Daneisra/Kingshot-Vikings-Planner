@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   troop_count INTEGER NOT NULL CHECK (troop_count >= 0),
   troop_level INTEGER NOT NULL CHECK (troop_level >= 7 AND troop_level <= 100),
   troop_loadout JSONB NOT NULL DEFAULT '[]'::jsonb,
+  personal_score INTEGER CHECK (personal_score IS NULL OR personal_score >= 0),
   comment TEXT,
   is_available BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

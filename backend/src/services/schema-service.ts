@@ -28,6 +28,11 @@ export async function ensureRegistrationSchema() {
   `);
 
   await pool.query(`
+    ALTER TABLE registrations
+    ADD COLUMN IF NOT EXISTS personal_score INTEGER CHECK (personal_score IS NULL OR personal_score >= 0)
+  `);
+
+  await pool.query(`
     UPDATE registrations
     SET troop_loadout = '[]'::jsonb
     WHERE troop_loadout IS NULL

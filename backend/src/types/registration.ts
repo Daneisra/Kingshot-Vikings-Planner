@@ -14,6 +14,7 @@ export interface RegistrationRecord {
   troopCount: number;
   troopLevel: number;
   troopLoadout: TroopLoadoutEntry[];
+  personalScore: number | null;
   comment: string | null;
   isAvailable: boolean;
   createdAt: string;
@@ -24,6 +25,7 @@ export interface RegistrationInput {
   nickname: string;
   partnerNames: string[];
   troopLoadout: TroopLoadoutEntry[];
+  personalScore: number | null;
   comment: string | null;
   isAvailable: boolean;
 }

@@ -79,6 +79,10 @@ function normalizeArchivedRegistrations(value: unknown): RegistrationRecord[] {
         troopCount: Number(registration.troopCount ?? 0),
         troopLevel: Number(registration.troopLevel ?? 0),
         troopLoadout: Array.isArray(registration.troopLoadout) ? registration.troopLoadout : [],
+        personalScore:
+          typeof registration.personalScore === "number" && Number.isFinite(registration.personalScore)
+            ? registration.personalScore
+            : null,
         comment: typeof registration.comment === "string" ? registration.comment : null,
         isAvailable: Boolean(registration.isAvailable),
         createdAt: String(registration.createdAt ?? ""),

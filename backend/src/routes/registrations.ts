@@ -68,6 +68,15 @@ const registrationSchema = z.object({
         });
       }
     }),
+  personalScore: z
+    .coerce
+    .number()
+    .int("Personal score must be a whole number.")
+    .min(0, "Personal score must be 0 or higher.")
+    .max(1000000000, "Personal score is unrealistically high.")
+    .nullable()
+    .optional()
+    .transform((value) => (typeof value === "number" ? value : null)),
   comment: z
     .string()
     .trim()

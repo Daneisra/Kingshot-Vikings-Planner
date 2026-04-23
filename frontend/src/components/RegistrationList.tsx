@@ -194,6 +194,10 @@ export function RegistrationList({
                     T{registration.troopLevel}
                   </p>
                   <p>
+                    <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Personal Score</span>
+                    {registration.personalScore === null ? "Not set" : registration.personalScore.toLocaleString("en-US")}
+                  </p>
+                  <p>
                     <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">Status</span>
                     {formatAvailabilityLabel(registration.isAvailable)}
                   </p>

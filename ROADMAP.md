@@ -78,7 +78,7 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 - [x] Add archive browsing and date-based exports
 - [ ] Add richer analytics across past weeks
 - [ ] Store weekly alliance score with each archive
-- [ ] Allow players to enter their personal Viking Vengeance score
+- [x] Allow players to enter their personal Viking Vengeance score
 - [ ] Compare personal score changes between weeks
 - [ ] Track Viking Vengeance difficulty level per week
 - [ ] Compare score changes between weeks
