@@ -9,6 +9,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   CORS_ORIGIN: z.string().default("*"),
   ADMIN_PASSWORD: z.string().min(8, "ADMIN_PASSWORD must be at least 8 characters"),
+  ADMIN_SECONDARY_PASSWORD: z.string().min(8, "ADMIN_SECONDARY_PASSWORD must be at least 8 characters").optional(),
   ADMIN_TOKEN_SECRET: z.string().min(16).optional(),
   ADMIN_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().default(120)
 });
@@ -21,6 +22,7 @@ export const config = {
   databaseUrl: parsedEnv.DATABASE_URL,
   corsOrigin: parsedEnv.CORS_ORIGIN,
   adminPassword: parsedEnv.ADMIN_PASSWORD,
+  adminSecondaryPassword: parsedEnv.ADMIN_SECONDARY_PASSWORD,
   adminTokenSecret: parsedEnv.ADMIN_TOKEN_SECRET ?? parsedEnv.ADMIN_PASSWORD,
   adminTokenTtlMinutes: parsedEnv.ADMIN_TOKEN_TTL_MINUTES
 };

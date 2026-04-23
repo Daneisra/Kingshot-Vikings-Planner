@@ -51,6 +51,7 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 - [x] Add optional admin session timeout
 - [x] Improve confirmation flow around resets and deletions
 - [x] Replace the single password header with a stronger admin authentication flow
+- [x] Support an optional secondary admin password
 
 ### Data / Reporting
 

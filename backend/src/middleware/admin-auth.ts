@@ -11,10 +11,18 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
     return next();
   }
 
-  if (providedPassword === config.adminPassword) {
+  if (isValidAdminPassword(providedPassword)) {
     res.locals.adminAuthMethod = "password";
     return next();
   }
 
   return res.status(401).json({ message: "Invalid admin credentials." });
+}
+
+function isValidAdminPassword(providedPassword: string | undefined) {
+  if (!providedPassword) {
+    return false;
+  }
+
+  return providedPassword === config.adminPassword || providedPassword === config.adminSecondaryPassword;
 }
