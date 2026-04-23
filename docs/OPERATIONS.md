@@ -90,6 +90,9 @@ PORT=4000
 DATABASE_URL=postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings
 CORS_ORIGIN=https://vikings.example.com
 ADMIN_PASSWORD=change-this-admin-password
+ADMIN_SECONDARY_PASSWORD=change-this-secondary-admin-password
+ADMIN_TOKEN_SECRET=change-this-token-secret-with-at-least-16-chars
+ADMIN_TOKEN_TTL_MINUTES=120
 ```
 
 Frontend:
@@ -106,7 +109,62 @@ Initialize schema:
 psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings" -f /opt/kingshot-vikings-planner/db/init.sql
 ```
 
-Simple backup example:
+### Manual Backup
+
+The repository includes a production backup helper:
+
+```bash
+cd /opt/kingshot-vikings-planner
+bash deploy/scripts/backup-postgres.sh
+```
+
+By default it:
+
+- reads `DATABASE_URL` from `/etc/kingshot-vikings-planner/backend.env`
+- writes compressed backups to `/var/backups/kingshot-vikings-planner`
+- keeps `14` days of backups
+- produces files named like `kingshot_vikings_20260423T120000Z.sql.gz`
+
+You can override defaults:
+
+```bash
+BACKUP_DIR=/home/deploy/kingshot-backups RETENTION_DAYS=30 bash deploy/scripts/backup-postgres.sh
+```
+
+### Restore Backup
+
+Restore into an empty database:
+
+```bash
+gunzip -c /var/backups/kingshot-vikings-planner/kingshot_vikings_YYYYMMDDTHHMMSSZ.sql.gz \
+  | psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings"
+```
+
+### Automated Backups
+
+Create the backup directory:
+
+```bash
+sudo mkdir -p /var/backups/kingshot-vikings-planner
+sudo chown -R $USER:$USER /var/backups/kingshot-vikings-planner
+chmod 700 /var/backups/kingshot-vikings-planner
+```
+
+Open the deploy user's crontab:
+
+```bash
+crontab -e
+```
+
+Run a backup every day at `03:20` server time:
+
+```cron
+20 3 * * * cd /opt/kingshot-vikings-planner && BACKUP_DIR=/var/backups/kingshot-vikings-planner RETENTION_DAYS=14 bash deploy/scripts/backup-postgres.sh >> /var/backups/kingshot-vikings-planner/backup.log 2>&1
+```
+
+### Low-Level Backup Example
+
+If you need to run `pg_dump` manually:
 
 ```bash
 pg_dump "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings" > kingshot_vikings_backup.sql
@@ -178,4 +236,3 @@ Common causes:
 - Keep server-specific files out of Git
 - Use GitHub Actions for standard deploys
 - Use PM2 logs and the health endpoint as the first debugging entry points
-
