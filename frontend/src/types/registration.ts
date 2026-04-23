@@ -47,3 +47,11 @@ export interface StatsResponse {
     availableTroops: number;
   }>;
 }
+
+export interface WeeklyArchiveSummary {
+  id: string;
+  archivedAt: string;
+  registrationCount: number;
+  totalTroops: number;
+  availableParticipants: number;
+}

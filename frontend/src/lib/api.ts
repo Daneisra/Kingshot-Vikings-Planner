@@ -2,7 +2,8 @@ import type {
   Registration,
   RegistrationFilters,
   RegistrationPayload,
-  StatsResponse
+  StatsResponse,
+  WeeklyArchiveSummary
 } from "../types/registration";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
@@ -219,8 +220,53 @@ export const api = {
       adminToken
     });
   },
+  listArchives(adminToken: string) {
+    return request<WeeklyArchiveSummary[]>("/admin/archives", {
+      adminToken
+    });
+  },
   async exportCsv(adminToken: string, filters: RegistrationFilters) {
     const path = `/admin/export.csv${buildQuery(filters)}`;
+    let response: Response;
+
+    try {
+      response = await fetch(`${API_BASE_URL}${path}`, {
+        headers: {
+          "x-admin-token": adminToken
+        }
+      });
+    } catch (error) {
+      const apiError = new ApiError({
+        message: "The API is unreachable. Check the server connection and try again.",
+        path,
+        isNetworkError: true
+      });
+
+      logApiError(apiError, error);
+      throw apiError;
+    }
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as ErrorPayload | null;
+      const apiError = new ApiError({
+        message: buildErrorMessage(path, response.status, payload),
+        path,
+        status: response.status,
+        requestId: payload?.requestId ?? response.headers.get("x-request-id") ?? undefined,
+        issues: payload?.issues ?? []
+      });
+
+      logApiError(apiError);
+      throw apiError;
+    }
+
+    return {
+      blob: await response.blob(),
+      filename: getFilenameFromDisposition(response.headers.get("content-disposition"))
+    };
+  },
+  async exportArchiveCsv(adminToken: string, archiveId: string) {
+    const path = `/admin/archives/${archiveId}/export.csv`;
     let response: Response;
 
     try {

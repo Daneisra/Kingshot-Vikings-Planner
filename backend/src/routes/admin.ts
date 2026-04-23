@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAdmin } from "../middleware/admin-auth";
 import { buildAuditContext } from "../services/audit-service";
 import { createAdminToken } from "../services/admin-token-service";
+import { getWeeklyArchive, listWeeklyArchives } from "../services/archive-service";
 import { buildRegistrationsCsv } from "../utils/csv";
 import { asyncHandler } from "../utils/async-handler";
 import { getRegistrationStats, listRegistrations, resetRegistrations } from "../services/registration-service";
@@ -24,6 +25,10 @@ const filtersSchema = z.object({
 
       return undefined;
     })
+});
+
+const archiveIdSchema = z.object({
+  id: z.string().uuid("Invalid archive identifier.")
 });
 
 export const adminRouter = Router();
@@ -61,6 +66,46 @@ adminRouter.get(
     const filters = filtersSchema.parse(req.query);
     const stats = await getRegistrationStats(filters);
     res.json(stats);
+  })
+);
+
+adminRouter.get(
+  "/archives",
+  requireAdmin,
+  asyncHandler(async (_req, res) => {
+    const archives = await listWeeklyArchives();
+    res.json(archives);
+  })
+);
+
+adminRouter.get(
+  "/archives/:id",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { id } = archiveIdSchema.parse(req.params);
+    const archive = await getWeeklyArchive(id);
+    res.json(archive);
+  })
+);
+
+adminRouter.get(
+  "/archives/:id/export.csv",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { id } = archiveIdSchema.parse(req.params);
+    const archive = await getWeeklyArchive(id);
+    const archiveDate = new Date(archive.archivedAt).toISOString().slice(0, 10);
+    const csv = buildRegistrationsCsv(archive.registrations, {
+      filters: {},
+      exportedAt: new Date()
+    });
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="kingshot-vikings-archive-${archiveDate}-${archive.id}.csv"`
+    );
+    res.send(csv);
   })
 );
 

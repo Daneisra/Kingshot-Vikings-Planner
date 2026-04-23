@@ -1,6 +1,7 @@
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import { BookOpen, Crown, Github, RefreshCw } from "lucide-react";
 import { AdminPanel } from "./components/AdminPanel";
+import { ArchivesPanel } from "./components/ArchivesPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { EventGuidePanel } from "./components/EventGuidePanel";
 import { EventWarningBanner } from "./components/EventWarningBanner";
@@ -19,7 +20,8 @@ import type {
   Registration,
   RegistrationFilters,
   RegistrationPayload,
-  StatsResponse
+  StatsResponse,
+  WeeklyArchiveSummary
 } from "./types/registration";
 
 const defaultFilters: RegistrationFilters = {
@@ -141,6 +143,8 @@ export default function App() {
   const [deletingRegistrationId, setDeletingRegistrationId] = useState<string | null>(null);
   const [isUnlockingAdmin, setIsUnlockingAdmin] = useState(false);
   const [isExportingCsv, setIsExportingCsv] = useState(false);
+  const [isLoadingArchives, setIsLoadingArchives] = useState(false);
+  const [exportingArchiveId, setExportingArchiveId] = useState<string | null>(null);
   const [isResettingWeek, setIsResettingWeek] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [adminToken, setAdminToken] = useState(() => initialAdminSessionRef.current?.token ?? "");
@@ -151,6 +155,8 @@ export default function App() {
   const [partnersErrorMessage, setPartnersErrorMessage] = useState("");
   const [registrationsErrorMessage, setRegistrationsErrorMessage] = useState("");
   const [statsErrorMessage, setStatsErrorMessage] = useState("");
+  const [archivesErrorMessage, setArchivesErrorMessage] = useState("");
+  const [archives, setArchives] = useState<WeeklyArchiveSummary[]>([]);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const toastIdRef = useRef(0);
@@ -286,6 +292,24 @@ export default function App() {
     }
   }
 
+  const loadArchives = useCallback(async () => {
+    if (!adminToken.trim()) {
+      return;
+    }
+
+    setIsLoadingArchives(true);
+    setArchivesErrorMessage("");
+
+    try {
+      const nextArchives = await api.listArchives(adminToken);
+      setArchives(nextArchives);
+    } catch (error) {
+      setArchivesErrorMessage(getDisplayMessage(error, "Unable to load weekly archives."));
+    } finally {
+      setIsLoadingArchives(false);
+    }
+  }, [adminToken, getDisplayMessage]);
+
   useEffect(() => {
     void loadPartners();
   }, []);
@@ -308,6 +332,16 @@ export default function App() {
         lockAdminSession();
       });
   }, [lockAdminSession, refreshAdminSession]);
+
+  useEffect(() => {
+    if (!isAdminUnlocked || !adminToken.trim()) {
+      setArchives([]);
+      setArchivesErrorMessage("");
+      return;
+    }
+
+    void loadArchives();
+  }, [adminToken, isAdminUnlocked, loadArchives]);
 
   useEffect(() => {
     void loadDashboard({ ...filters, search: debouncedSearch });
@@ -482,6 +516,24 @@ export default function App() {
     }
   }
 
+  async function handleExportArchiveCsv(archiveId: string) {
+    if (!isAdminUnlocked) {
+      return;
+    }
+
+    setExportingArchiveId(archiveId);
+
+    try {
+      const { blob, filename } = await api.exportArchiveCsv(adminToken, archiveId);
+      downloadBlob(blob, filename);
+      pushToast("success", "Archive CSV export generated.");
+    } catch (error) {
+      pushToast("error", getDisplayMessage(error, "Unable to export archive CSV."));
+    } finally {
+      setExportingArchiveId(null);
+    }
+  }
+
   async function handleResetWeek() {
     if (!isAdminUnlocked) {
       return;
@@ -521,6 +573,7 @@ export default function App() {
             );
             setConfirmDialog(null);
             await refreshAll(defaultFilters);
+            await loadArchives();
           } catch (error) {
             pushToast("error", getDisplayMessage(error, "Unable to reset the list."));
             setConfirmDialog(null);
@@ -637,6 +690,16 @@ export default function App() {
               onLock={handleLockAdmin}
               onExport={handleExportCsv}
               onReset={handleResetWeek}
+            />
+
+            <ArchivesPanel
+              archives={archives}
+              isAdminUnlocked={isAdminUnlocked}
+              isLoading={isLoadingArchives}
+              exportingArchiveId={exportingArchiveId}
+              errorMessage={archivesErrorMessage}
+              onRefresh={loadArchives}
+              onExport={handleExportArchiveCsv}
             />
           </div>
 

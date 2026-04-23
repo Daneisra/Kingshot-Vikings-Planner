@@ -36,7 +36,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 - Quick stats:
   total participants, total troops, average troop level, most selected partners
 - CSV export
-- Weekly reset action with archive snapshot
+- Weekly reset action with archive snapshot and archive CSV export
 - Responsive mobile-first UI
 - Admin-protected actions using temporary signed tokens and optional secondary admin password
 - REST API backed by PostgreSQL

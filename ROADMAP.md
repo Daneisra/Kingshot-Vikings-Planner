@@ -75,7 +75,7 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 ### Data / Reporting
 
 - [x] Add weekly archive snapshots instead of reset-only workflow
-- [ ] Add archive browsing and date-based exports
+- [x] Add archive browsing and date-based exports
 - [ ] Add richer analytics across past weeks
 - [ ] Store weekly alliance score with each archive
 - [ ] Allow players to enter their personal Viking Vengeance score

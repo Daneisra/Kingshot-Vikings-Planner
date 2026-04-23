@@ -47,3 +47,15 @@ export interface RegistrationStats {
     availableTroops: number;
   }>;
 }
+
+export interface WeeklyArchiveSummary {
+  id: string;
+  archivedAt: string;
+  registrationCount: number;
+  totalTroops: number;
+  availableParticipants: number;
+}
+
+export interface WeeklyArchiveDetail extends WeeklyArchiveSummary {
+  registrations: RegistrationRecord[];
+}
