@@ -47,7 +47,7 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 - [x] Split the app into multiple pages to reduce the density of the main screen
 - [x] Keep the main sign-up page focused on casual users with registrations, filters, and core stats only
 - [x] Create a dedicated Auto Groups page instead of keeping group suggestions inside the admin workspace
-- [ ] Create a dedicated Guide page for event rules, reminders, and Viking Vengeance references
+- [x] Create a dedicated Guide page for event rules, reminders, and Viking Vengeance references
 
 ### Admin
 

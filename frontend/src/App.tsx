@@ -51,7 +51,7 @@ const githubIssuesUrl = "https://github.com/Daneisra/Kingshot-Vikings-Planner/is
 const vikingVengeanceGuideUrl =
   "https://github.com/Daneisra/Kingshot-Vikings-Planner/blob/main/docs/VIKING_VENGEANCE_GUIDE.md";
 
-type AppView = "planner" | "groups" | "admin";
+type AppView = "planner" | "groups" | "guide" | "admin";
 
 interface ConfirmDialogState {
   title: string;
@@ -143,6 +143,10 @@ function readAppViewFromHash(): AppView {
 
   if (hashValue === "groups") {
     return "groups";
+  }
+
+  if (hashValue === "guide") {
+    return "guide";
   }
 
   return "planner";
@@ -255,12 +259,16 @@ export default function App() {
       ? "Admin workspace for Vikings coordination."
       : appView === "groups"
         ? "Build Viking reinforcement groups faster."
+        : appView === "guide"
+          ? "Learn the Viking Vengeance event flow."
         : "Organize Viking sign-ups without friction.";
   const pageDescription =
     appView === "admin"
       ? "Archives, analytics, trends, protected tools, and admin reporting live here so the main board stays focused."
       : appView === "groups"
         ? "Use the current registration pool to review suggested reinforcement groups, HQ anchors, and pairing balance."
+        : appView === "guide"
+          ? "Keep event rules, wave timings, reminders, and leadership checklists in one dedicated space players can revisit quickly."
         : "A shared sign-up board built for mobile, with troop tracking, availability filters, and protected admin actions.";
 
   const refreshAdminSession = useCallback((session: AdminSessionResponse) => {
@@ -800,6 +808,14 @@ export default function App() {
               </button>
               <button
                 type="button"
+                className={appView === "guide" ? "primary-button" : "secondary-button"}
+                onClick={() => setAppView("guide")}
+              >
+                <BookOpen className="h-4 w-4" />
+                Guide
+              </button>
+              <button
+                type="button"
                 className={appView === "admin" ? "primary-button" : "secondary-button"}
                 onClick={() => setAppView("admin")}
               >
@@ -858,8 +874,12 @@ export default function App() {
 
             <div className="space-y-6">
               <StatsCards stats={stats} warningMessage={statsErrorMessage} />
-              <EventGuidePanel guideUrl={vikingVengeanceGuideUrl} />
             </div>
+          </div>
+        ) : appView === "guide" ? (
+          <div className="space-y-6">
+            <EventWarningBanner />
+            <EventGuidePanel guideUrl={vikingVengeanceGuideUrl} />
           </div>
         ) : (
           <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
