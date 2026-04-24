@@ -1,5 +1,5 @@
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
-import { BookOpen, Crown, Github, House, RefreshCw, ShieldCheck } from "lucide-react";
+import { BookOpen, Crown, Github, House, RefreshCw, ShieldCheck, Users2 } from "lucide-react";
 import { AdminPanel } from "./components/AdminPanel";
 import { AllianceScoreTrendPanel } from "./components/AllianceScoreTrendPanel";
 import { ArchiveAnalyticsPanel } from "./components/ArchiveAnalyticsPanel";
@@ -51,7 +51,7 @@ const githubIssuesUrl = "https://github.com/Daneisra/Kingshot-Vikings-Planner/is
 const vikingVengeanceGuideUrl =
   "https://github.com/Daneisra/Kingshot-Vikings-Planner/blob/main/docs/VIKING_VENGEANCE_GUIDE.md";
 
-type AppView = "planner" | "admin";
+type AppView = "planner" | "groups" | "admin";
 
 interface ConfirmDialogState {
   title: string;
@@ -136,7 +136,16 @@ function formatSessionHint(isAdminUnlocked: boolean, remainingMs: number | null)
 
 function readAppViewFromHash(): AppView {
   const hashValue = window.location.hash.replace("#", "").trim().toLowerCase();
-  return hashValue === "admin" ? "admin" : "planner";
+
+  if (hashValue === "admin") {
+    return "admin";
+  }
+
+  if (hashValue === "groups") {
+    return "groups";
+  }
+
+  return "planner";
 }
 
 function writeAppViewHash(view: AppView) {
@@ -242,11 +251,17 @@ export default function App() {
     Boolean(filters.search.trim()) || Boolean(filters.partner.trim()) || filters.available !== "all";
   const adminSessionHint = formatSessionHint(isAdminUnlocked, adminSessionRemainingMs);
   const pageTitle =
-    appView === "admin" ? "Admin workspace for Vikings coordination." : "Organize Viking sign-ups without friction.";
+    appView === "admin"
+      ? "Admin workspace for Vikings coordination."
+      : appView === "groups"
+        ? "Build Viking reinforcement groups faster."
+        : "Organize Viking sign-ups without friction.";
   const pageDescription =
     appView === "admin"
-      ? "Archives, analytics, trends, protected tools, and planning helpers live here so the main board stays focused."
-      : "A shared sign-up board built for mobile, with troop tracking, availability filters, and protected admin actions.";
+      ? "Archives, analytics, trends, protected tools, and admin reporting live here so the main board stays focused."
+      : appView === "groups"
+        ? "Use the current registration pool to review suggested reinforcement groups, HQ anchors, and pairing balance."
+        : "A shared sign-up board built for mobile, with troop tracking, availability filters, and protected admin actions.";
 
   const refreshAdminSession = useCallback((session: AdminSessionResponse) => {
     const serverExpiresAt = Date.parse(session.expiresAt);
@@ -777,6 +792,14 @@ export default function App() {
               </button>
               <button
                 type="button"
+                className={appView === "groups" ? "primary-button" : "secondary-button"}
+                onClick={() => setAppView("groups")}
+              >
+                <Users2 className="h-4 w-4" />
+                Auto Groups
+              </button>
+              <button
+                type="button"
                 className={appView === "admin" ? "primary-button" : "secondary-button"}
                 onClick={() => setAppView("admin")}
               >
@@ -827,6 +850,17 @@ export default function App() {
               </div>
             </div>
           </>
+        ) : appView === "groups" ? (
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="space-y-6">
+              <ReinforcementGroupsPanel registrations={registrations} hasActiveFilters={hasActiveFilters} />
+            </div>
+
+            <div className="space-y-6">
+              <StatsCards stats={stats} warningMessage={statsErrorMessage} />
+              <EventGuidePanel guideUrl={vikingVengeanceGuideUrl} />
+            </div>
+          </div>
         ) : (
           <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
             <div className="space-y-6">
@@ -843,13 +877,9 @@ export default function App() {
                 onExport={handleExportCsv}
                 onReset={handleResetWeek}
               />
-
-              <EventGuidePanel guideUrl={vikingVengeanceGuideUrl} />
             </div>
 
             <div className="space-y-6">
-              <ReinforcementGroupsPanel registrations={registrations} hasActiveFilters={hasActiveFilters} />
-
               <ArchivesPanel
                 archives={archives}
                 isAdminUnlocked={isAdminUnlocked}
