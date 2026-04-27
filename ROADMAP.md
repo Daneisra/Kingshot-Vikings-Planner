@@ -76,7 +76,7 @@ Issues: `https://github.com/Daneisra/Kingshot-Vikings-Planner/issues`
 
 ### Admin
 
-- [ ] Add bulk import support for registrations
+- [x] Add bulk import support for registrations
 
 ### Data / Reporting
 

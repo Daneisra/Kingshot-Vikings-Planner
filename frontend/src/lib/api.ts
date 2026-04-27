@@ -222,6 +222,13 @@ export const api = {
       adminToken
     });
   },
+  bulkImportRegistrations(adminToken: string, registrations: RegistrationPayload[]) {
+    return request<{ importedCount: number; registrations: Registration[] }>("/admin/import", {
+      method: "POST",
+      adminToken,
+      body: JSON.stringify({ registrations })
+    });
+  },
   listArchives(adminToken: string) {
     return request<WeeklyArchiveSummary[]>("/admin/archives", {
       adminToken

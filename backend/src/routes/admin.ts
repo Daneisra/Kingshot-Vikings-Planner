@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { requireAdmin } from "../middleware/admin-auth";
+import { registrationSchema } from "../schemas/registration-schema";
 import { buildAuditContext } from "../services/audit-service";
 import { createAdminToken } from "../services/admin-token-service";
 import {
@@ -10,7 +11,12 @@ import {
 } from "../services/archive-service";
 import { buildRegistrationsCsv } from "../utils/csv";
 import { asyncHandler } from "../utils/async-handler";
-import { getRegistrationStats, listRegistrations, resetRegistrations } from "../services/registration-service";
+import {
+  bulkImportRegistrations,
+  getRegistrationStats,
+  listRegistrations,
+  resetRegistrations
+} from "../services/registration-service";
 import { z } from "zod";
 
 const filtersSchema = z.object({
@@ -86,6 +92,13 @@ const archiveMetadataSchema = z.object({
     .max(4, "Use up to 4 manual stat fields.")
     .optional()
     .transform((value) => value ?? [])
+});
+
+const bulkImportSchema = z.object({
+  registrations: z
+    .array(registrationSchema)
+    .min(1, "At least one registration is required.")
+    .max(100, "Import up to 100 registrations at a time.")
 });
 
 export const adminRouter = Router();
@@ -183,6 +196,16 @@ adminRouter.patch(
     const payload = archiveMetadataSchema.parse(req.body);
     const archive = await updateWeeklyArchiveMetadata(id, payload);
     res.json(archive);
+  })
+);
+
+adminRouter.post(
+  "/import",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const payload = bulkImportSchema.parse(req.body);
+    const result = await bulkImportRegistrations(payload.registrations, buildAuditContext(req, res));
+    res.status(201).json(result);
   })
 );
 

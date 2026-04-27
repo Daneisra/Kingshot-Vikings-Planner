@@ -4,6 +4,7 @@ import { AdminPanel } from "./components/AdminPanel";
 import { AllianceScoreTrendPanel } from "./components/AllianceScoreTrendPanel";
 import { ArchiveAnalyticsPanel } from "./components/ArchiveAnalyticsPanel";
 import { ArchivesPanel } from "./components/ArchivesPanel";
+import { BulkImportPanel } from "./components/BulkImportPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { EventGuidePanel } from "./components/EventGuidePanel";
 import { EventWarningBanner } from "./components/EventWarningBanner";
@@ -181,6 +182,7 @@ export default function App() {
   const [exportingArchiveId, setExportingArchiveId] = useState<string | null>(null);
   const [savingArchiveId, setSavingArchiveId] = useState<string | null>(null);
   const [isResettingWeek, setIsResettingWeek] = useState(false);
+  const [isImportingRegistrations, setIsImportingRegistrations] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [adminToken, setAdminToken] = useState(() => initialAdminSessionRef.current?.token ?? "");
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(() => Boolean(initialAdminSessionRef.current));
@@ -660,6 +662,31 @@ export default function App() {
     }
   }
 
+  async function handleBulkImportRegistrations(payloads: RegistrationPayload[]) {
+    if (!isAdminUnlocked) {
+      pushToast("error", "Unlock the admin panel before importing registrations.");
+      return;
+    }
+
+    setIsImportingRegistrations(true);
+
+    try {
+      const result = await api.bulkImportRegistrations(adminToken, payloads);
+      pushToast(
+        "success",
+        result.importedCount === 1
+          ? "Imported 1 registration."
+          : `Imported ${result.importedCount} registrations.`
+      );
+      await refreshAll(defaultFilters);
+    } catch (error) {
+      pushToast("error", getDisplayMessage(error, "Unable to import registrations."));
+      throw error;
+    } finally {
+      setIsImportingRegistrations(false);
+    }
+  }
+
   async function handleResetWeek() {
     if (!isAdminUnlocked) {
       return;
@@ -896,6 +923,12 @@ export default function App() {
                 onLock={handleLockAdmin}
                 onExport={handleExportCsv}
                 onReset={handleResetWeek}
+              />
+
+              <BulkImportPanel
+                isAdminUnlocked={isAdminUnlocked}
+                isImporting={isImportingRegistrations}
+                onImport={handleBulkImportRegistrations}
               />
             </div>
 

@@ -275,6 +275,88 @@ export async function createRegistration(input: RegistrationInput) {
   return mapRow(result);
 }
 
+export async function bulkImportRegistrations(inputs: RegistrationInput[], auditContext: AuditContext) {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const importedRegistrations: RegistrationRecord[] = [];
+
+    for (const input of inputs) {
+      const partnerNames = normalizePartnerNames(input.partnerNames);
+      const primaryPartnerName = partnerNames[0];
+
+      if (!primaryPartnerName) {
+        throw new HttpError(400, "At least one partner is required.");
+      }
+
+      const troopLoadout = normalizeTroopLoadout(input.troopLoadout);
+      const { troopCount, troopLevel } = summarizeTroopLoadout(troopLoadout);
+      const result = await client.query<RegistrationRecord>(
+        `
+          INSERT INTO registrations (
+            nickname,
+            partner_name,
+            partner_names,
+            troop_count,
+            troop_level,
+            troop_loadout,
+            personal_score,
+            comment,
+            is_available
+          )
+          VALUES ($1, $2, $3::jsonb, $4, $5, $6::jsonb, $7, $8, $9)
+          RETURNING ${selectColumns}
+        `,
+        [
+          input.nickname,
+          primaryPartnerName,
+          JSON.stringify(partnerNames),
+          troopCount,
+          troopLevel,
+          JSON.stringify(troopLoadout),
+          input.personalScore,
+          input.comment,
+          input.isAvailable
+        ]
+      );
+
+      const registration = mapRow(result);
+
+      if (registration) {
+        importedRegistrations.push(registration);
+      }
+    }
+
+    await insertAuditLog(client, {
+      action: "registrations_imported",
+      targetType: "registrations",
+      summary:
+        importedRegistrations.length === 1
+          ? "Imported 1 registration from admin bulk import."
+          : `Imported ${importedRegistrations.length} registrations from admin bulk import.`,
+      metadata: {
+        importedCount: importedRegistrations.length,
+        nicknames: importedRegistrations.map((registration) => registration.nickname)
+      },
+      context: auditContext
+    });
+
+    await client.query("COMMIT");
+
+    return {
+      importedCount: importedRegistrations.length,
+      registrations: importedRegistrations
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export async function updateRegistration(id: string, input: RegistrationInput) {
   const partnerNames = normalizePartnerNames(input.partnerNames);
   const primaryPartnerName = partnerNames[0];

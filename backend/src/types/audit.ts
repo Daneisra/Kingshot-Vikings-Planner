@@ -4,7 +4,7 @@ export interface AuditContext {
   userAgent?: string;
 }
 
-export type AuditAction = "registration_deleted" | "weekly_reset";
+export type AuditAction = "registration_deleted" | "registrations_imported" | "weekly_reset";
 
 export type AuditTargetType = "registration" | "registrations";
 
