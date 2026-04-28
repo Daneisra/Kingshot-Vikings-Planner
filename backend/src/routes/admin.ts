@@ -17,6 +17,7 @@ import {
   listRegistrations,
   resetRegistrations
 } from "../services/registration-service";
+import { updateEventWarningSettings } from "../services/settings-service";
 import { z } from "zod";
 
 const filtersSchema = z.object({
@@ -100,6 +101,44 @@ const bulkImportSchema = z.object({
     .min(1, "At least one registration is required.")
     .max(100, "Import up to 100 registrations at a time.")
 });
+
+const eventWarningSchema = z
+  .object({
+    isEnabled: z.boolean(),
+    title: z
+      .string()
+      .trim()
+      .max(80, "Warning title is too long.")
+      .optional()
+      .transform((value) => value ?? ""),
+    message: z
+      .string()
+      .trim()
+      .max(240, "Warning message is too long.")
+      .optional()
+      .transform((value) => value ?? "")
+  })
+  .superRefine((value, context) => {
+    if (!value.isEnabled) {
+      return;
+    }
+
+    if (!value.title) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Warning title is required when the banner is enabled.",
+        path: ["title"]
+      });
+    }
+
+    if (!value.message) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Warning message is required when the banner is enabled.",
+        path: ["message"]
+      });
+    }
+  });
 
 export const adminRouter = Router();
 
@@ -206,6 +245,16 @@ adminRouter.post(
     const payload = bulkImportSchema.parse(req.body);
     const result = await bulkImportRegistrations(payload.registrations, buildAuditContext(req, res));
     res.status(201).json(result);
+  })
+);
+
+adminRouter.patch(
+  "/settings/event-warning",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const payload = eventWarningSchema.parse(req.body);
+    const settings = await updateEventWarningSettings(payload, buildAuditContext(req, res));
+    res.json(settings);
   })
 );
 

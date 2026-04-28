@@ -23,6 +23,19 @@ export async function ensureRegistrationSchema() {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key VARCHAR(80) PRIMARY KEY,
+      value JSONB NOT NULL DEFAULT '{}'::jsonb,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_app_settings_updated_at
+      ON app_settings (updated_at DESC)
+  `);
+
+  await pool.query(`
     ALTER TABLE weekly_archives
     ADD COLUMN IF NOT EXISTS alliance_score INTEGER
   `);

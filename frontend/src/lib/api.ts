@@ -7,6 +7,7 @@ import type {
   PersonalScoreTrend,
   WeeklyArchiveSummary
 } from "../types/registration";
+import type { EventWarningSettings } from "../types/settings";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
@@ -186,6 +187,9 @@ export const api = {
   getPartners() {
     return request<string[]>("/registrations/partners");
   },
+  getEventWarningSettings() {
+    return request<EventWarningSettings>("/settings/event-warning");
+  },
   createRegistration(payload: RegistrationPayload) {
     return request<Registration>("/registrations", {
       method: "POST",
@@ -251,6 +255,13 @@ export const api = {
     }
   ) {
     return request<WeeklyArchiveSummary>(`/admin/archives/${archiveId}`, {
+      method: "PATCH",
+      adminToken,
+      body: JSON.stringify(payload)
+    });
+  },
+  updateEventWarningSettings(adminToken: string, payload: EventWarningSettings) {
+    return request<EventWarningSettings>("/admin/settings/event-warning", {
       method: "PATCH",
       adminToken,
       body: JSON.stringify(payload)

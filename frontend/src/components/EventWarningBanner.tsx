@@ -1,5 +1,6 @@
 import { AlertTriangle, BellRing, ShieldAlert, Sword } from "lucide-react";
 import { useEffect, useState } from "react";
+import type { EventWarningSettings } from "../types/settings";
 
 interface WarningItem {
   id: string;
@@ -42,8 +43,15 @@ const warningItems: WarningItem[] = [
 
 const rotationIntervalMs = 4500;
 
-export function EventWarningBanner() {
+interface EventWarningBannerProps {
+  customWarning?: EventWarningSettings;
+}
+
+export function EventWarningBanner({ customWarning }: EventWarningBannerProps) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const hasCustomWarning = Boolean(
+    customWarning?.isEnabled && customWarning.title.trim() && customWarning.message.trim()
+  );
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -58,6 +66,23 @@ export function EventWarningBanner() {
 
   return (
     <section className="rounded-3xl border border-rose-400/20 bg-slate-950/70 p-4 shadow-panel backdrop-blur">
+      {hasCustomWarning ? (
+        <div className="mb-4 rounded-[1.5rem] border border-amber-300/30 bg-amber-300/10 p-5">
+          <div className="flex items-start gap-3">
+            <div className="rounded-2xl border border-amber-200/20 bg-slate-950/60 p-3 text-amber-100">
+              <BellRing className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-amber-200/20 bg-amber-200/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-100">
+                Leadership alert
+              </div>
+              <h2 className="mt-3 text-xl font-semibold tracking-tight text-frost">{customWarning?.title}</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-amber-50/90">{customWarning?.message}</p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div
         className={`warning-banner relative overflow-hidden rounded-[1.5rem] border border-white/10 bg-gradient-to-r ${activeWarning.accentClassName} p-5`}
       >

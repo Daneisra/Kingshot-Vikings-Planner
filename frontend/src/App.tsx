@@ -8,6 +8,7 @@ import { BulkImportPanel } from "./components/BulkImportPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { EventGuidePanel } from "./components/EventGuidePanel";
 import { EventWarningBanner } from "./components/EventWarningBanner";
+import { EventWarningSettingsPanel } from "./components/EventWarningSettingsPanel";
 import { FiltersBar } from "./components/FiltersBar";
 import { PersonalScoreTrendPanel } from "./components/PersonalScoreTrendPanel";
 import { RegistrationForm } from "./components/RegistrationForm";
@@ -29,6 +30,7 @@ import type {
   StatsResponse,
   WeeklyArchiveSummary
 } from "./types/registration";
+import type { EventWarningSettings } from "./types/settings";
 
 const defaultFilters: RegistrationFilters = {
   search: "",
@@ -43,6 +45,12 @@ const emptyStats: StatsResponse = {
   availableTroops: 0,
   averageTroopLevel: 0,
   topPartners: []
+};
+
+const defaultEventWarningSettings: EventWarningSettings = {
+  isEnabled: false,
+  title: "",
+  message: ""
 };
 
 const adminStorageKey = "kingshot-vikings-admin-password";
@@ -183,6 +191,7 @@ export default function App() {
   const [savingArchiveId, setSavingArchiveId] = useState<string | null>(null);
   const [isResettingWeek, setIsResettingWeek] = useState(false);
   const [isImportingRegistrations, setIsImportingRegistrations] = useState(false);
+  const [isSavingEventWarning, setIsSavingEventWarning] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [adminToken, setAdminToken] = useState(() => initialAdminSessionRef.current?.token ?? "");
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(() => Boolean(initialAdminSessionRef.current));
@@ -192,6 +201,9 @@ export default function App() {
   const [partnersErrorMessage, setPartnersErrorMessage] = useState("");
   const [registrationsErrorMessage, setRegistrationsErrorMessage] = useState("");
   const [statsErrorMessage, setStatsErrorMessage] = useState("");
+  const [eventWarningSettings, setEventWarningSettings] = useState<EventWarningSettings>(
+    defaultEventWarningSettings
+  );
   const [archivesErrorMessage, setArchivesErrorMessage] = useState("");
   const [archives, setArchives] = useState<WeeklyArchiveSummary[]>([]);
   const [scoreTrendErrorMessage, setScoreTrendErrorMessage] = useState("");
@@ -318,6 +330,15 @@ export default function App() {
     }
   }
 
+  async function loadEventWarningSettings() {
+    try {
+      const settings = await api.getEventWarningSettings();
+      setEventWarningSettings(settings);
+    } catch (error) {
+      console.error("[event-warning]", error);
+    }
+  }
+
   async function loadDashboard(currentFilters: RegistrationFilters) {
     setIsLoading(true);
     setRegistrationsErrorMessage("");
@@ -389,6 +410,7 @@ export default function App() {
 
   useEffect(() => {
     void loadPartners();
+    void loadEventWarningSettings();
   }, []);
 
   useEffect(() => {
@@ -493,7 +515,7 @@ export default function App() {
     setIsRefreshing(true);
 
     try {
-      await Promise.all([loadPartners(), loadDashboard(activeFilters)]);
+      await Promise.all([loadPartners(), loadDashboard(activeFilters), loadEventWarningSettings()]);
     } finally {
       setIsRefreshing(false);
     }
@@ -506,6 +528,7 @@ export default function App() {
       try {
         await Promise.all([
           loadPartners(),
+          loadEventWarningSettings(),
           loadDashboard({ ...filters, search: debouncedSearch }),
           isAdminUnlocked ? loadArchives() : Promise.resolve()
         ]);
@@ -687,6 +710,26 @@ export default function App() {
     }
   }
 
+  async function handleUpdateEventWarningSettings(payload: EventWarningSettings) {
+    if (!isAdminUnlocked) {
+      pushToast("error", "Unlock the admin panel before editing the event warning.");
+      return;
+    }
+
+    setIsSavingEventWarning(true);
+
+    try {
+      const settings = await api.updateEventWarningSettings(adminToken, payload);
+      setEventWarningSettings(settings);
+      pushToast("success", settings.isEnabled ? "Event warning banner updated." : "Event warning banner disabled.");
+    } catch (error) {
+      pushToast("error", getDisplayMessage(error, "Unable to update the event warning banner."));
+      throw error;
+    } finally {
+      setIsSavingEventWarning(false);
+    }
+  }
+
   async function handleResetWeek() {
     if (!isAdminUnlocked) {
       return;
@@ -857,7 +900,7 @@ export default function App() {
           <>
             <StatsCards stats={stats} warningMessage={statsErrorMessage} />
 
-            <EventWarningBanner />
+            <EventWarningBanner customWarning={eventWarningSettings} />
 
             <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
               <div ref={formPanelRef} className="space-y-6">
@@ -905,7 +948,7 @@ export default function App() {
           </div>
         ) : appView === "guide" ? (
           <div className="space-y-6">
-            <EventWarningBanner />
+            <EventWarningBanner customWarning={eventWarningSettings} />
             <EventGuidePanel guideUrl={vikingVengeanceGuideUrl} />
           </div>
         ) : (
@@ -929,6 +972,13 @@ export default function App() {
                 isAdminUnlocked={isAdminUnlocked}
                 isImporting={isImportingRegistrations}
                 onImport={handleBulkImportRegistrations}
+              />
+
+              <EventWarningSettingsPanel
+                settings={eventWarningSettings}
+                isAdminUnlocked={isAdminUnlocked}
+                isSaving={isSavingEventWarning}
+                onSave={handleUpdateEventWarningSettings}
               />
             </div>
 

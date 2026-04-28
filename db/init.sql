@@ -42,6 +42,12 @@ CREATE TABLE IF NOT EXISTS weekly_archives (
   registrations JSONB NOT NULL DEFAULT '[]'::jsonb
 );
 
+CREATE TABLE IF NOT EXISTS app_settings (
+  key VARCHAR(80) PRIMARY KEY,
+  value JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -51,9 +57,15 @@ END;
 $$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS registrations_set_updated_at ON registrations;
+DROP TRIGGER IF EXISTS app_settings_set_updated_at ON app_settings;
 
 CREATE TRIGGER registrations_set_updated_at
 BEFORE UPDATE ON registrations
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER app_settings_set_updated_at
+BEFORE UPDATE ON app_settings
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();
 
@@ -74,3 +86,6 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at
 
 CREATE INDEX IF NOT EXISTS idx_weekly_archives_archived_at
   ON weekly_archives (archived_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_app_settings_updated_at
+  ON app_settings (updated_at DESC);
