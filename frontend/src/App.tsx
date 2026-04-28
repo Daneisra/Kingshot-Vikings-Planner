@@ -11,6 +11,7 @@ import { EventWarningBanner } from "./components/EventWarningBanner";
 import { EventWarningSettingsPanel } from "./components/EventWarningSettingsPanel";
 import { FiltersBar } from "./components/FiltersBar";
 import { PersonalScoreTrendPanel } from "./components/PersonalScoreTrendPanel";
+import { PreEventChecklistPanel } from "./components/PreEventChecklistPanel";
 import { RegistrationForm } from "./components/RegistrationForm";
 import { RegistrationList } from "./components/RegistrationList";
 import { ReinforcementGroupsPanel } from "./components/ReinforcementGroupsPanel";
@@ -902,6 +903,8 @@ export default function App() {
 
             <EventWarningBanner customWarning={eventWarningSettings} />
 
+            <PreEventChecklistPanel />
+
             <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
               <div ref={formPanelRef} className="space-y-6">
                 <RegistrationForm
@@ -949,6 +952,7 @@ export default function App() {
         ) : appView === "guide" ? (
           <div className="space-y-6">
             <EventWarningBanner customWarning={eventWarningSettings} />
+            <PreEventChecklistPanel />
             <EventGuidePanel guideUrl={vikingVengeanceGuideUrl} />
           </div>
         ) : (

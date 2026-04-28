@@ -41,7 +41,7 @@ Focus: finish the Viking Vengeance planner without overloading the casual player
 - [x] Split the app into multiple pages to reduce the density of the main screen
 - [x] Keep the main sign-up page focused on casual users with registrations, filters, and core stats only
 - [x] Add a configurable admin warning banner for urgent event messages
-- [ ] Add a pre-event checklist for players:
+- [x] Add a pre-event checklist for players:
   empty city troops, keep best heroes ready, check availability, join before event start
 - [ ] Add a Viking wave timeline with important waves highlighted
 - [ ] Add a post-event result screen for score, difficulty, notes, and lessons learned

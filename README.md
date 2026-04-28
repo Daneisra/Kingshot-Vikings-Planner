@@ -39,6 +39,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 - In-app Viking Vengeance guide with quick rules and wave timeline
 - Animated event reminders for the most important Viking Vengeance rules
 - Admin-configurable event warning banner for urgent player instructions
+- Local pre-event checklist for player readiness before wave 1
 - Search by nickname
 - Filter by partner and weekly availability
 - Quick stats:
