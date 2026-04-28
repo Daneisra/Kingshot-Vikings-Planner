@@ -43,7 +43,7 @@ Focus: finish the Viking Vengeance planner without overloading the casual player
 - [x] Add a configurable admin warning banner for urgent event messages
 - [x] Add a pre-event checklist for players:
   empty city troops, keep best heroes ready, check availability, join before event start
-- [ ] Add a Viking wave timeline with important waves highlighted
+- [x] Add a Viking wave timeline with important waves highlighted
 - [ ] Add a post-event result screen for score, difficulty, notes, and lessons learned
 
 ### Viking Groups

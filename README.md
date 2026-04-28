@@ -40,6 +40,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 - Animated event reminders for the most important Viking Vengeance rules
 - Admin-configurable event warning banner for urgent player instructions
 - Local pre-event checklist for player readiness before wave 1
+- Highlighted Viking wave timeline for online-only and HQ waves
 - Search by nickname
 - Filter by partner and weekly availability
 - Quick stats:

@@ -1,4 +1,4 @@
-import { AlertTriangle, ExternalLink, Shield, Swords, TimerReset } from "lucide-react";
+import { AlertTriangle, ExternalLink, Shield, Swords } from "lucide-react";
 
 const quickRules = [
   "Empty your city before the event starts so reinforcements get the kills.",
@@ -6,19 +6,6 @@ const quickRules = [
   "Stay online for waves 7, 14, and 17 because only online players are targeted.",
   "Be ready for HQ waves 10 and 20 if leadership assigns you there.",
   "Do not heal during the event unless your leadership explicitly calls for it."
-];
-
-const waveTimeline = [
-  "Waves 1-6: Standard city defense",
-  "Wave 7: Online players only",
-  "Waves 8-9: Standard city defense",
-  "Wave 10: Alliance HQ",
-  "Waves 11-13: Standard city defense",
-  "Wave 14: Online players only",
-  "Waves 15-16: Standard city defense",
-  "Wave 17: Online players only",
-  "Waves 18-19: Standard city defense",
-  "Wave 20: Alliance HQ"
 ];
 
 const checklist = [
@@ -68,44 +55,27 @@ export function EventGuidePanel({ guideUrl }: EventGuidePanelProps) {
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
           <div className="rounded-2xl border border-white/10 bg-slate-950/75 p-4">
-            <div className="flex items-center gap-2 text-cyan-200">
-              <TimerReset className="h-4 w-4" />
-              <p className="text-sm font-semibold uppercase tracking-[0.2em]">Wave timeline</p>
+            <div className="flex items-center gap-2 text-emerald-200">
+              <Swords className="h-4 w-4" />
+              <p className="text-sm font-semibold uppercase tracking-[0.2em]">Scoring focus</p>
             </div>
-            <ul className="mt-4 space-y-2 text-sm leading-6 text-slate-300">
-              {waveTimeline.map((item) => (
-                <li key={item} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                  {item}
-                </li>
-              ))}
-            </ul>
+            <p className="mt-3 text-sm leading-6 text-slate-300">
+              Players score best when they reinforce other cities instead of leaving their own troops at home.
+            </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-white/10 bg-slate-950/75 p-4">
-              <div className="flex items-center gap-2 text-emerald-200">
-                <Swords className="h-4 w-4" />
-                <p className="text-sm font-semibold uppercase tracking-[0.2em]">Scoring focus</p>
-              </div>
-              <p className="mt-3 text-sm leading-6 text-slate-300">
-                Players score best when they reinforce other cities instead of leaving their own troops at
-                home.
-              </p>
+          <div className="rounded-2xl border border-white/10 bg-slate-950/75 p-4">
+            <div className="flex items-center gap-2 text-indigo-200">
+              <Shield className="h-4 w-4" />
+              <p className="text-sm font-semibold uppercase tracking-[0.2em]">Leader checklist</p>
             </div>
-
-            <div className="rounded-2xl border border-white/10 bg-slate-950/75 p-4">
-              <div className="flex items-center gap-2 text-indigo-200">
-                <Shield className="h-4 w-4" />
-                <p className="text-sm font-semibold uppercase tracking-[0.2em]">Leader checklist</p>
-              </div>
-              <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-300">
-                {checklist.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-300">
+              {checklist.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
           </div>
         </div>
       </div>

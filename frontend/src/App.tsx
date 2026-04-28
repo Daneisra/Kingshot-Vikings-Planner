@@ -18,6 +18,7 @@ import { ReinforcementGroupsPanel } from "./components/ReinforcementGroupsPanel"
 import { StatsCards } from "./components/StatsCards";
 import { ToastStack } from "./components/ToastStack";
 import type { ToastItem } from "./components/ToastStack";
+import { VikingWaveTimelinePanel } from "./components/VikingWaveTimelinePanel";
 import { useDebouncedValue } from "./hooks/useDebouncedValue";
 import { ApiError, api } from "./lib/api";
 import { APP_VERSION_LABEL } from "./lib/app-version";
@@ -905,6 +906,8 @@ export default function App() {
 
             <PreEventChecklistPanel />
 
+            <VikingWaveTimelinePanel compact />
+
             <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
               <div ref={formPanelRef} className="space-y-6">
                 <RegistrationForm
@@ -953,6 +956,7 @@ export default function App() {
           <div className="space-y-6">
             <EventWarningBanner customWarning={eventWarningSettings} />
             <PreEventChecklistPanel />
+            <VikingWaveTimelinePanel />
             <EventGuidePanel guideUrl={vikingVengeanceGuideUrl} />
           </div>
         ) : (
