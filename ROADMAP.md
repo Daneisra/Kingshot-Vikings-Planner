@@ -134,6 +134,7 @@ Focus: evolve from a Viking-only planner into a broader alliance coordination hu
 - [ ] Add a simple alliance calendar for planned event times
 - [ ] Add admin-managed alliance announcements
 - [ ] Add a public guides page for alliance rules and event references
+- [ ] Add a small "Support the project" section or button with PayPal and Ko-fi links
 
 ### Future Kingshot Events
 
