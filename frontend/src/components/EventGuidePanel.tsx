@@ -1,4 +1,5 @@
 import { AlertTriangle, ExternalLink, Shield, Swords, TimerReset, XCircle } from "lucide-react";
+import type { GuideNotesSettings } from "../types/settings";
 
 const quickRules = [
   "Empty your city before the event starts so reinforcements get the kills.",
@@ -58,9 +59,12 @@ const commonMistakes = [
 
 interface EventGuidePanelProps {
   guideUrl: string;
+  guideNotes?: GuideNotesSettings;
 }
 
-export function EventGuidePanel({ guideUrl }: EventGuidePanelProps) {
+export function EventGuidePanel({ guideUrl, guideNotes }: EventGuidePanelProps) {
+  const hasGuideNotes = Boolean(guideNotes?.isEnabled && guideNotes.title.trim() && guideNotes.notes.trim());
+
   return (
     <section className="rounded-3xl border border-amber-400/20 bg-gradient-to-br from-amber-400/10 via-slate-950/80 to-slate-950/90 p-5 shadow-panel backdrop-blur">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -82,6 +86,17 @@ export function EventGuidePanel({ guideUrl }: EventGuidePanelProps) {
       </div>
 
       <div className="mt-5 space-y-4">
+        {hasGuideNotes ? (
+          <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-4">
+            <div className="flex items-center gap-2 text-cyan-100">
+              <Shield className="h-4 w-4" />
+              <p className="text-sm font-semibold uppercase tracking-[0.2em]">Alliance notes</p>
+            </div>
+            <h3 className="mt-3 text-lg font-semibold text-frost">{guideNotes?.title}</h3>
+            <p className="mt-2 whitespace-pre-line text-sm leading-6 text-cyan-50/90">{guideNotes?.notes}</p>
+          </div>
+        ) : null}
+
         <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-2xl border border-amber-400/20 bg-slate-950/75 p-4">
             <div className="flex items-center gap-2 text-amber-200">

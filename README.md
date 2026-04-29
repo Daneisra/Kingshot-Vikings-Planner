@@ -38,6 +38,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 - Track up to 2 strongest troop tiers with a shared tier and separate Infantry, Lancer, and Marksman counts
 - Visible app version in the UI for easier support and deployment checks
 - In-app Viking Vengeance guide with quick rules, wave strategy, common mistakes, and wave timeline
+- Admin-editable alliance notes inside the Viking Vengeance guide
 - Animated event reminders for the most important Viking Vengeance rules
 - Admin-configurable event warning banner for urgent player instructions
 - Local pre-event checklist for player readiness before wave 1

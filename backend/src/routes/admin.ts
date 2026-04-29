@@ -17,7 +17,7 @@ import {
   listRegistrations,
   resetRegistrations
 } from "../services/registration-service";
-import { updateEventWarningSettings } from "../services/settings-service";
+import { updateEventWarningSettings, updateGuideNotesSettings } from "../services/settings-service";
 import { z } from "zod";
 
 const filtersSchema = z.object({
@@ -140,6 +140,44 @@ const eventWarningSchema = z
     }
   });
 
+const guideNotesSchema = z
+  .object({
+    isEnabled: z.boolean(),
+    title: z
+      .string()
+      .trim()
+      .max(80, "Guide notes title is too long.")
+      .optional()
+      .transform((value) => value ?? ""),
+    notes: z
+      .string()
+      .trim()
+      .max(800, "Guide notes are too long.")
+      .optional()
+      .transform((value) => value ?? "")
+  })
+  .superRefine((value, context) => {
+    if (!value.isEnabled) {
+      return;
+    }
+
+    if (!value.title) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Guide notes title is required when notes are enabled.",
+        path: ["title"]
+      });
+    }
+
+    if (!value.notes) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Guide notes are required when notes are enabled.",
+        path: ["notes"]
+      });
+    }
+  });
+
 export const adminRouter = Router();
 
 adminRouter.post(
@@ -254,6 +292,16 @@ adminRouter.patch(
   asyncHandler(async (req, res) => {
     const payload = eventWarningSchema.parse(req.body);
     const settings = await updateEventWarningSettings(payload, buildAuditContext(req, res));
+    res.json(settings);
+  })
+);
+
+adminRouter.patch(
+  "/settings/guide-notes",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const payload = guideNotesSchema.parse(req.body);
+    const settings = await updateGuideNotesSettings(payload, buildAuditContext(req, res));
     res.json(settings);
   })
 );

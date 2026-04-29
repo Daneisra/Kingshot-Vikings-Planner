@@ -63,7 +63,7 @@ Focus: finish the Viking Vengeance planner without overloading the casual player
 - [x] Create a dedicated Guide page for event rules, reminders, and Viking Vengeance references
 - [x] Expand the in-app guide with a short wave-by-wave strategy section
 - [x] Add a quick "common mistakes" section for casual players
-- [ ] Add admin-editable guide notes for alliance-specific rules
+- [x] Add admin-editable guide notes for alliance-specific rules
 
 ## Next
 

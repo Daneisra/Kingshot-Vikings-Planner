@@ -10,6 +10,7 @@ import { EventGuidePanel } from "./components/EventGuidePanel";
 import { EventWarningBanner } from "./components/EventWarningBanner";
 import { EventWarningSettingsPanel } from "./components/EventWarningSettingsPanel";
 import { FiltersBar } from "./components/FiltersBar";
+import { GuideNotesSettingsPanel } from "./components/GuideNotesSettingsPanel";
 import { HqDefensePlannerPanel } from "./components/HqDefensePlannerPanel";
 import { PersonalScoreTrendPanel } from "./components/PersonalScoreTrendPanel";
 import { PostEventResultPanel } from "./components/PostEventResultPanel";
@@ -34,7 +35,7 @@ import type {
   StatsResponse,
   WeeklyArchiveSummary
 } from "./types/registration";
-import type { EventWarningSettings } from "./types/settings";
+import type { EventWarningSettings, GuideNotesSettings } from "./types/settings";
 
 const defaultFilters: RegistrationFilters = {
   search: "",
@@ -55,6 +56,12 @@ const defaultEventWarningSettings: EventWarningSettings = {
   isEnabled: false,
   title: "",
   message: ""
+};
+
+const defaultGuideNotesSettings: GuideNotesSettings = {
+  isEnabled: false,
+  title: "",
+  notes: ""
 };
 
 const adminStorageKey = "kingshot-vikings-admin-password";
@@ -196,6 +203,7 @@ export default function App() {
   const [isResettingWeek, setIsResettingWeek] = useState(false);
   const [isImportingRegistrations, setIsImportingRegistrations] = useState(false);
   const [isSavingEventWarning, setIsSavingEventWarning] = useState(false);
+  const [isSavingGuideNotes, setIsSavingGuideNotes] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [adminToken, setAdminToken] = useState(() => initialAdminSessionRef.current?.token ?? "");
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(() => Boolean(initialAdminSessionRef.current));
@@ -208,6 +216,7 @@ export default function App() {
   const [eventWarningSettings, setEventWarningSettings] = useState<EventWarningSettings>(
     defaultEventWarningSettings
   );
+  const [guideNotesSettings, setGuideNotesSettings] = useState<GuideNotesSettings>(defaultGuideNotesSettings);
   const [archivesErrorMessage, setArchivesErrorMessage] = useState("");
   const [archives, setArchives] = useState<WeeklyArchiveSummary[]>([]);
   const [scoreTrendErrorMessage, setScoreTrendErrorMessage] = useState("");
@@ -343,6 +352,15 @@ export default function App() {
     }
   }
 
+  async function loadGuideNotesSettings() {
+    try {
+      const settings = await api.getGuideNotesSettings();
+      setGuideNotesSettings(settings);
+    } catch (error) {
+      console.error("[guide-notes]", error);
+    }
+  }
+
   async function loadDashboard(currentFilters: RegistrationFilters) {
     setIsLoading(true);
     setRegistrationsErrorMessage("");
@@ -415,6 +433,7 @@ export default function App() {
   useEffect(() => {
     void loadPartners();
     void loadEventWarningSettings();
+    void loadGuideNotesSettings();
   }, []);
 
   useEffect(() => {
@@ -519,7 +538,12 @@ export default function App() {
     setIsRefreshing(true);
 
     try {
-      await Promise.all([loadPartners(), loadDashboard(activeFilters), loadEventWarningSettings()]);
+      await Promise.all([
+        loadPartners(),
+        loadDashboard(activeFilters),
+        loadEventWarningSettings(),
+        loadGuideNotesSettings()
+      ]);
     } finally {
       setIsRefreshing(false);
     }
@@ -533,6 +557,7 @@ export default function App() {
         await Promise.all([
           loadPartners(),
           loadEventWarningSettings(),
+          loadGuideNotesSettings(),
           loadDashboard({ ...filters, search: debouncedSearch }),
           isAdminUnlocked ? loadArchives() : Promise.resolve()
         ]);
@@ -731,6 +756,26 @@ export default function App() {
       throw error;
     } finally {
       setIsSavingEventWarning(false);
+    }
+  }
+
+  async function handleUpdateGuideNotesSettings(payload: GuideNotesSettings) {
+    if (!isAdminUnlocked) {
+      pushToast("error", "Unlock the admin panel before editing guide notes.");
+      return;
+    }
+
+    setIsSavingGuideNotes(true);
+
+    try {
+      const settings = await api.updateGuideNotesSettings(adminToken, payload);
+      setGuideNotesSettings(settings);
+      pushToast("success", settings.isEnabled ? "Guide notes updated." : "Guide notes disabled.");
+    } catch (error) {
+      pushToast("error", getDisplayMessage(error, "Unable to update guide notes."));
+      throw error;
+    } finally {
+      setIsSavingGuideNotes(false);
     }
   }
 
@@ -960,7 +1005,7 @@ export default function App() {
             <EventWarningBanner customWarning={eventWarningSettings} />
             <PreEventChecklistPanel />
             <VikingWaveTimelinePanel />
-            <EventGuidePanel guideUrl={vikingVengeanceGuideUrl} />
+            <EventGuidePanel guideUrl={vikingVengeanceGuideUrl} guideNotes={guideNotesSettings} />
           </div>
         ) : (
           <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
@@ -990,6 +1035,13 @@ export default function App() {
                 isAdminUnlocked={isAdminUnlocked}
                 isSaving={isSavingEventWarning}
                 onSave={handleUpdateEventWarningSettings}
+              />
+
+              <GuideNotesSettingsPanel
+                settings={guideNotesSettings}
+                isAdminUnlocked={isAdminUnlocked}
+                isSaving={isSavingGuideNotes}
+                onSave={handleUpdateGuideNotesSettings}
               />
             </div>
 
