@@ -10,6 +10,7 @@ import { EventGuidePanel } from "./components/EventGuidePanel";
 import { EventWarningBanner } from "./components/EventWarningBanner";
 import { EventWarningSettingsPanel } from "./components/EventWarningSettingsPanel";
 import { FiltersBar } from "./components/FiltersBar";
+import { HqDefensePlannerPanel } from "./components/HqDefensePlannerPanel";
 import { PersonalScoreTrendPanel } from "./components/PersonalScoreTrendPanel";
 import { PostEventResultPanel } from "./components/PostEventResultPanel";
 import { PreEventChecklistPanel } from "./components/PreEventChecklistPanel";
@@ -946,6 +947,7 @@ export default function App() {
         ) : appView === "groups" ? (
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="space-y-6">
+              <HqDefensePlannerPanel registrations={registrations} />
               <ReinforcementGroupsPanel registrations={registrations} hasActiveFilters={hasActiveFilters} />
             </div>
 
