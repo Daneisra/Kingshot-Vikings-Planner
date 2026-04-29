@@ -1,10 +1,12 @@
 import { useEffect } from "react";
+import type { ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
 
 interface ConfirmDialogProps {
   isOpen: boolean;
   title: string;
   description: string;
+  details?: ReactNode;
   confirmLabel: string;
   cancelLabel?: string;
   tone?: "danger" | "default";
@@ -17,6 +19,7 @@ export function ConfirmDialog({
   isOpen,
   title,
   description,
+  details,
   confirmLabel,
   cancelLabel = "Cancel",
   tone = "default",
@@ -58,6 +61,7 @@ export function ConfirmDialog({
           <div className="flex-1">
             <h2 className="text-xl font-semibold text-frost">{title}</h2>
             <p className="mt-2 text-sm leading-6 text-slate-300">{description}</p>
+            {details ? <div className="mt-4">{details}</div> : null}
           </div>
         </div>
 

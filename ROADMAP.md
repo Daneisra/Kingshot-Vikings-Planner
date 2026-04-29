@@ -81,7 +81,7 @@ Focus: strengthen admin tools, history, and reporting around Viking Vengeance.
 - [x] Add bulk import support for registrations
 - [ ] Add admin settings for event configuration:
   event name, active season/week, difficulty level, alliance notes, warning banner text
-- [ ] Add safer admin previews before weekly reset and archive creation
+- [x] Add safer admin previews before weekly reset and archive creation
 
 ### Data / Reporting
 

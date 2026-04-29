@@ -51,6 +51,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 - CSV export
 - Admin CSV-style bulk import for adding several registrations safely
 - Weekly reset action with archive snapshot and archive CSV export
+- Detailed admin preview before weekly reset and archive creation
 - Responsive mobile-first UI
 - Admin-protected actions using temporary signed tokens and optional secondary admin password
 - REST API backed by PostgreSQL

@@ -1,4 +1,5 @@
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { BookOpen, Crown, Github, House, RefreshCw, ShieldCheck, Users2 } from "lucide-react";
 import { AdminPanel } from "./components/AdminPanel";
 import { AllianceScoreTrendPanel } from "./components/AllianceScoreTrendPanel";
@@ -76,10 +77,54 @@ type AppView = "planner" | "groups" | "guide" | "admin";
 interface ConfirmDialogState {
   title: string;
   description: string;
+  details?: ReactNode;
   confirmLabel: string;
   tone: "danger" | "default";
   isConfirming: boolean;
   onConfirm: () => Promise<void>;
+}
+
+function ResetPreviewDetails({ stats }: { stats: StatsResponse }) {
+  return (
+    <div className="space-y-3 rounded-2xl border border-white/10 bg-slate-900/70 p-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <PreviewMetric label="Participants" value={String(stats.totalParticipants)} />
+        <PreviewMetric label="Available" value={String(stats.availableParticipants)} />
+        <PreviewMetric label="Total troops" value={stats.totalTroops.toLocaleString("en-US")} />
+        <PreviewMetric label="Available troops" value={stats.availableTroops.toLocaleString("en-US")} />
+        <PreviewMetric label="Average level" value={stats.averageTroopLevel.toFixed(1)} />
+        <PreviewMetric label="Top partners" value={String(stats.topPartners.length)} />
+      </div>
+
+      {stats.topPartners.length > 0 ? (
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Archived partner snapshot</p>
+          <div className="mt-2 space-y-2">
+            {stats.topPartners.slice(0, 3).map((partner) => (
+              <div
+                key={partner.partnerName}
+                className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs"
+              >
+                <span className="font-semibold text-slate-200">{partner.partnerName}</span>
+                <span className="text-slate-400">
+                  {partner.count} player{partner.count > 1 ? "s" : ""} · {partner.totalTroops.toLocaleString("en-US")} troops
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function PreviewMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2">
+      <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-frost">{value}</p>
+    </div>
+  );
 }
 
 interface StoredAdminSession {
@@ -794,12 +839,13 @@ export default function App() {
 
       const description =
         currentWeekStats.totalParticipants === 1
-          ? "This will permanently clear 1 registration from the current week."
-          : `This will permanently clear ${currentWeekStats.totalParticipants} registrations from the current week.`;
+          ? "This will archive the current board, then permanently clear 1 registration from the active week."
+          : `This will archive the current board, then permanently clear ${currentWeekStats.totalParticipants} registrations from the active week.`;
 
       setConfirmDialog({
         title: "Start a new week?",
         description,
+        details: <ResetPreviewDetails stats={currentWeekStats} />,
         confirmLabel: "Reset weekly board",
         tone: "danger",
         isConfirming: false,
@@ -839,6 +885,7 @@ export default function App() {
         isOpen={Boolean(confirmDialog)}
         title={confirmDialog?.title ?? ""}
         description={confirmDialog?.description ?? ""}
+        details={confirmDialog?.details}
         confirmLabel={confirmDialog?.confirmLabel ?? "Confirm"}
         tone={confirmDialog?.tone ?? "default"}
         isConfirming={Boolean(confirmDialog?.isConfirming)}
