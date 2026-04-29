@@ -51,10 +51,10 @@ Focus: finish the Viking Vengeance planner without overloading the casual player
 - [x] Allow selecting multiple regular partners for Viking Vengeance coordination
 - [x] Generate optimized reinforcement groups automatically
 - [x] Create a dedicated Auto Groups page instead of keeping group suggestions inside the admin workspace
-- [ ] Improve Auto Groups with stronger balancing rules:
+- [x] Improve Auto Groups with stronger balancing rules:
   partner preference, troop strength, personal score, availability, and fair distribution
 - [ ] Add an HQ defense planner for wave 10 and wave 20 coordination
-- [ ] Add role hints for each suggested group:
+- [x] Add role hints for each suggested group:
   rally lead, support, HQ helper, backup
 
 ### Viking Guide
