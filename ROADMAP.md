@@ -30,6 +30,7 @@ Focus: finish the Viking Vengeance planner without overloading the casual player
 ### Viking Planner UX
 
 - [x] Prevent troop level selection below 7
+- [x] Support troop tiers from T7 to T16
 - [x] Add helper copy near troop inputs:
   `Only count your strongest 2 troop tiers.`
 - [x] Improve inline validation before submit

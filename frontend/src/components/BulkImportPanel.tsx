@@ -7,6 +7,8 @@ Ragnar,Lagertha|Bjorn,10,120000,90000,85000,9,50000,30000,20000,yes,42000000,Mai
 Lagertha,Ragnar,9,100000,80000,75000,,,,,yes,,`;
 
 const troopTypes: TroopType[] = ["infantry", "lancer", "marksman"];
+const MIN_TROOP_TIER = 7;
+const MAX_TROOP_TIER = 16;
 
 const headerAliases: Record<string, string> = {
   nickname: "nickname",
@@ -123,8 +125,8 @@ function parseOptionalCount(value: string, rowNumber: number, label: string, err
 function parseTier(value: string, rowNumber: number, label: string, errors: string[]) {
   const parsedValue = Number(value.trim().replace(/^t/i, ""));
 
-  if (!Number.isInteger(parsedValue) || parsedValue < 7 || parsedValue > 11) {
-    errors.push(`Row ${rowNumber}: ${label} must be between T7 and T11.`);
+  if (!Number.isInteger(parsedValue) || parsedValue < MIN_TROOP_TIER || parsedValue > MAX_TROOP_TIER) {
+    errors.push(`Row ${rowNumber}: ${label} must be between T${MIN_TROOP_TIER} and T${MAX_TROOP_TIER}.`);
     return null;
   }
 

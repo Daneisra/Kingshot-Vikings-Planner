@@ -366,7 +366,7 @@ function buildPairingContext(registrations: Registration[]): PairingContext {
 
 function getPlayerStrengthScore(registration: Registration, pairingContext: PairingContext) {
   const troopScore = registration.troopCount / pairingContext.maxTroopCount;
-  const tierScore = Math.max(0, registration.troopLevel - 6) / 5;
+  const tierScore = Math.min(1, Math.max(0, registration.troopLevel - 6) / 10);
   const personalScore = registration.personalScore === null ? 0.5 : registration.personalScore / pairingContext.maxPersonalScore;
 
   return troopScore * 0.55 + tierScore * 0.25 + personalScore * 0.2;

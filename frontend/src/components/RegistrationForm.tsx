@@ -3,11 +3,14 @@ import type { FormEvent } from "react";
 import type { Registration, RegistrationPayload, TroopLoadoutEntry, TroopType } from "../types/registration";
 
 const MIN_TROOP_TIER = 7;
-const MAX_TROOP_TIER = 11;
+const MAX_TROOP_TIER = 16;
 const MAX_TEXT_LENGTH = 40;
 const MAX_COMMENT_LENGTH = 300;
 const MAX_PERSONAL_SCORE = 1000000000;
-const troopTierOptions = [7, 8, 9, 10, 11];
+const troopTierOptions = Array.from(
+  { length: MAX_TROOP_TIER - MIN_TROOP_TIER + 1 },
+  (_value, index) => MIN_TROOP_TIER + index
+);
 const troopTypeLabels: Record<TroopType, string> = {
   infantry: "Infantry",
   lancer: "Lancer",
@@ -377,7 +380,7 @@ export function RegistrationForm({
                       ))}
                     </select>
                     <p className="mt-2 text-xs text-slate-500">
-                      T7+ only. T11 is available for late-game War Academy players.
+                      T7+ only. Use your real in-game troop tier, up to T16.
                     </p>
                     {renderFieldError(tierField)}
                   </label>

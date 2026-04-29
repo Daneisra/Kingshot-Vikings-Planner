@@ -4,7 +4,7 @@ const troopTypeSchema = z.enum(["infantry", "lancer", "marksman"]);
 
 const troopLoadoutEntrySchema = z.object({
   type: troopTypeSchema,
-  tier: z.coerce.number().int().min(7, "Troop tier must be 7 or higher.").max(11, "Troop tier must be 11 or lower."),
+  tier: z.coerce.number().int().min(7, "Troop tier must be 7 or higher.").max(16, "Troop tier must be 16 or lower."),
   count: z.coerce.number().int().min(1, "Troop count must be at least 1.").max(100000000)
 });
 
