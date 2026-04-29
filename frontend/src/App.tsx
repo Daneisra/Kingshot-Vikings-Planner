@@ -8,6 +8,7 @@ import { ArchivesPanel } from "./components/ArchivesPanel";
 import { BulkImportPanel } from "./components/BulkImportPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { EventGuidePanel } from "./components/EventGuidePanel";
+import { EventConfigurationSettingsPanel } from "./components/EventConfigurationSettingsPanel";
 import { EventWarningBanner } from "./components/EventWarningBanner";
 import { EventWarningSettingsPanel } from "./components/EventWarningSettingsPanel";
 import { FiltersBar } from "./components/FiltersBar";
@@ -36,7 +37,7 @@ import type {
   StatsResponse,
   WeeklyArchiveSummary
 } from "./types/registration";
-import type { EventWarningSettings, GuideNotesSettings } from "./types/settings";
+import type { EventConfigurationSettings, EventWarningSettings, GuideNotesSettings } from "./types/settings";
 
 const defaultFilters: RegistrationFilters = {
   search: "",
@@ -63,6 +64,13 @@ const defaultGuideNotesSettings: GuideNotesSettings = {
   isEnabled: false,
   title: "",
   notes: ""
+};
+
+const defaultEventConfigurationSettings: EventConfigurationSettings = {
+  eventName: "Viking Vengeance",
+  activeWeek: "",
+  difficultyLevel: "",
+  allianceNotes: ""
 };
 
 const adminStorageKey = "kingshot-vikings-admin-password";
@@ -124,6 +132,36 @@ function PreviewMetric({ label, value }: { label: string; value: string }) {
       <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">{label}</p>
       <p className="mt-1 text-sm font-semibold text-frost">{value}</p>
     </div>
+  );
+}
+
+function EventConfigurationSummary({ settings }: { settings: EventConfigurationSettings }) {
+  const hasContext = Boolean(settings.activeWeek || settings.difficultyLevel || settings.allianceNotes);
+
+  if (!hasContext) {
+    return null;
+  }
+
+  return (
+    <section className="rounded-3xl border border-cyan-300/15 bg-cyan-300/10 p-5 shadow-panel backdrop-blur">
+      <p className="text-sm uppercase tracking-[0.2em] text-cyan-200">Current event</p>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <span className="text-2xl font-semibold tracking-tight text-frost">{settings.eventName}</span>
+        {settings.activeWeek ? (
+          <span className="rounded-full border border-white/10 bg-slate-950/50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-200">
+            {settings.activeWeek}
+          </span>
+        ) : null}
+        {settings.difficultyLevel ? (
+          <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-100">
+            {settings.difficultyLevel}
+          </span>
+        ) : null}
+      </div>
+      {settings.allianceNotes ? (
+        <p className="mt-3 max-w-4xl whitespace-pre-line text-sm leading-6 text-cyan-50/85">{settings.allianceNotes}</p>
+      ) : null}
+    </section>
   );
 }
 
@@ -252,6 +290,7 @@ export default function App() {
   const [isResettingWeek, setIsResettingWeek] = useState(false);
   const [isImportingRegistrations, setIsImportingRegistrations] = useState(false);
   const [isSavingEventWarning, setIsSavingEventWarning] = useState(false);
+  const [isSavingEventConfiguration, setIsSavingEventConfiguration] = useState(false);
   const [isSavingGuideNotes, setIsSavingGuideNotes] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [adminToken, setAdminToken] = useState(() => initialAdminSessionRef.current?.token ?? "");
@@ -264,6 +303,9 @@ export default function App() {
   const [statsErrorMessage, setStatsErrorMessage] = useState("");
   const [eventWarningSettings, setEventWarningSettings] = useState<EventWarningSettings>(
     defaultEventWarningSettings
+  );
+  const [eventConfigurationSettings, setEventConfigurationSettings] = useState<EventConfigurationSettings>(
+    defaultEventConfigurationSettings
   );
   const [guideNotesSettings, setGuideNotesSettings] = useState<GuideNotesSettings>(defaultGuideNotesSettings);
   const [archivesErrorMessage, setArchivesErrorMessage] = useState("");
@@ -414,6 +456,15 @@ export default function App() {
     }
   }
 
+  async function loadEventConfigurationSettings() {
+    try {
+      const settings = await api.getEventConfigurationSettings();
+      setEventConfigurationSettings(settings);
+    } catch (error) {
+      console.error("[event-configuration]", error);
+    }
+  }
+
   async function loadDashboard(currentFilters: RegistrationFilters) {
     setIsLoading(true);
     setRegistrationsErrorMessage("");
@@ -486,6 +537,7 @@ export default function App() {
   useEffect(() => {
     void loadPartners();
     void loadEventWarningSettings();
+    void loadEventConfigurationSettings();
     void loadGuideNotesSettings();
   }, []);
 
@@ -812,6 +864,26 @@ export default function App() {
     }
   }
 
+  async function handleUpdateEventConfigurationSettings(payload: EventConfigurationSettings) {
+    if (!isAdminUnlocked) {
+      pushToast("error", "Unlock the admin panel before editing the event configuration.");
+      return;
+    }
+
+    setIsSavingEventConfiguration(true);
+
+    try {
+      const settings = await api.updateEventConfigurationSettings(adminToken, payload);
+      setEventConfigurationSettings(settings);
+      pushToast("success", "Event configuration updated.");
+    } catch (error) {
+      pushToast("error", getDisplayMessage(error, "Unable to update event configuration."));
+      throw error;
+    } finally {
+      setIsSavingEventConfiguration(false);
+    }
+  }
+
   async function handleUpdateGuideNotesSettings(payload: GuideNotesSettings) {
     if (!isAdminUnlocked) {
       pushToast("error", "Unlock the admin panel before editing guide notes.");
@@ -931,6 +1003,19 @@ export default function App() {
                   <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-300">
                     Version {APP_VERSION_LABEL}
                   </span>
+                  <span className="inline-flex items-center rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-cyan-100">
+                    {eventConfigurationSettings.eventName}
+                  </span>
+                  {eventConfigurationSettings.activeWeek ? (
+                    <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-300">
+                      {eventConfigurationSettings.activeWeek}
+                    </span>
+                  ) : null}
+                  {eventConfigurationSettings.difficultyLevel ? (
+                    <span className="inline-flex items-center rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-amber-100">
+                      {eventConfigurationSettings.difficultyLevel}
+                    </span>
+                  ) : null}
                   <a
                     href={githubIssuesUrl}
                     target="_blank"
@@ -1051,6 +1136,7 @@ export default function App() {
         ) : appView === "prep" ? (
           <div className="space-y-6">
             <EventWarningBanner customWarning={eventWarningSettings} />
+            <EventConfigurationSummary settings={eventConfigurationSettings} />
             <PreEventChecklistPanel />
             <VikingWaveTimelinePanel compact />
           </div>
@@ -1068,6 +1154,7 @@ export default function App() {
         ) : appView === "guide" ? (
           <div className="space-y-6">
             <EventWarningBanner customWarning={eventWarningSettings} />
+            <EventConfigurationSummary settings={eventConfigurationSettings} />
             <PreEventChecklistPanel />
             <VikingWaveTimelinePanel />
             <EventGuidePanel guideUrl={vikingVengeanceGuideUrl} guideNotes={guideNotesSettings} />
@@ -1100,6 +1187,13 @@ export default function App() {
                 isAdminUnlocked={isAdminUnlocked}
                 isSaving={isSavingEventWarning}
                 onSave={handleUpdateEventWarningSettings}
+              />
+
+              <EventConfigurationSettingsPanel
+                settings={eventConfigurationSettings}
+                isAdminUnlocked={isAdminUnlocked}
+                isSaving={isSavingEventConfiguration}
+                onSave={handleUpdateEventConfigurationSettings}
               />
 
               <GuideNotesSettingsPanel

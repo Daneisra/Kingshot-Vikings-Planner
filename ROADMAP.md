@@ -81,7 +81,7 @@ Focus: strengthen admin tools, history, and reporting around Viking Vengeance.
 - [x] Create a dedicated admin page for archives, score trends, analytics, manual metrics, and admin-only tools
 - [x] Add clearer navigation between the main planner page and the admin workspace
 - [x] Add bulk import support for registrations
-- [ ] Add admin settings for event configuration:
+- [x] Add admin settings for event configuration:
   event name, active season/week, difficulty level, alliance notes, warning banner text
 - [x] Add safer admin previews before weekly reset and archive creation
 

@@ -9,3 +9,10 @@ export interface GuideNotesSettings {
   title: string;
   notes: string;
 }
+
+export interface EventConfigurationSettings {
+  eventName: string;
+  activeWeek: string;
+  difficultyLevel: string;
+  allianceNotes: string;
+}

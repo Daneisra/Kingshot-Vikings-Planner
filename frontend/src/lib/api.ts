@@ -7,7 +7,7 @@ import type {
   PersonalScoreTrend,
   WeeklyArchiveSummary
 } from "../types/registration";
-import type { EventWarningSettings, GuideNotesSettings } from "../types/settings";
+import type { EventConfigurationSettings, EventWarningSettings, GuideNotesSettings } from "../types/settings";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
@@ -190,6 +190,9 @@ export const api = {
   getEventWarningSettings() {
     return request<EventWarningSettings>("/settings/event-warning");
   },
+  getEventConfigurationSettings() {
+    return request<EventConfigurationSettings>("/settings/event-configuration");
+  },
   getGuideNotesSettings() {
     return request<GuideNotesSettings>("/settings/guide-notes");
   },
@@ -265,6 +268,13 @@ export const api = {
   },
   updateEventWarningSettings(adminToken: string, payload: EventWarningSettings) {
     return request<EventWarningSettings>("/admin/settings/event-warning", {
+      method: "PATCH",
+      adminToken,
+      body: JSON.stringify(payload)
+    });
+  },
+  updateEventConfigurationSettings(adminToken: string, payload: EventConfigurationSettings) {
+    return request<EventConfigurationSettings>("/admin/settings/event-configuration", {
       method: "PATCH",
       adminToken,
       body: JSON.stringify(payload)

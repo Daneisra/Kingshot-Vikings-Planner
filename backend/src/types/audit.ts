@@ -5,6 +5,7 @@ export interface AuditContext {
 }
 
 export type AuditAction =
+  | "event_configuration_updated"
   | "event_warning_updated"
   | "guide_notes_updated"
   | "registration_deleted"

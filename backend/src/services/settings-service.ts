@@ -1,10 +1,11 @@
 import { pool } from "../db/pool";
 import type { AuditContext } from "../types/audit";
-import type { EventWarningSettings, GuideNotesSettings } from "../types/settings";
+import type { EventConfigurationSettings, EventWarningSettings, GuideNotesSettings } from "../types/settings";
 import { insertAuditLog } from "./audit-service";
 
 const eventWarningKey = "event_warning";
 const guideNotesKey = "guide_notes";
+const eventConfigurationKey = "event_configuration";
 
 const defaultEventWarningSettings: EventWarningSettings = {
   isEnabled: false,
@@ -16,6 +17,13 @@ const defaultGuideNotesSettings: GuideNotesSettings = {
   isEnabled: false,
   title: "",
   notes: ""
+};
+
+const defaultEventConfigurationSettings: EventConfigurationSettings = {
+  eventName: "Viking Vengeance",
+  activeWeek: "",
+  difficultyLevel: "",
+  allianceNotes: ""
 };
 
 function normalizeEventWarningSettings(value: unknown): EventWarningSettings {
@@ -46,6 +54,25 @@ function normalizeGuideNotesSettings(value: unknown): GuideNotesSettings {
   };
 }
 
+function normalizeEventConfigurationSettings(value: unknown): EventConfigurationSettings {
+  if (!value || typeof value !== "object") {
+    return defaultEventConfigurationSettings;
+  }
+
+  const candidate = value as Partial<EventConfigurationSettings>;
+
+  return {
+    eventName:
+      typeof candidate.eventName === "string"
+        ? candidate.eventName.trim().slice(0, 80)
+        : defaultEventConfigurationSettings.eventName,
+    activeWeek: typeof candidate.activeWeek === "string" ? candidate.activeWeek.trim().slice(0, 80) : "",
+    difficultyLevel:
+      typeof candidate.difficultyLevel === "string" ? candidate.difficultyLevel.trim().slice(0, 40) : "",
+    allianceNotes: typeof candidate.allianceNotes === "string" ? candidate.allianceNotes.trim().slice(0, 500) : ""
+  };
+}
+
 export async function getEventWarningSettings() {
   const result = await pool.query<{ value: unknown }>(
     `
@@ -70,6 +97,19 @@ export async function getGuideNotesSettings() {
   );
 
   return normalizeGuideNotesSettings(result.rows[0]?.value);
+}
+
+export async function getEventConfigurationSettings() {
+  const result = await pool.query<{ value: unknown }>(
+    `
+      SELECT value
+      FROM app_settings
+      WHERE key = $1
+    `,
+    [eventConfigurationKey]
+  );
+
+  return normalizeEventConfigurationSettings(result.rows[0]?.value);
 }
 
 export async function updateEventWarningSettings(input: EventWarningSettings, auditContext: AuditContext) {
@@ -106,6 +146,49 @@ export async function updateEventWarningSettings(input: EventWarningSettings, au
 
     await client.query("COMMIT");
     return normalizeEventWarningSettings(result.rows[0]?.value);
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function updateEventConfigurationSettings(input: EventConfigurationSettings, auditContext: AuditContext) {
+  const client = await pool.connect();
+  const settings = normalizeEventConfigurationSettings(input);
+
+  try {
+    await client.query("BEGIN");
+
+    const result = await client.query<{ value: unknown }>(
+      `
+        INSERT INTO app_settings (key, value)
+        VALUES ($1, $2::jsonb)
+        ON CONFLICT (key)
+        DO UPDATE SET
+          value = EXCLUDED.value,
+          updated_at = NOW()
+        RETURNING value
+      `,
+      [eventConfigurationKey, JSON.stringify(settings)]
+    );
+
+    await insertAuditLog(client, {
+      action: "event_configuration_updated",
+      targetType: "app_settings",
+      summary: "Updated Viking event configuration.",
+      metadata: {
+        key: eventConfigurationKey,
+        eventName: settings.eventName,
+        activeWeek: settings.activeWeek,
+        difficultyLevel: settings.difficultyLevel
+      },
+      context: auditContext
+    });
+
+    await client.query("COMMIT");
+    return normalizeEventConfigurationSettings(result.rows[0]?.value);
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;

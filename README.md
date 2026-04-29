@@ -39,6 +39,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 - Visible app version in the UI for easier support and deployment checks
 - In-app Viking Vengeance guide with quick rules, wave strategy, common mistakes, and wave timeline
 - Admin-editable alliance notes inside the Viking Vengeance guide
+- Admin-managed event configuration for the active week, difficulty, and public alliance notes
 - Animated event reminders for the most important Viking Vengeance rules
 - Admin-configurable event warning banner for urgent player instructions
 - Dedicated Prep page with the local pre-event checklist and critical wave reminders

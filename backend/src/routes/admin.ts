@@ -17,7 +17,11 @@ import {
   listRegistrations,
   resetRegistrations
 } from "../services/registration-service";
-import { updateEventWarningSettings, updateGuideNotesSettings } from "../services/settings-service";
+import {
+  updateEventConfigurationSettings,
+  updateEventWarningSettings,
+  updateGuideNotesSettings
+} from "../services/settings-service";
 import { z } from "zod";
 
 const filtersSchema = z.object({
@@ -178,6 +182,32 @@ const guideNotesSchema = z
     }
   });
 
+const eventConfigurationSchema = z.object({
+  eventName: z
+    .string()
+    .trim()
+    .min(1, "Event name is required.")
+    .max(80, "Event name is too long."),
+  activeWeek: z
+    .string()
+    .trim()
+    .max(80, "Active week is too long.")
+    .optional()
+    .transform((value) => value ?? ""),
+  difficultyLevel: z
+    .string()
+    .trim()
+    .max(40, "Difficulty level is too long.")
+    .optional()
+    .transform((value) => value ?? ""),
+  allianceNotes: z
+    .string()
+    .trim()
+    .max(500, "Alliance notes are too long.")
+    .optional()
+    .transform((value) => value ?? "")
+});
+
 export const adminRouter = Router();
 
 adminRouter.post(
@@ -292,6 +322,16 @@ adminRouter.patch(
   asyncHandler(async (req, res) => {
     const payload = eventWarningSchema.parse(req.body);
     const settings = await updateEventWarningSettings(payload, buildAuditContext(req, res));
+    res.json(settings);
+  })
+);
+
+adminRouter.patch(
+  "/settings/event-configuration",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const payload = eventConfigurationSchema.parse(req.body);
+    const settings = await updateEventConfigurationSettings(payload, buildAuditContext(req, res));
     res.json(settings);
   })
 );
