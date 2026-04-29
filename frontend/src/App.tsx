@@ -11,6 +11,7 @@ import { EventWarningBanner } from "./components/EventWarningBanner";
 import { EventWarningSettingsPanel } from "./components/EventWarningSettingsPanel";
 import { FiltersBar } from "./components/FiltersBar";
 import { PersonalScoreTrendPanel } from "./components/PersonalScoreTrendPanel";
+import { PostEventResultPanel } from "./components/PostEventResultPanel";
 import { PreEventChecklistPanel } from "./components/PreEventChecklistPanel";
 import { RegistrationForm } from "./components/RegistrationForm";
 import { RegistrationList } from "./components/RegistrationList";
@@ -991,6 +992,13 @@ export default function App() {
             </div>
 
             <div className="space-y-6">
+              <PostEventResultPanel
+                archives={archives}
+                isAdminUnlocked={isAdminUnlocked}
+                isLoading={isLoadingArchives}
+                errorMessage={archivesErrorMessage}
+              />
+
               <ArchivesPanel
                 archives={archives}
                 isAdminUnlocked={isAdminUnlocked}

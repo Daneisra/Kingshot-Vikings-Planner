@@ -44,7 +44,7 @@ Focus: finish the Viking Vengeance planner without overloading the casual player
 - [x] Add a pre-event checklist for players:
   empty city troops, keep best heroes ready, check availability, join before event start
 - [x] Add a Viking wave timeline with important waves highlighted
-- [ ] Add a post-event result screen for score, difficulty, notes, and lessons learned
+- [x] Add a post-event result screen for score, difficulty, notes, and lessons learned
 
 ### Viking Groups
 
