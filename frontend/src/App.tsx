@@ -1,6 +1,6 @@
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { BookOpen, Crown, Github, House, RefreshCw, ShieldCheck, Users2 } from "lucide-react";
+import { BookOpen, ClipboardCheck, Crown, Github, House, RefreshCw, ShieldCheck, Users2 } from "lucide-react";
 import { AdminPanel } from "./components/AdminPanel";
 import { AllianceScoreTrendPanel } from "./components/AllianceScoreTrendPanel";
 import { ArchiveAnalyticsPanel } from "./components/ArchiveAnalyticsPanel";
@@ -72,7 +72,7 @@ const githubIssuesUrl = "https://github.com/Daneisra/Kingshot-Vikings-Planner/is
 const vikingVengeanceGuideUrl =
   "https://github.com/Daneisra/Kingshot-Vikings-Planner/blob/main/docs/VIKING_VENGEANCE_GUIDE.md";
 
-type AppView = "planner" | "groups" | "guide" | "admin";
+type AppView = "planner" | "prep" | "groups" | "guide" | "admin";
 
 interface ConfirmDialogState {
   title: string;
@@ -210,6 +210,10 @@ function readAppViewFromHash(): AppView {
     return "groups";
   }
 
+  if (hashValue === "prep") {
+    return "prep";
+  }
+
   if (hashValue === "guide") {
     return "guide";
   }
@@ -331,6 +335,8 @@ export default function App() {
       ? "Admin workspace for Vikings coordination."
       : appView === "groups"
         ? "Build Viking reinforcement groups faster."
+        : appView === "prep"
+          ? "Prepare players before Viking waves."
         : appView === "guide"
           ? "Learn the Viking Vengeance event flow."
         : "Organize Viking sign-ups without friction.";
@@ -339,6 +345,8 @@ export default function App() {
       ? "Archives, analytics, trends, protected tools, and admin reporting live here so the main board stays focused."
       : appView === "groups"
         ? "Use the current registration pool to review suggested reinforcement groups, HQ anchors, and pairing balance."
+        : appView === "prep"
+          ? "Checklist and critical wave reminders live here so the main planner stays focused on sign-ups."
         : appView === "guide"
           ? "Keep event rules, wave timings, reminders, and leadership checklists in one dedicated space players can revisit quickly."
         : "A shared sign-up board built for mobile, with troop tracking, availability filters, and protected admin actions.";
@@ -966,6 +974,14 @@ export default function App() {
               </button>
               <button
                 type="button"
+                className={appView === "prep" ? "primary-button" : "secondary-button"}
+                onClick={() => setAppView("prep")}
+              >
+                <ClipboardCheck className="h-4 w-4" />
+                Prep
+              </button>
+              <button
+                type="button"
                 className={appView === "groups" ? "primary-button" : "secondary-button"}
                 onClick={() => setAppView("groups")}
               >
@@ -997,10 +1013,6 @@ export default function App() {
             <StatsCards stats={stats} warningMessage={statsErrorMessage} />
 
             <EventWarningBanner customWarning={eventWarningSettings} />
-
-            <PreEventChecklistPanel />
-
-            <VikingWaveTimelinePanel compact />
 
             <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
               <div ref={formPanelRef} className="space-y-6">
@@ -1036,6 +1048,12 @@ export default function App() {
               </div>
             </div>
           </>
+        ) : appView === "prep" ? (
+          <div className="space-y-6">
+            <EventWarningBanner customWarning={eventWarningSettings} />
+            <PreEventChecklistPanel />
+            <VikingWaveTimelinePanel compact />
+          </div>
         ) : appView === "groups" ? (
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="space-y-6">

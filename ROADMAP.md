@@ -40,6 +40,7 @@ Focus: finish the Viking Vengeance planner without overloading the casual player
 - [x] Add animated warning banners to remind players to empty troops from their city before the event
 - [x] Split the app into multiple pages to reduce the density of the main screen
 - [x] Keep the main sign-up page focused on casual users with registrations, filters, and core stats only
+- [x] Move the pre-event checklist and critical waves out of the Planner into a dedicated Prep page
 - [x] Add a configurable admin warning banner for urgent event messages
 - [x] Add a pre-event checklist for players:
   empty city troops, keep best heroes ready, check availability, join before event start

@@ -24,7 +24,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 ## Features
 
 - Shared registration list for the current Vikings cycle
-- Dedicated Planner, Auto Groups, Guide, and Admin workspaces to keep each area focused
+- Dedicated Planner, Prep, Auto Groups, Guide, and Admin workspaces to keep each area focused
 - Create, edit, and delete player registrations
 - Support multiple regular partners for Viking Vengeance coordination
 - Optional personal Viking Vengeance score tracking per player
@@ -41,8 +41,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 - Admin-editable alliance notes inside the Viking Vengeance guide
 - Animated event reminders for the most important Viking Vengeance rules
 - Admin-configurable event warning banner for urgent player instructions
-- Local pre-event checklist for player readiness before wave 1
-- Highlighted Viking wave timeline for online-only and HQ waves
+- Dedicated Prep page with the local pre-event checklist and critical wave reminders
 - Post-event result recap for score, difficulty, notes, and lessons learned
 - Search by nickname
 - Filter by partner and weekly availability
