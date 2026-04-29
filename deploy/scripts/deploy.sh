@@ -180,6 +180,20 @@ run_production_smoke_tests() {
     'const payload = JSON.parse(process.argv[1]); if (!Array.isArray(payload) || !payload.every((entry) => typeof entry === "string")) { console.error("Partners payload is invalid", payload); process.exit(1); }'
 }
 
+write_deploy_metadata() {
+  local deployed_at commit_sha
+
+  deployed_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+  commit_sha="$(git rev-parse HEAD)"
+
+  cat > "$APP_DIR/backend/dist/deploy-info.json" <<JSON
+{
+  "deployedAt": "$deployed_at",
+  "commitSha": "$commit_sha"
+}
+JSON
+}
+
 main() {
   load_runtime_env
 
@@ -217,6 +231,9 @@ main() {
     cd "$APP_DIR/backend"
     npm run build
   )
+
+  log "Writing deploy metadata"
+  write_deploy_metadata
 
   load_frontend_env
 

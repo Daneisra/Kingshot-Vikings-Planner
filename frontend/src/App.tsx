@@ -14,6 +14,7 @@ import { EventWarningSettingsPanel } from "./components/EventWarningSettingsPane
 import { FiltersBar } from "./components/FiltersBar";
 import { GuideNotesSettingsPanel } from "./components/GuideNotesSettingsPanel";
 import { HqDefensePlannerPanel } from "./components/HqDefensePlannerPanel";
+import { AdminHealthPanel } from "./components/AdminHealthPanel";
 import { PersonalScoreTrendPanel } from "./components/PersonalScoreTrendPanel";
 import { PostEventResultPanel } from "./components/PostEventResultPanel";
 import { PreEventChecklistPanel } from "./components/PreEventChecklistPanel";
@@ -27,7 +28,7 @@ import { VikingWaveTimelinePanel } from "./components/VikingWaveTimelinePanel";
 import { useDebouncedValue } from "./hooks/useDebouncedValue";
 import { ApiError, api } from "./lib/api";
 import { APP_VERSION_LABEL } from "./lib/app-version";
-import type { AdminSessionResponse } from "./lib/api";
+import type { AdminSessionResponse, HealthResponse } from "./lib/api";
 import type {
   ManualArchiveStat,
   PersonalScoreTrend,
@@ -285,6 +286,7 @@ export default function App() {
   const [isUnlockingAdmin, setIsUnlockingAdmin] = useState(false);
   const [isExportingCsv, setIsExportingCsv] = useState(false);
   const [isLoadingArchives, setIsLoadingArchives] = useState(false);
+  const [isLoadingHealth, setIsLoadingHealth] = useState(false);
   const [exportingArchiveId, setExportingArchiveId] = useState<string | null>(null);
   const [savingArchiveId, setSavingArchiveId] = useState<string | null>(null);
   const [isResettingWeek, setIsResettingWeek] = useState(false);
@@ -309,7 +311,9 @@ export default function App() {
   );
   const [guideNotesSettings, setGuideNotesSettings] = useState<GuideNotesSettings>(defaultGuideNotesSettings);
   const [archivesErrorMessage, setArchivesErrorMessage] = useState("");
+  const [healthErrorMessage, setHealthErrorMessage] = useState("");
   const [archives, setArchives] = useState<WeeklyArchiveSummary[]>([]);
+  const [healthStatus, setHealthStatus] = useState<HealthResponse | null>(null);
   const [scoreTrendErrorMessage, setScoreTrendErrorMessage] = useState("");
   const [scoreTrends, setScoreTrends] = useState<PersonalScoreTrend[]>([]);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
@@ -465,6 +469,24 @@ export default function App() {
     }
   }
 
+  async function loadHealth() {
+    setIsLoadingHealth(true);
+    setHealthErrorMessage("");
+
+    try {
+      const health = await api.getHealth();
+      setHealthStatus(health);
+
+      if (health.status !== "ok") {
+        setHealthErrorMessage("The API is reachable, but one or more runtime checks are degraded.");
+      }
+    } catch (error) {
+      setHealthErrorMessage(getDisplayMessage(error, "Unable to load system health."));
+    } finally {
+      setIsLoadingHealth(false);
+    }
+  }
+
   async function loadDashboard(currentFilters: RegistrationFilters) {
     setIsLoading(true);
     setRegistrationsErrorMessage("");
@@ -539,6 +561,7 @@ export default function App() {
     void loadEventWarningSettings();
     void loadEventConfigurationSettings();
     void loadGuideNotesSettings();
+    void loadHealth();
   }, []);
 
   useEffect(() => {
@@ -647,6 +670,8 @@ export default function App() {
         loadPartners(),
         loadDashboard(activeFilters),
         loadEventWarningSettings(),
+        loadEventConfigurationSettings(),
+        loadHealth(),
         loadGuideNotesSettings()
       ]);
     } finally {
@@ -662,6 +687,8 @@ export default function App() {
         await Promise.all([
           loadPartners(),
           loadEventWarningSettings(),
+          loadEventConfigurationSettings(),
+          loadHealth(),
           loadGuideNotesSettings(),
           loadDashboard({ ...filters, search: debouncedSearch }),
           isAdminUnlocked ? loadArchives() : Promise.resolve()
@@ -1174,6 +1201,13 @@ export default function App() {
                 onLock={handleLockAdmin}
                 onExport={handleExportCsv}
                 onReset={handleResetWeek}
+              />
+
+              <AdminHealthPanel
+                health={healthStatus}
+                isLoading={isLoadingHealth}
+                errorMessage={healthErrorMessage}
+                onRefresh={loadHealth}
               />
 
               <BulkImportPanel

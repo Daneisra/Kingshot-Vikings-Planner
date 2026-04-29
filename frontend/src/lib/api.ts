@@ -33,6 +33,19 @@ export interface AdminSessionResponse {
   expiresAt: string;
 }
 
+export interface HealthResponse {
+  status: "ok" | "degraded";
+  version: string;
+  database: {
+    status: "ok" | "error";
+    latencyMs: number | null;
+  };
+  startedAt: string;
+  uptimeSeconds: number;
+  deployedAt: string | null;
+  commitSha: string | null;
+}
+
 export class ApiError extends Error {
   status?: number;
   path: string;
@@ -178,6 +191,9 @@ function logApiError(error: ApiError, cause?: unknown) {
 }
 
 export const api = {
+  getHealth() {
+    return request<HealthResponse>("/health");
+  },
   listRegistrations(filters: RegistrationFilters) {
     return request<Registration[]>(`/registrations${buildQuery(filters)}`);
   },

@@ -120,7 +120,7 @@ Focus: strengthen admin tools, history, and reporting around Viking Vengeance.
 - [x] Add automated PostgreSQL backup guidance or scripts
 - [x] Add structured logging and log rotation guidance
 - [x] Add linting to CI before deploy
-- [ ] Add a lightweight admin health panel:
+- [x] Add a lightweight admin health panel:
   app version, API status, database status, latest deploy timestamp
 
 ## Later

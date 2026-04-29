@@ -37,6 +37,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 - HQ defense planner for Viking Vengeance waves 10 and 20
 - Track up to 2 strongest troop tiers, from T7 to T16, with separate Infantry, Lancer, and Marksman counts
 - Visible app version in the UI for easier support and deployment checks
+- Admin health panel for API status, database status, uptime, and deploy metadata
 - In-app Viking Vengeance guide with quick rules, wave strategy, common mistakes, and wave timeline
 - Admin-editable alliance notes inside the Viking Vengeance guide
 - Admin-managed event configuration for the active week, difficulty, and public alliance notes
