@@ -18,6 +18,7 @@ import { AdminHealthPanel } from "./components/AdminHealthPanel";
 import { PersonalScoreTrendPanel } from "./components/PersonalScoreTrendPanel";
 import { PlayerProfileSummaryPanel } from "./components/PlayerProfileSummaryPanel";
 import { PostEventResultPanel } from "./components/PostEventResultPanel";
+import { ParticipationTrendPanel } from "./components/ParticipationTrendPanel";
 import { PreEventChecklistPanel } from "./components/PreEventChecklistPanel";
 import { RegistrationForm } from "./components/RegistrationForm";
 import { RegistrationList } from "./components/RegistrationList";
@@ -1272,6 +1273,13 @@ export default function App() {
               />
 
               <ArchiveAnalyticsPanel
+                archives={archives}
+                isAdminUnlocked={isAdminUnlocked}
+                isLoading={isLoadingArchives}
+                errorMessage={archivesErrorMessage}
+              />
+
+              <ParticipationTrendPanel
                 archives={archives}
                 isAdminUnlocked={isAdminUnlocked}
                 isLoading={isLoadingArchives}

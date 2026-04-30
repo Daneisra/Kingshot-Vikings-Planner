@@ -106,7 +106,7 @@ Focus: strengthen admin tools, history, and reporting around Viking Vengeance.
 - [x] Add individual player profile summaries:
   latest score, best score, average score, participation history
 - [ ] Add alliance score trend charts by difficulty level
-- [ ] Add participation trend charts by week
+- [x] Add participation trend charts by week
 - [ ] Add export options for archives, personal scores, and event notes
 
 ### Ops / Deployment
