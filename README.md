@@ -31,6 +31,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 - Personal score trend comparison across archived weeks
 - Individual player profile summaries from archived weeks
 - Alliance score trend comparison across archived weeks
+- Alliance score trend charts by recorded Viking difficulty
 - Participation trend charts by archived week
 - Rich historical archive analytics with score highlights and difficulty-based averages
 - Archive metadata editing for alliance score, event difficulty, and weekly leadership notes

@@ -7,6 +7,7 @@ import { ArchiveAnalyticsPanel } from "./components/ArchiveAnalyticsPanel";
 import { ArchivesPanel } from "./components/ArchivesPanel";
 import { BulkImportPanel } from "./components/BulkImportPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
+import { DifficultyScoreTrendPanel } from "./components/DifficultyScoreTrendPanel";
 import { EventGuidePanel } from "./components/EventGuidePanel";
 import { EventConfigurationSettingsPanel } from "./components/EventConfigurationSettingsPanel";
 import { EventWarningBanner } from "./components/EventWarningBanner";
@@ -1266,6 +1267,13 @@ export default function App() {
               />
 
               <AllianceScoreTrendPanel
+                archives={archives}
+                isAdminUnlocked={isAdminUnlocked}
+                isLoading={isLoadingArchives}
+                errorMessage={archivesErrorMessage}
+              />
+
+              <DifficultyScoreTrendPanel
                 archives={archives}
                 isAdminUnlocked={isAdminUnlocked}
                 isLoading={isLoadingArchives}
