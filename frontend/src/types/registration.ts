@@ -76,3 +76,19 @@ export interface PersonalScoreTrend {
   currentArchivedAt: string;
   previousArchivedAt: string;
 }
+
+export interface PlayerProfileSummary {
+  nickname: string;
+  participationCount: number;
+  availableCount: number;
+  latestArchivedAt: string;
+  firstArchivedAt: string;
+  latestScore: number | null;
+  previousScore: number | null;
+  scoreDelta: number | null;
+  bestScore: number | null;
+  averageScore: number | null;
+  latestTroopCount: number;
+  latestTroopLevel: number;
+  latestPartners: string[];
+}

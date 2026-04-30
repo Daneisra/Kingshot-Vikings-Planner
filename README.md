@@ -29,6 +29,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 - Support multiple regular partners for Viking Vengeance coordination
 - Optional personal Viking Vengeance score tracking per player
 - Personal score trend comparison across archived weeks
+- Individual player profile summaries from archived weeks
 - Alliance score trend comparison across archived weeks
 - Rich historical archive analytics with score highlights and difficulty-based averages
 - Archive metadata editing for alliance score, event difficulty, and weekly leadership notes

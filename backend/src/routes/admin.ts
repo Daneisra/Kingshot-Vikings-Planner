@@ -5,6 +5,7 @@ import { buildAuditContext } from "../services/audit-service";
 import { createAdminToken } from "../services/admin-token-service";
 import {
   getWeeklyArchive,
+  listPlayerProfileSummaries,
   listPersonalScoreTrends,
   listWeeklyArchives,
   updateWeeklyArchiveMetadata
@@ -261,6 +262,15 @@ adminRouter.get(
   asyncHandler(async (_req, res) => {
     const trends = await listPersonalScoreTrends();
     res.json(trends);
+  })
+);
+
+adminRouter.get(
+  "/archives/player-profiles",
+  requireAdmin,
+  asyncHandler(async (_req, res) => {
+    const profiles = await listPlayerProfileSummaries();
+    res.json(profiles);
   })
 );
 

@@ -5,6 +5,7 @@ import type {
   RegistrationPayload,
   StatsResponse,
   PersonalScoreTrend,
+  PlayerProfileSummary,
   WeeklyArchiveSummary
 } from "../types/registration";
 import type { EventConfigurationSettings, EventWarningSettings, GuideNotesSettings } from "../types/settings";
@@ -262,6 +263,11 @@ export const api = {
   },
   listPersonalScoreTrends(adminToken: string) {
     return request<PersonalScoreTrend[]>("/admin/archives/personal-score-trends", {
+      adminToken
+    });
+  },
+  listPlayerProfiles(adminToken: string) {
+    return request<PlayerProfileSummary[]>("/admin/archives/player-profiles", {
       adminToken
     });
   },

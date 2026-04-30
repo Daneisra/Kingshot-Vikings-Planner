@@ -16,6 +16,7 @@ import { GuideNotesSettingsPanel } from "./components/GuideNotesSettingsPanel";
 import { HqDefensePlannerPanel } from "./components/HqDefensePlannerPanel";
 import { AdminHealthPanel } from "./components/AdminHealthPanel";
 import { PersonalScoreTrendPanel } from "./components/PersonalScoreTrendPanel";
+import { PlayerProfileSummaryPanel } from "./components/PlayerProfileSummaryPanel";
 import { PostEventResultPanel } from "./components/PostEventResultPanel";
 import { PreEventChecklistPanel } from "./components/PreEventChecklistPanel";
 import { RegistrationForm } from "./components/RegistrationForm";
@@ -32,6 +33,7 @@ import type { AdminSessionResponse, HealthResponse } from "./lib/api";
 import type {
   ManualArchiveStat,
   PersonalScoreTrend,
+  PlayerProfileSummary,
   Registration,
   RegistrationFilters,
   RegistrationPayload,
@@ -316,6 +318,7 @@ export default function App() {
   const [healthStatus, setHealthStatus] = useState<HealthResponse | null>(null);
   const [scoreTrendErrorMessage, setScoreTrendErrorMessage] = useState("");
   const [scoreTrends, setScoreTrends] = useState<PersonalScoreTrend[]>([]);
+  const [playerProfiles, setPlayerProfiles] = useState<PlayerProfileSummary[]>([]);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const toastIdRef = useRef(0);
@@ -541,12 +544,14 @@ export default function App() {
     setScoreTrendErrorMessage("");
 
     try {
-      const [nextArchives, nextTrends] = await Promise.all([
+      const [nextArchives, nextTrends, nextPlayerProfiles] = await Promise.all([
         api.listArchives(adminToken),
-        api.listPersonalScoreTrends(adminToken)
+        api.listPersonalScoreTrends(adminToken),
+        api.listPlayerProfiles(adminToken)
       ]);
       setArchives(nextArchives);
       setScoreTrends(nextTrends);
+      setPlayerProfiles(nextPlayerProfiles);
     } catch (error) {
       const message = getDisplayMessage(error, "Unable to load weekly archives.");
       setArchivesErrorMessage(message);
@@ -588,6 +593,7 @@ export default function App() {
       setArchives([]);
       setArchivesErrorMessage("");
       setScoreTrends([]);
+      setPlayerProfiles([]);
       setScoreTrendErrorMessage("");
       return;
     }
@@ -1274,6 +1280,13 @@ export default function App() {
 
               <PersonalScoreTrendPanel
                 trends={scoreTrends}
+                isAdminUnlocked={isAdminUnlocked}
+                isLoading={isLoadingArchives}
+                errorMessage={scoreTrendErrorMessage}
+              />
+
+              <PlayerProfileSummaryPanel
+                profiles={playerProfiles}
                 isAdminUnlocked={isAdminUnlocked}
                 isLoading={isLoadingArchives}
                 errorMessage={scoreTrendErrorMessage}

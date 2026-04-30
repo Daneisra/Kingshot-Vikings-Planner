@@ -2,6 +2,7 @@ import { pool } from "../db/pool";
 import type {
   ManualArchiveStat,
   PersonalScoreTrend,
+  PlayerProfileSummary,
   RegistrationRecord,
   WeeklyArchiveDetail,
   WeeklyArchiveSummary
@@ -133,6 +134,76 @@ export async function listPersonalScoreTrends(): Promise<PersonalScoreTrend[]> {
     .slice(0, 10);
 }
 
+export async function listPlayerProfileSummaries(): Promise<PlayerProfileSummary[]> {
+  const result = await pool.query<
+    WeeklyArchiveSummary & {
+      registrations: unknown;
+    }
+  >(
+    `
+      SELECT
+        id,
+        archived_at AS "archivedAt",
+        registration_count AS "registrationCount",
+        total_troops AS "totalTroops",
+        available_participants AS "availableParticipants",
+        alliance_score AS "allianceScore",
+        difficulty_level AS "difficultyLevel",
+        difficulty_note AS "difficultyNote",
+        event_log AS "eventLog",
+        manual_stats AS "manualStats",
+        registrations
+      FROM weekly_archives
+      ORDER BY archived_at DESC
+      LIMIT 30
+    `
+  );
+
+  const profiles = new Map<
+    string,
+    {
+      displayName: string;
+      registrations: Array<{
+        archivedAt: string;
+        registration: RegistrationRecord;
+      }>;
+    }
+  >();
+
+  result.rows.forEach((archive) => {
+    const registrations = normalizeArchivedRegistrations(archive.registrations);
+
+    registrations.forEach((registration) => {
+      const nicknameKey = registration.nickname.trim().toLowerCase();
+
+      if (!nicknameKey) {
+        return;
+      }
+
+      const profile = profiles.get(nicknameKey) ?? {
+        displayName: registration.nickname,
+        registrations: []
+      };
+
+      profile.registrations.push({
+        archivedAt: archive.archivedAt,
+        registration
+      });
+      profiles.set(nicknameKey, profile);
+    });
+  });
+
+  return Array.from(profiles.values())
+    .map((profile) => buildPlayerProfileSummary(profile.displayName, profile.registrations))
+    .sort(
+      (left, right) =>
+        new Date(right.latestArchivedAt).getTime() - new Date(left.latestArchivedAt).getTime() ||
+        right.participationCount - left.participationCount ||
+        left.nickname.localeCompare(right.nickname)
+    )
+    .slice(0, 50);
+}
+
 export async function updateWeeklyArchiveMetadata(
   id: string,
   input: {
@@ -184,6 +255,46 @@ export async function updateWeeklyArchiveMetadata(
   return {
     ...archive,
     manualStats: normalizeManualStats(archive.manualStats)
+  };
+}
+
+function buildPlayerProfileSummary(
+  nickname: string,
+  entries: Array<{
+    archivedAt: string;
+    registration: RegistrationRecord;
+  }>
+): PlayerProfileSummary {
+  const sortedEntries = [...entries].sort(
+    (left, right) => new Date(right.archivedAt).getTime() - new Date(left.archivedAt).getTime()
+  );
+  const latestEntry = sortedEntries[0];
+  const firstEntry = sortedEntries[sortedEntries.length - 1];
+  const scoredEntries = sortedEntries.filter((entry) => entry.registration.personalScore !== null);
+  const [latestScoredEntry, previousScoredEntry] = scoredEntries;
+  const scores = scoredEntries.map((entry) => entry.registration.personalScore as number);
+  const bestScore = scores.length > 0 ? Math.max(...scores) : null;
+  const averageScore =
+    scores.length > 0 ? Math.round(scores.reduce((total, score) => total + score, 0) / scores.length) : null;
+
+  return {
+    nickname,
+    participationCount: sortedEntries.length,
+    availableCount: sortedEntries.filter((entry) => entry.registration.isAvailable).length,
+    latestArchivedAt: latestEntry.archivedAt,
+    firstArchivedAt: firstEntry.archivedAt,
+    latestScore: latestScoredEntry?.registration.personalScore ?? null,
+    previousScore: previousScoredEntry?.registration.personalScore ?? null,
+    scoreDelta:
+      latestScoredEntry && previousScoredEntry
+        ? (latestScoredEntry.registration.personalScore as number) -
+          (previousScoredEntry.registration.personalScore as number)
+        : null,
+    bestScore,
+    averageScore,
+    latestTroopCount: latestEntry.registration.troopCount,
+    latestTroopLevel: latestEntry.registration.troopLevel,
+    latestPartners: latestEntry.registration.partnerNames
   };
 }
 
