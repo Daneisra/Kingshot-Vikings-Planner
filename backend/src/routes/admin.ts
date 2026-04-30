@@ -10,7 +10,12 @@ import {
   listWeeklyArchives,
   updateWeeklyArchiveMetadata
 } from "../services/archive-service";
-import { buildRegistrationsCsv } from "../utils/csv";
+import {
+  buildArchiveSummaryCsv,
+  buildEventNotesCsv,
+  buildPersonalScoresCsv,
+  buildRegistrationsCsv
+} from "../utils/csv";
 import { asyncHandler } from "../utils/async-handler";
 import {
   bulkImportRegistrations,
@@ -271,6 +276,51 @@ adminRouter.get(
   asyncHandler(async (_req, res) => {
     const profiles = await listPlayerProfileSummaries();
     res.json(profiles);
+  })
+);
+
+adminRouter.get(
+  "/archives/export.csv",
+  requireAdmin,
+  asyncHandler(async (_req, res) => {
+    const archives = await listWeeklyArchives();
+    const exportDate = new Date().toISOString().slice(0, 10);
+    const csv = buildArchiveSummaryCsv(archives);
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="kingshot-vikings-archives-${exportDate}.csv"`);
+    res.send(csv);
+  })
+);
+
+adminRouter.get(
+  "/archives/personal-scores.csv",
+  requireAdmin,
+  asyncHandler(async (_req, res) => {
+    const profiles = await listPlayerProfileSummaries();
+    const exportDate = new Date().toISOString().slice(0, 10);
+    const csv = buildPersonalScoresCsv(profiles);
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="kingshot-vikings-personal-scores-${exportDate}.csv"`
+    );
+    res.send(csv);
+  })
+);
+
+adminRouter.get(
+  "/archives/event-notes.csv",
+  requireAdmin,
+  asyncHandler(async (_req, res) => {
+    const archives = await listWeeklyArchives();
+    const exportDate = new Date().toISOString().slice(0, 10);
+    const csv = buildEventNotesCsv(archives);
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="kingshot-vikings-event-notes-${exportDate}.csv"`);
+    res.send(csv);
   })
 );
 

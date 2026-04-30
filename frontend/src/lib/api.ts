@@ -351,45 +351,58 @@ export const api = {
   },
   async exportArchiveCsv(adminToken: string, archiveId: string) {
     const path = `/admin/archives/${archiveId}/export.csv`;
-    let response: Response;
-
-    try {
-      response = await fetch(`${API_BASE_URL}${path}`, {
-        headers: {
-          "x-admin-token": adminToken
-        }
-      });
-    } catch (error) {
-      const apiError = new ApiError({
-        message: "The API is unreachable. Check the server connection and try again.",
-        path,
-        isNetworkError: true
-      });
-
-      logApiError(apiError, error);
-      throw apiError;
-    }
-
-    if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as ErrorPayload | null;
-      const apiError = new ApiError({
-        message: buildErrorMessage(path, response.status, payload),
-        path,
-        status: response.status,
-        requestId: payload?.requestId ?? response.headers.get("x-request-id") ?? undefined,
-        issues: payload?.issues ?? []
-      });
-
-      logApiError(apiError);
-      throw apiError;
-    }
-
-    return {
-      blob: await response.blob(),
-      filename: getFilenameFromDisposition(response.headers.get("content-disposition"))
-    };
+    return fetchCsv(path, adminToken);
+  },
+  async exportArchiveSummaryCsv(adminToken: string) {
+    return fetchCsv("/admin/archives/export.csv", adminToken);
+  },
+  async exportPersonalScoresCsv(adminToken: string) {
+    return fetchCsv("/admin/archives/personal-scores.csv", adminToken);
+  },
+  async exportEventNotesCsv(adminToken: string) {
+    return fetchCsv("/admin/archives/event-notes.csv", adminToken);
   }
 };
+
+async function fetchCsv(path: string, adminToken: string) {
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      headers: {
+        "x-admin-token": adminToken
+      }
+    });
+  } catch (error) {
+    const apiError = new ApiError({
+      message: "The API is unreachable. Check the server connection and try again.",
+      path,
+      isNetworkError: true
+    });
+
+    logApiError(apiError, error);
+    throw apiError;
+  }
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as ErrorPayload | null;
+    const apiError = new ApiError({
+      message: buildErrorMessage(path, response.status, payload),
+      path,
+      status: response.status,
+      requestId: payload?.requestId ?? response.headers.get("x-request-id") ?? undefined,
+      issues: payload?.issues ?? []
+    });
+
+    logApiError(apiError);
+    throw apiError;
+  }
+
+  return {
+    blob: await response.blob(),
+    filename: getFilenameFromDisposition(response.headers.get("content-disposition"))
+  };
+}
 
 function getFilenameFromDisposition(contentDisposition: string | null) {
   if (!contentDisposition) {

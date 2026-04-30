@@ -35,6 +35,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 - Participation trend charts by archived week
 - Rich historical archive analytics with score highlights and difficulty-based averages
 - Archive metadata editing for alliance score, event difficulty, and weekly leadership notes
+- Dedicated reporting CSV exports for archive summaries, personal scores, and event notes
 - Manual archive stat fields for alliance metrics outside the sign-up sheet
 - Automatic reinforcement group suggestions based on availability, partner preferences, troop strength, personal score, and role hints
 - HQ defense planner for Viking Vengeance waves 10 and 20

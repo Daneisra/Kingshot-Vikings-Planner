@@ -1,4 +1,10 @@
-import { RegistrationFilters, RegistrationRecord, TroopLoadoutEntry } from "../types/registration";
+import {
+  PlayerProfileSummary,
+  RegistrationFilters,
+  RegistrationRecord,
+  TroopLoadoutEntry,
+  WeeklyArchiveSummary
+} from "../types/registration";
 
 function escapeCell(value: string | number | boolean | null) {
   const rawValue = value === null ? "" : String(value);
@@ -87,6 +93,109 @@ export function buildRegistrationsCsv(
   return `\ufeff${[...summaryRows, header, ...rows]
     .map((row) => row.map((cell) => escapeCell(cell ?? null)).join(","))
     .join("\r\n")}`;
+}
+
+export function buildArchiveSummaryCsv(archives: WeeklyArchiveSummary[], exportedAt = new Date()) {
+  const rows = [
+    ["Kingshot Vikings Archive Summary Export"],
+    ["Exported At (UTC)", exportedAt.toISOString()],
+    ["Archived Weeks", archives.length],
+    [""],
+    [
+      "Archived At",
+      "Players",
+      "Available Players",
+      "Total Troops",
+      "Alliance Score",
+      "Difficulty Level",
+      "Difficulty Note",
+      "Manual Stats"
+    ],
+    ...archives.map((archive) => [
+      archive.archivedAt,
+      archive.registrationCount,
+      archive.availableParticipants,
+      archive.totalTroops,
+      archive.allianceScore ?? "",
+      archive.difficultyLevel ?? "",
+      archive.difficultyNote ?? "",
+      archive.manualStats.map((stat) => `${stat.label}: ${stat.value}`).join(" | ")
+    ])
+  ];
+
+  return formatCsvRows(rows);
+}
+
+export function buildPersonalScoresCsv(profiles: PlayerProfileSummary[], exportedAt = new Date()) {
+  const rows = [
+    ["Kingshot Vikings Personal Scores Export"],
+    ["Exported At (UTC)", exportedAt.toISOString()],
+    ["Players", profiles.length],
+    [""],
+    [
+      "Nickname",
+      "Participation Count",
+      "Available Count",
+      "Latest Archived At",
+      "First Archived At",
+      "Latest Score",
+      "Previous Score",
+      "Score Delta",
+      "Best Score",
+      "Average Score",
+      "Latest Troop Count",
+      "Latest Troop Tier",
+      "Latest Partners"
+    ],
+    ...profiles.map((profile) => [
+      profile.nickname,
+      profile.participationCount,
+      profile.availableCount,
+      profile.latestArchivedAt,
+      profile.firstArchivedAt,
+      profile.latestScore ?? "",
+      profile.previousScore ?? "",
+      profile.scoreDelta ?? "",
+      profile.bestScore ?? "",
+      profile.averageScore ?? "",
+      profile.latestTroopCount,
+      profile.latestTroopLevel ? `T${profile.latestTroopLevel}` : "",
+      profile.latestPartners.join(" | ")
+    ])
+  ];
+
+  return formatCsvRows(rows);
+}
+
+export function buildEventNotesCsv(archives: WeeklyArchiveSummary[], exportedAt = new Date()) {
+  const rows = [
+    ["Kingshot Vikings Event Notes Export"],
+    ["Exported At (UTC)", exportedAt.toISOString()],
+    ["Archived Weeks", archives.length],
+    [""],
+    [
+      "Archived At",
+      "Alliance Score",
+      "Difficulty Level",
+      "Difficulty Note",
+      "Event Log",
+      "Manual Stats"
+    ],
+    ...archives.map((archive) => [
+      archive.archivedAt,
+      archive.allianceScore ?? "",
+      archive.difficultyLevel ?? "",
+      archive.difficultyNote ?? "",
+      archive.eventLog ?? "",
+      archive.manualStats.map((stat) => `${stat.label}: ${stat.value}`).join(" | ")
+    ])
+  ];
+
+  return formatCsvRows(rows);
+}
+
+function formatCsvRows(rows: Array<Array<string | number | boolean | null>>) {
+  return `\ufeff${rows.map((row) => row.map((cell) => escapeCell(cell ?? null)).join(",")).join("\r\n")}`;
 }
 
 function formatFilters(filters: RegistrationFilters) {

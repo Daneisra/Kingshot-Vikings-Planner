@@ -23,6 +23,8 @@ import { ParticipationTrendPanel } from "./components/ParticipationTrendPanel";
 import { PreEventChecklistPanel } from "./components/PreEventChecklistPanel";
 import { RegistrationForm } from "./components/RegistrationForm";
 import { RegistrationList } from "./components/RegistrationList";
+import { ReportingExportPanel } from "./components/ReportingExportPanel";
+import type { ReportingExportKind } from "./components/ReportingExportPanel";
 import { ReinforcementGroupsPanel } from "./components/ReinforcementGroupsPanel";
 import { StatsCards } from "./components/StatsCards";
 import { ToastStack } from "./components/ToastStack";
@@ -289,6 +291,7 @@ export default function App() {
   const [deletingRegistrationId, setDeletingRegistrationId] = useState<string | null>(null);
   const [isUnlockingAdmin, setIsUnlockingAdmin] = useState(false);
   const [isExportingCsv, setIsExportingCsv] = useState(false);
+  const [exportingReportKind, setExportingReportKind] = useState<ReportingExportKind | null>(null);
   const [isLoadingArchives, setIsLoadingArchives] = useState(false);
   const [isLoadingHealth, setIsLoadingHealth] = useState(false);
   const [exportingArchiveId, setExportingArchiveId] = useState<string | null>(null);
@@ -825,6 +828,30 @@ export default function App() {
     }
   }
 
+  async function handleExportReport(kind: ReportingExportKind) {
+    if (!isAdminUnlocked) {
+      return;
+    }
+
+    setExportingReportKind(kind);
+
+    try {
+      const exportResult =
+        kind === "archives"
+          ? await api.exportArchiveSummaryCsv(adminToken)
+          : kind === "personal-scores"
+            ? await api.exportPersonalScoresCsv(adminToken)
+            : await api.exportEventNotesCsv(adminToken);
+
+      downloadBlob(exportResult.blob, exportResult.filename);
+      pushToast("success", "Reporting CSV export generated.");
+    } catch (error) {
+      pushToast("error", getDisplayMessage(error, "Unable to export reporting CSV."));
+    } finally {
+      setExportingReportKind(null);
+    }
+  }
+
   async function handleUpdateArchiveMetadata(
     archiveId: string,
     payload: {
@@ -1216,6 +1243,12 @@ export default function App() {
                 isLoading={isLoadingHealth}
                 errorMessage={healthErrorMessage}
                 onRefresh={loadHealth}
+              />
+
+              <ReportingExportPanel
+                isAdminUnlocked={isAdminUnlocked}
+                exportingKind={exportingReportKind}
+                onExport={handleExportReport}
               />
 
               <BulkImportPanel
