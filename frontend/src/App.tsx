@@ -2,6 +2,7 @@ import { startTransition, useCallback, useEffect, useRef, useState } from "react
 import type { ReactNode } from "react";
 import { BookOpen, ClipboardCheck, Crown, Github, House, RefreshCw, ShieldCheck, Users2 } from "lucide-react";
 import { AdminPanel } from "./components/AdminPanel";
+import { AllianceHomePage } from "./components/AllianceHomePage";
 import { AllianceScoreTrendPanel } from "./components/AllianceScoreTrendPanel";
 import { ArchiveAnalyticsPanel } from "./components/ArchiveAnalyticsPanel";
 import { ArchivesPanel } from "./components/ArchivesPanel";
@@ -84,10 +85,11 @@ const adminStorageKey = "kingshot-vikings-admin-password";
 const ADMIN_SESSION_TIMEOUT_MINUTES = 20;
 const ADMIN_SESSION_TIMEOUT_MS = ADMIN_SESSION_TIMEOUT_MINUTES * 60 * 1000;
 const githubIssuesUrl = "https://github.com/Daneisra/Kingshot-Vikings-Planner/issues";
+const discordUrl = import.meta.env.VITE_DISCORD_URL || "";
 const vikingVengeanceGuideUrl =
   "https://github.com/Daneisra/Kingshot-Vikings-Planner/blob/main/docs/VIKING_VENGEANCE_GUIDE.md";
 
-type AppView = "planner" | "prep" | "groups" | "guide" | "admin";
+type AppView = "home" | "planner" | "prep" | "groups" | "guide" | "admin";
 
 interface ConfirmDialogState {
   title: string;
@@ -251,6 +253,10 @@ function readAppViewFromHash(): AppView {
     return "admin";
   }
 
+  if (hashValue === "home") {
+    return "home";
+  }
+
   if (hashValue === "groups") {
     return "groups";
   }
@@ -263,7 +269,7 @@ function readAppViewFromHash(): AppView {
     return "guide";
   }
 
-  return "planner";
+  return "home";
 }
 
 function writeAppViewHash(view: AppView) {
@@ -387,6 +393,8 @@ export default function App() {
   const pageTitle =
     appView === "admin"
       ? "Admin workspace for Vikings coordination."
+      : appView === "home"
+        ? "Alliance hub for Vikings coordination."
       : appView === "groups"
         ? "Build Viking reinforcement groups faster."
         : appView === "prep"
@@ -397,6 +405,8 @@ export default function App() {
   const pageDescription =
     appView === "admin"
       ? "Archives, analytics, trends, protected tools, and admin reporting live here so the main board stays focused."
+      : appView === "home"
+        ? "Jump into sign-ups, preparation, auto groups, guides, and community links from one clean entry point."
       : appView === "groups"
         ? "Use the current registration pool to review suggested reinforcement groups, HQ anchors, and pairing balance."
         : appView === "prep"
@@ -1113,10 +1123,18 @@ export default function App() {
             <nav className="flex flex-wrap gap-3">
               <button
                 type="button"
+                className={appView === "home" ? "primary-button" : "secondary-button"}
+                onClick={() => setAppView("home")}
+              >
+                <House className="h-4 w-4" />
+                Home
+              </button>
+              <button
+                type="button"
                 className={appView === "planner" ? "primary-button" : "secondary-button"}
                 onClick={() => setAppView("planner")}
               >
-                <House className="h-4 w-4" />
+                <Crown className="h-4 w-4" />
                 Planner
               </button>
               <button
@@ -1155,7 +1173,17 @@ export default function App() {
           </div>
         </header>
 
-        {appView === "planner" ? (
+        {appView === "home" ? (
+          <AllianceHomePage
+            eventConfiguration={eventConfigurationSettings}
+            eventWarning={eventWarningSettings}
+            stats={stats}
+            health={healthStatus}
+            githubIssuesUrl={githubIssuesUrl}
+            discordUrl={discordUrl}
+            onNavigate={setAppView}
+          />
+        ) : appView === "planner" ? (
           <>
             <StatsCards stats={stats} warningMessage={statsErrorMessage} />
 

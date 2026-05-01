@@ -129,7 +129,7 @@ Focus: evolve from a Viking-only planner into a broader alliance coordination hu
 
 ### Alliance Hub
 
-- [ ] Add an alliance home page with:
+- [x] Add an alliance home page with:
   announcements, event shortcuts, Discord link, GitHub issues link, and quick status cards
 - [ ] Add a global event navigation model:
   Home, Viking Vengeance, Auto Groups, Guide, Admin, future events
