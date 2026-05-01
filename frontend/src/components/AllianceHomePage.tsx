@@ -1,4 +1,4 @@
-import { BookOpen, ClipboardCheck, Github, MessageCircle, ShieldCheck, Users2 } from "lucide-react";
+import { BookOpen, ClipboardCheck, Coffee, Github, HeartHandshake, MessageCircle, ShieldCheck, Users2 } from "lucide-react";
 import type { HealthResponse } from "../lib/api";
 import type { StatsResponse } from "../types/registration";
 import type { EventConfigurationSettings, EventWarningSettings } from "../types/settings";
@@ -12,6 +12,8 @@ interface AllianceHomePageProps {
   health: HealthResponse | null;
   githubIssuesUrl: string;
   discordUrl: string;
+  paypalUrl: string;
+  kofiUrl: string;
   onNavigate: (view: HomeTargetView) => void;
 }
 
@@ -54,6 +56,8 @@ export function AllianceHomePage({
   health,
   githubIssuesUrl,
   discordUrl,
+  paypalUrl,
+  kofiUrl,
   onNavigate
 }: AllianceHomePageProps) {
   return (
@@ -176,6 +180,30 @@ export function AllianceHomePage({
             </p>
           </div>
         )}
+      </section>
+
+      <section className="rounded-3xl border border-amber-300/20 bg-amber-300/10 p-5 shadow-panel backdrop-blur">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-sm uppercase tracking-[0.2em] text-amber-200">Support the project</p>
+            <h3 className="mt-2 text-xl font-semibold text-frost">Help keep the planner improving</h3>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-amber-50/85">
+              If the tool helps your alliance coordinate Viking Vengeance, you can support future fixes,
+              hosting, and feature work.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <a href={paypalUrl} target="_blank" rel="noreferrer" className="primary-button">
+              <HeartHandshake className="h-4 w-4" />
+              PayPal
+            </a>
+            <a href={kofiUrl} target="_blank" rel="noreferrer" className="secondary-button">
+              <Coffee className="h-4 w-4" />
+              Ko-fi
+            </a>
+          </div>
+        </div>
       </section>
     </div>
   );

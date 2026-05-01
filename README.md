@@ -26,6 +26,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 - Shared registration list for the current Vikings cycle
 - Dedicated Home, Planner, Prep, Auto Groups, Guide, and Admin workspaces to keep each area focused
 - Alliance home page with event shortcuts, quick status cards, GitHub Issues, and optional Discord link
+- Support section with PayPal and Ko-fi links
 - Create, edit, and delete player registrations
 - Support multiple regular partners for Viking Vengeance coordination
 - Optional personal Viking Vengeance score tracking per player

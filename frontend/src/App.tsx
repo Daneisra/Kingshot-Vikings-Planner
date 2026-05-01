@@ -85,7 +85,9 @@ const adminStorageKey = "kingshot-vikings-admin-password";
 const ADMIN_SESSION_TIMEOUT_MINUTES = 20;
 const ADMIN_SESSION_TIMEOUT_MS = ADMIN_SESSION_TIMEOUT_MINUTES * 60 * 1000;
 const githubIssuesUrl = "https://github.com/Daneisra/Kingshot-Vikings-Planner/issues";
-const discordUrl = import.meta.env.VITE_DISCORD_URL || "";
+const discordUrl = import.meta.env.VITE_DISCORD_URL || "https://discord.gg/GnuZajtVYk";
+const paypalUrl = import.meta.env.VITE_PAYPAL_URL || "https://paypal.me/Daneisra?country.x=FR&locale.x=fr_FR";
+const kofiUrl = import.meta.env.VITE_KOFI_URL || "https://ko-fi.com/daneisra";
 const vikingVengeanceGuideUrl =
   "https://github.com/Daneisra/Kingshot-Vikings-Planner/blob/main/docs/VIKING_VENGEANCE_GUIDE.md";
 
@@ -1181,6 +1183,8 @@ export default function App() {
             health={healthStatus}
             githubIssuesUrl={githubIssuesUrl}
             discordUrl={discordUrl}
+            paypalUrl={paypalUrl}
+            kofiUrl={kofiUrl}
             onNavigate={setAppView}
           />
         ) : appView === "planner" ? (
