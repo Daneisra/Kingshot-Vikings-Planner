@@ -404,12 +404,15 @@ export function RegistrationForm({
 
                         <div className="min-w-0">
                           <input
-                            type="number"
-                            min={0}
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            autoComplete="off"
+                            enterKeyHint="next"
                             value={group[troopType]}
                             onChange={(event) =>
                               updateTierGroup(index as 0 | 1, {
-                                [troopType]: Math.max(0, Number(event.target.value) || 0)
+                                [troopType]: parseTroopCountInput(event.target.value)
                               } as Partial<TierGroupDraft>)
                             }
                             onBlur={() => handleBlur(field)}
@@ -670,4 +673,10 @@ function validateTierGroup(
 
 function getTierGroupTotal(group: TierGroupDraft) {
   return group.infantry + group.lancer + group.marksman;
+}
+
+function parseTroopCountInput(value: string) {
+  const digitsOnly = value.replace(/\D/g, "");
+
+  return digitsOnly ? Number(digitsOnly) : 0;
 }

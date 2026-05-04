@@ -26,6 +26,8 @@ Focus: finish the Viking Vengeance planner without overloading the casual player
 - [x] Improve API error diagnostics for failed frontend requests
 - [x] Make partial API failures clearer in the UI
 - [x] Review weekly reset behavior and empty-state safety
+- [x] Mitigate iPhone Chrome reload/black-screen crashes while entering troop counts
+- [ ] Confirm the iPhone Chrome troop-count fix with the affected player in production
 
 ### Viking Planner UX
 
