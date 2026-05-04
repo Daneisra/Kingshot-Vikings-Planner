@@ -110,6 +110,8 @@ Focus: strengthen admin tools, history, and reporting around Viking Vengeance.
 - [x] Add alliance score trend charts by difficulty level
 - [x] Add participation trend charts by week
 - [x] Add export options for archives, personal scores, and event notes
+- [ ] Create a public Score page for alliance score, personal score summaries, score trends, and archive highlights that can be shared with all players
+- [ ] Move public score and reporting widgets out of Admin so the admin page stays focused on protected actions, settings, exports, and maintenance tools
 
 ### Ops / Deployment
 
