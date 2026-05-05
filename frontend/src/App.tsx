@@ -1288,7 +1288,11 @@ export default function App() {
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="space-y-6">
               <HqDefensePlannerPanel registrations={registrations} />
-              <ReinforcementGroupsPanel registrations={registrations} hasActiveFilters={hasActiveFilters} />
+              <ReinforcementGroupsPanel
+                registrations={registrations}
+                hasActiveFilters={hasActiveFilters}
+                topPartners={stats.topPartners}
+              />
             </div>
 
             <div className="space-y-6">
@@ -1390,38 +1394,6 @@ export default function App() {
                 onSave={handleUpdateArchiveMetadata}
               />
 
-              {stats.topPartners.length > 0 ? (
-                <section className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-panel backdrop-blur">
-                  <p className="text-sm uppercase tracking-[0.2em] text-amber-300">Most selected partners</p>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    {stats.topPartners.map((partner) => (
-                      <div
-                        key={partner.partnerName}
-                        className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
-                      >
-                        <p className="text-base font-semibold text-frost">{partner.partnerName}</p>
-                        <p className="mt-1 text-sm text-slate-400">
-                          {partner.count} registration{partner.count > 1 ? "s" : ""}
-                        </p>
-                        <div className="mt-3 grid gap-2 text-sm text-slate-300 sm:grid-cols-2">
-                          <p>
-                            <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">
-                              Total Troops
-                            </span>
-                            {partner.totalTroops.toLocaleString("en-US")}
-                          </p>
-                          <p>
-                            <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">
-                              Available Troops
-                            </span>
-                            {partner.availableTroops.toLocaleString("en-US")}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              ) : null}
             </div>
           </div>
         )}

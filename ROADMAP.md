@@ -49,8 +49,8 @@ Focus: finish the Viking Vengeance planner without overloading the casual player
   empty city troops, keep best heroes ready, check availability, join before event start
 - [x] Add a Viking wave timeline with important waves highlighted
 - [x] Add a post-event result screen for score, difficulty, notes, and lessons learned
-- [ ] Rework partner entry so players can naturally select up to 5 regular partners
-- [ ] Add a "6 marches" option in the planner to unlock one extra partner slot for players deploying all marches
+- [x] Rework partner entry so players can naturally select up to 5 regular partners
+- [x] Add a "6 marches" option in the planner to unlock one extra partner slot for players deploying all marches
 
 ### Viking Groups
 
@@ -62,12 +62,12 @@ Focus: finish the Viking Vengeance planner without overloading the casual player
 - [x] Add an HQ defense planner for wave 10 and wave 20 coordination
 - [x] Add role hints for each suggested group:
   rally lead, support, HQ helper, backup
-- [ ] Rework Auto Groups around the alliance strategy of emptying cities and deploying all 6 marches
-- [ ] Generate optimized groups of 7 players instead of pairs:
+- [x] Rework Auto Groups around the alliance strategy of emptying cities and deploying all 6 marches
+- [x] Generate optimized groups of 7 players instead of pairs:
   1 owner plus 6 reinforcement partners
-- [ ] Update group balancing rules for 7-player sets:
+- [x] Update group balancing rules for 7-player sets:
   troop strength, march coverage, partner preferences, availability, and score history
-- [ ] Move "Most selected partners" from Admin to the Auto Groups page where partner planning belongs
+- [x] Move "Most selected partners" from Admin to the Auto Groups page where partner planning belongs
 
 ### Viking Guide
 

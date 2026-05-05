@@ -40,9 +40,10 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 - Archive metadata editing for alliance score, event difficulty, and weekly leadership notes
 - Dedicated reporting CSV exports for archive summaries, personal scores, and event notes
 - Manual archive stat fields for alliance metrics outside the sign-up sheet
-- Automatic reinforcement group suggestions based on availability, partner preferences, troop strength, personal score, and role hints
+- Automatic 7-player reinforcement cell suggestions based on availability, partner preferences, troop strength, personal score, and role hints
 - HQ defense planner for Viking Vengeance waves 10 and 20
 - Track up to 2 strongest troop tiers, from T7 to T16, with separate Infantry, Lancer, and Marksman counts
+- Select up to 5 regular partners, with an optional 6 marches mode for a 6th reinforcement partner slot
 - Visible app version in the UI for easier support and deployment checks
 - Admin health panel for API status, database status, uptime, and deploy metadata
 - In-app Viking Vengeance guide with quick rules, wave strategy, common mistakes, and wave timeline

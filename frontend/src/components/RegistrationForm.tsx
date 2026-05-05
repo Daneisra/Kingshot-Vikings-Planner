@@ -7,6 +7,8 @@ const MAX_TROOP_TIER = 16;
 const MAX_TEXT_LENGTH = 40;
 const MAX_COMMENT_LENGTH = 300;
 const MAX_PERSONAL_SCORE = 1000000000;
+const MAX_STANDARD_PARTNERS = 5;
+const MAX_SIX_MARCH_PARTNERS = 6;
 const troopTierOptions = Array.from(
   { length: MAX_TROOP_TIER - MIN_TROOP_TIER + 1 },
   (_value, index) => MIN_TROOP_TIER + index
@@ -29,6 +31,7 @@ interface RegistrationFormState {
   nickname: string;
   partnerInput: string;
   partnerNames: string[];
+  usesSixMarches: boolean;
   tierGroups: [TierGroupDraft, TierGroupDraft];
   personalScore: string;
   comment: string;
@@ -63,6 +66,7 @@ const initialState = (): RegistrationFormState => ({
   nickname: "",
   partnerInput: "",
   partnerNames: [],
+  usesSixMarches: false,
   tierGroups: [defaultTierGroup(), defaultTierGroup()],
   personalScore: "",
   comment: "",
@@ -90,10 +94,13 @@ export function RegistrationForm({
 
   useEffect(() => {
     if (editingRegistration) {
+      const partnerNames = buildPartnerNames(editingRegistration);
+
       setForm({
         nickname: editingRegistration.nickname,
         partnerInput: "",
-        partnerNames: buildPartnerNames(editingRegistration),
+        partnerNames,
+        usesSixMarches: partnerNames.length > MAX_STANDARD_PARTNERS,
         tierGroups: buildTierGroups(editingRegistration),
         personalScore: editingRegistration.personalScore === null ? "" : String(editingRegistration.personalScore),
         comment: editingRegistration.comment ?? "",
@@ -207,8 +214,10 @@ export function RegistrationForm({
       return;
     }
 
-    if (form.partnerNames.length >= 4) {
-      setFormError("Use up to 4 regular partners.");
+    const partnerLimit = getPartnerLimit(form);
+
+    if (form.partnerNames.length >= partnerLimit) {
+      setFormError(`Use up to ${partnerLimit} regular partners.`);
       return;
     }
 
@@ -276,6 +285,28 @@ export function RegistrationForm({
 
         <div>
           <span className="mb-2 block text-sm font-medium text-slate-300">Regular partners</span>
+          <label className="mb-3 flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+            <input
+              type="checkbox"
+              checked={form.usesSixMarches}
+              onChange={(event) => {
+                const usesSixMarches = event.target.checked;
+
+                setFormError("");
+                setForm((current) => ({
+                  ...current,
+                  usesSixMarches
+                }));
+              }}
+              className="mt-1 h-4 w-4 rounded border-white/20 bg-slate-950 text-amber-300"
+            />
+            <span>
+              <span className="block text-sm font-semibold text-frost">6 marches available</span>
+              <span className="mt-1 block text-xs leading-5 text-slate-400">
+                Enable this only if you deploy all 6 marches and need one extra reinforcement partner slot.
+              </span>
+            </span>
+          </label>
           <div className="flex gap-2">
             <input
               type="text"
@@ -301,8 +332,13 @@ export function RegistrationForm({
             </button>
           </div>
           <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-500">
-            <span>Add up to 4 partners. The first one becomes the primary partner.</span>
-            <span>{form.partnerInput.trim().length}/{MAX_TEXT_LENGTH}</span>
+            <span>
+              Add up to {getPartnerLimit(form)} partners. The first one becomes the primary partner.
+            </span>
+            <span>
+              {form.partnerNames.length}/{getPartnerLimit(form)} partners / {form.partnerInput.trim().length}/
+              {MAX_TEXT_LENGTH}
+            </span>
           </div>
           {form.partnerNames.length > 0 ? (
             <div className="mt-3 flex flex-wrap gap-2">
@@ -598,8 +634,8 @@ function getFieldErrors(form: RegistrationFormState): FieldErrors {
 
   if (form.partnerNames.length < 1) {
     errors.partnerNames = "Add at least one regular partner.";
-  } else if (form.partnerNames.length > 4) {
-    errors.partnerNames = "Use up to 4 regular partners.";
+  } else if (form.partnerNames.length > getPartnerLimit(form)) {
+    errors.partnerNames = `Use up to ${getPartnerLimit(form)} regular partners.`;
   }
 
   const duplicatePartnerNames = new Set<string>();
@@ -673,6 +709,10 @@ function validateTierGroup(
 
 function getTierGroupTotal(group: TierGroupDraft) {
   return group.infantry + group.lancer + group.marksman;
+}
+
+function getPartnerLimit(form: RegistrationFormState) {
+  return form.usesSixMarches ? MAX_SIX_MARCH_PARTNERS : MAX_STANDARD_PARTNERS;
 }
 
 function parseTroopCountInput(value: string) {

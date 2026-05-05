@@ -13,7 +13,7 @@ export const registrationSchema = z.object({
   partnerNames: z
     .array(z.string().trim().min(2, "Partner name is required.").max(40))
     .min(1, "At least one partner is required.")
-    .max(4, "Use up to 4 regular partners.")
+    .max(6, "Use up to 6 regular partners.")
     .transform((names) => {
       const uniqueNames: string[] = [];
 
