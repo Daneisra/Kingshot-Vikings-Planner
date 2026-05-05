@@ -60,7 +60,7 @@ export function PersonalScoreTrendPanel({
                       <p className="text-sm font-semibold text-frost">{trend.nickname}</p>
                     </div>
                     <p className="mt-1 text-sm text-slate-400">
-                      {trend.previousScore.toLocaleString("en-US")} → {trend.currentScore.toLocaleString("en-US")}
+                      {trend.previousScore.toLocaleString("en-US")} {"->"} {trend.currentScore.toLocaleString("en-US")}
                     </p>
                   </div>
 

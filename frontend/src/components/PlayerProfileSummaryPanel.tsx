@@ -104,7 +104,7 @@ function PlayerProfileCard({ profile }: { profile: PlayerProfileSummary }) {
         <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
           <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Availability</p>
           <p className="mt-2 text-sm font-semibold text-frost">
-            {profile.availableCount}/{profile.participationCount} weeks · {availabilityRate}%
+            {profile.availableCount}/{profile.participationCount} weeks / {availabilityRate}%
           </p>
         </div>
       </div>

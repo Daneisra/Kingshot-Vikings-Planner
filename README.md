@@ -24,7 +24,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 ## Features
 
 - Shared registration list for the current Vikings cycle
-- Dedicated Home, Planner, Prep, Auto Groups, Guide, and Admin workspaces to keep each area focused
+- Dedicated Home, Planner, Prep, Auto Groups, Score, Guide, and Admin workspaces to keep each area focused
 - Alliance home page with event shortcuts, quick status cards, GitHub Issues, and optional Discord link
 - Support section with PayPal and Ko-fi links
 - Create, edit, and delete player registrations
@@ -33,6 +33,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 - Personal score trend comparison across archived weeks
 - Individual player profile summaries from archived weeks
 - Alliance score trend comparison across archived weeks
+- Public Score page for shareable score trends, player summaries, and archive highlights
 - Alliance score trend charts by recorded Viking difficulty
 - Participation trend charts by archived week
 - Rich historical archive analytics with score highlights and difficulty-based averages

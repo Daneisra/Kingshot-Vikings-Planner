@@ -213,6 +213,15 @@ export const api = {
   getGuideNotesSettings() {
     return request<GuideNotesSettings>("/settings/guide-notes");
   },
+  listPublicScoreArchives() {
+    return request<WeeklyArchiveSummary[]>("/scores/archives");
+  },
+  listPublicPersonalScoreTrends() {
+    return request<PersonalScoreTrend[]>("/scores/personal-score-trends");
+  },
+  listPublicPlayerProfiles() {
+    return request<PlayerProfileSummary[]>("/scores/player-profiles");
+  },
   createRegistration(payload: RegistrationPayload) {
     return request<Registration>("/registrations", {
       method: "POST",

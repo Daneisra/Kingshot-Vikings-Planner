@@ -1,9 +1,9 @@
-import { BookOpen, ClipboardCheck, Coffee, Github, HeartHandshake, MessageCircle, ShieldCheck, Users2 } from "lucide-react";
+import { BookOpen, ClipboardCheck, Coffee, Github, HeartHandshake, MessageCircle, ShieldCheck, Trophy, Users2 } from "lucide-react";
 import type { HealthResponse } from "../lib/api";
 import type { StatsResponse } from "../types/registration";
 import type { EventConfigurationSettings, EventWarningSettings } from "../types/settings";
 
-type HomeTargetView = "planner" | "prep" | "groups" | "guide" | "admin";
+type HomeTargetView = "planner" | "prep" | "groups" | "score" | "guide" | "admin";
 
 interface AllianceHomePageProps {
   eventConfiguration: EventConfigurationSettings;
@@ -40,6 +40,12 @@ const shortcutItems: Array<{
     label: "Auto groups",
     description: "Review reinforcement and HQ suggestions.",
     icon: ShieldCheck
+  },
+  {
+    view: "score",
+    label: "Score board",
+    description: "Review public score trends and archive highlights.",
+    icon: Trophy
   },
   {
     view: "guide",

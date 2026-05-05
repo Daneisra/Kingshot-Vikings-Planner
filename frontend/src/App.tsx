@@ -1,14 +1,11 @@
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { BookOpen, ClipboardCheck, Crown, Github, House, RefreshCw, ShieldCheck, Users2 } from "lucide-react";
+import { BookOpen, ClipboardCheck, Crown, Github, House, RefreshCw, ShieldCheck, Trophy, Users2 } from "lucide-react";
 import { AdminPanel } from "./components/AdminPanel";
 import { AllianceHomePage } from "./components/AllianceHomePage";
-import { AllianceScoreTrendPanel } from "./components/AllianceScoreTrendPanel";
-import { ArchiveAnalyticsPanel } from "./components/ArchiveAnalyticsPanel";
 import { ArchivesPanel } from "./components/ArchivesPanel";
 import { BulkImportPanel } from "./components/BulkImportPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
-import { DifficultyScoreTrendPanel } from "./components/DifficultyScoreTrendPanel";
 import { EventGuidePanel } from "./components/EventGuidePanel";
 import { EventConfigurationSettingsPanel } from "./components/EventConfigurationSettingsPanel";
 import { EventWarningBanner } from "./components/EventWarningBanner";
@@ -17,16 +14,14 @@ import { FiltersBar } from "./components/FiltersBar";
 import { GuideNotesSettingsPanel } from "./components/GuideNotesSettingsPanel";
 import { HqDefensePlannerPanel } from "./components/HqDefensePlannerPanel";
 import { AdminHealthPanel } from "./components/AdminHealthPanel";
-import { PersonalScoreTrendPanel } from "./components/PersonalScoreTrendPanel";
-import { PlayerProfileSummaryPanel } from "./components/PlayerProfileSummaryPanel";
 import { PostEventResultPanel } from "./components/PostEventResultPanel";
-import { ParticipationTrendPanel } from "./components/ParticipationTrendPanel";
 import { PreEventChecklistPanel } from "./components/PreEventChecklistPanel";
 import { RegistrationForm } from "./components/RegistrationForm";
 import { RegistrationList } from "./components/RegistrationList";
 import { ReportingExportPanel } from "./components/ReportingExportPanel";
 import type { ReportingExportKind } from "./components/ReportingExportPanel";
 import { ReinforcementGroupsPanel } from "./components/ReinforcementGroupsPanel";
+import { ScorePage } from "./components/ScorePage";
 import { StatsCards } from "./components/StatsCards";
 import { ToastStack } from "./components/ToastStack";
 import type { ToastItem } from "./components/ToastStack";
@@ -91,7 +86,7 @@ const kofiUrl = import.meta.env.VITE_KOFI_URL || "https://ko-fi.com/daneisra";
 const vikingVengeanceGuideUrl =
   "https://github.com/Daneisra/Kingshot-Vikings-Planner/blob/main/docs/VIKING_VENGEANCE_GUIDE.md";
 
-type AppView = "home" | "planner" | "prep" | "groups" | "guide" | "admin";
+type AppView = "home" | "planner" | "prep" | "groups" | "score" | "guide" | "admin";
 
 interface ConfirmDialogState {
   title: string;
@@ -259,8 +254,16 @@ function readAppViewFromHash(): AppView {
     return "home";
   }
 
+  if (hashValue === "planner") {
+    return "planner";
+  }
+
   if (hashValue === "groups") {
     return "groups";
+  }
+
+  if (hashValue === "score") {
+    return "score";
   }
 
   if (hashValue === "prep") {
@@ -328,10 +331,12 @@ export default function App() {
   const [archivesErrorMessage, setArchivesErrorMessage] = useState("");
   const [healthErrorMessage, setHealthErrorMessage] = useState("");
   const [archives, setArchives] = useState<WeeklyArchiveSummary[]>([]);
+  const [publicScoreArchives, setPublicScoreArchives] = useState<WeeklyArchiveSummary[]>([]);
   const [healthStatus, setHealthStatus] = useState<HealthResponse | null>(null);
-  const [scoreTrendErrorMessage, setScoreTrendErrorMessage] = useState("");
-  const [scoreTrends, setScoreTrends] = useState<PersonalScoreTrend[]>([]);
-  const [playerProfiles, setPlayerProfiles] = useState<PlayerProfileSummary[]>([]);
+  const [publicScoreTrends, setPublicScoreTrends] = useState<PersonalScoreTrend[]>([]);
+  const [publicPlayerProfiles, setPublicPlayerProfiles] = useState<PlayerProfileSummary[]>([]);
+  const [isLoadingPublicScores, setIsLoadingPublicScores] = useState(false);
+  const [publicScoresErrorMessage, setPublicScoresErrorMessage] = useState("");
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const toastIdRef = useRef(0);
@@ -399,6 +404,8 @@ export default function App() {
         ? "Alliance hub for Vikings coordination."
       : appView === "groups"
         ? "Build Viking reinforcement groups faster."
+        : appView === "score"
+          ? "Review public Viking score history."
         : appView === "prep"
           ? "Prepare players before Viking waves."
         : appView === "guide"
@@ -411,6 +418,8 @@ export default function App() {
         ? "Jump into sign-ups, preparation, auto groups, guides, and community links from one clean entry point."
       : appView === "groups"
         ? "Use the current registration pool to review suggested reinforcement groups, HQ anchors, and pairing balance."
+        : appView === "score"
+          ? "Alliance scores, personal score trends, participation charts, and public archive highlights live here outside the protected admin tools."
         : appView === "prep"
           ? "Checklist and critical wave reminders live here so the main planner stays focused on sign-ups."
         : appView === "guide"
@@ -558,25 +567,37 @@ export default function App() {
 
     setIsLoadingArchives(true);
     setArchivesErrorMessage("");
-    setScoreTrendErrorMessage("");
 
     try {
-      const [nextArchives, nextTrends, nextPlayerProfiles] = await Promise.all([
-        api.listArchives(adminToken),
-        api.listPersonalScoreTrends(adminToken),
-        api.listPlayerProfiles(adminToken)
-      ]);
+      const nextArchives = await api.listArchives(adminToken);
       setArchives(nextArchives);
-      setScoreTrends(nextTrends);
-      setPlayerProfiles(nextPlayerProfiles);
     } catch (error) {
       const message = getDisplayMessage(error, "Unable to load weekly archives.");
       setArchivesErrorMessage(message);
-      setScoreTrendErrorMessage(message);
     } finally {
       setIsLoadingArchives(false);
     }
   }, [adminToken, getDisplayMessage]);
+
+  const loadPublicScores = useCallback(async () => {
+    setIsLoadingPublicScores(true);
+    setPublicScoresErrorMessage("");
+
+    try {
+      const [nextArchives, nextTrends, nextPlayerProfiles] = await Promise.all([
+        api.listPublicScoreArchives(),
+        api.listPublicPersonalScoreTrends(),
+        api.listPublicPlayerProfiles()
+      ]);
+      setPublicScoreArchives(nextArchives);
+      setPublicScoreTrends(nextTrends);
+      setPublicPlayerProfiles(nextPlayerProfiles);
+    } catch (error) {
+      setPublicScoresErrorMessage(getDisplayMessage(error, "Unable to load public score data."));
+    } finally {
+      setIsLoadingPublicScores(false);
+    }
+  }, [getDisplayMessage]);
 
   useEffect(() => {
     void loadPartners();
@@ -609,14 +630,19 @@ export default function App() {
     if (!isAdminUnlocked || !adminToken.trim()) {
       setArchives([]);
       setArchivesErrorMessage("");
-      setScoreTrends([]);
-      setPlayerProfiles([]);
-      setScoreTrendErrorMessage("");
       return;
     }
 
     void loadArchives();
   }, [adminToken, isAdminUnlocked, loadArchives]);
+
+  useEffect(() => {
+    if (appView !== "score") {
+      return;
+    }
+
+    void loadPublicScores();
+  }, [appView, loadPublicScores]);
 
   useEffect(() => {
     void loadDashboard({ ...filters, search: debouncedSearch });
@@ -703,6 +729,22 @@ export default function App() {
   }
 
   async function refreshCurrentView() {
+    if (appView === "score") {
+      setIsRefreshing(true);
+
+      try {
+        await Promise.all([
+          loadEventConfigurationSettings(),
+          loadHealth(),
+          loadPublicScores()
+        ]);
+      } finally {
+        setIsRefreshing(false);
+      }
+
+      return;
+    }
+
     if (appView === "admin") {
       setIsRefreshing(true);
 
@@ -1157,6 +1199,14 @@ export default function App() {
               </button>
               <button
                 type="button"
+                className={appView === "score" ? "primary-button" : "secondary-button"}
+                onClick={() => setAppView("score")}
+              >
+                <Trophy className="h-4 w-4" />
+                Score
+              </button>
+              <button
+                type="button"
                 className={appView === "guide" ? "primary-button" : "secondary-button"}
                 onClick={() => setAppView("guide")}
               >
@@ -1245,6 +1295,15 @@ export default function App() {
               <StatsCards stats={stats} warningMessage={statsErrorMessage} />
             </div>
           </div>
+        ) : appView === "score" ? (
+          <ScorePage
+            archives={publicScoreArchives}
+            personalScoreTrends={publicScoreTrends}
+            playerProfiles={publicPlayerProfiles}
+            isLoading={isLoadingPublicScores}
+            errorMessage={publicScoresErrorMessage}
+            onRefresh={() => void loadPublicScores()}
+          />
         ) : appView === "guide" ? (
           <div className="space-y-6">
             <EventWarningBanner customWarning={eventWarningSettings} />
@@ -1329,48 +1388,6 @@ export default function App() {
                 onRefresh={loadArchives}
                 onExport={handleExportArchiveCsv}
                 onSave={handleUpdateArchiveMetadata}
-              />
-
-              <AllianceScoreTrendPanel
-                archives={archives}
-                isAdminUnlocked={isAdminUnlocked}
-                isLoading={isLoadingArchives}
-                errorMessage={archivesErrorMessage}
-              />
-
-              <DifficultyScoreTrendPanel
-                archives={archives}
-                isAdminUnlocked={isAdminUnlocked}
-                isLoading={isLoadingArchives}
-                errorMessage={archivesErrorMessage}
-              />
-
-              <ArchiveAnalyticsPanel
-                archives={archives}
-                isAdminUnlocked={isAdminUnlocked}
-                isLoading={isLoadingArchives}
-                errorMessage={archivesErrorMessage}
-              />
-
-              <ParticipationTrendPanel
-                archives={archives}
-                isAdminUnlocked={isAdminUnlocked}
-                isLoading={isLoadingArchives}
-                errorMessage={archivesErrorMessage}
-              />
-
-              <PersonalScoreTrendPanel
-                trends={scoreTrends}
-                isAdminUnlocked={isAdminUnlocked}
-                isLoading={isLoadingArchives}
-                errorMessage={scoreTrendErrorMessage}
-              />
-
-              <PlayerProfileSummaryPanel
-                profiles={playerProfiles}
-                isAdminUnlocked={isAdminUnlocked}
-                isLoading={isLoadingArchives}
-                errorMessage={scoreTrendErrorMessage}
               />
 
               {stats.topPartners.length > 0 ? (

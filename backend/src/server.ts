@@ -10,6 +10,7 @@ import { attachRequestId } from "./middleware/request-id";
 import { adminRouter } from "./routes/admin";
 import { healthRouter } from "./routes/health";
 import { registrationsRouter } from "./routes/registrations";
+import { scoresRouter } from "./routes/scores";
 import { settingsRouter } from "./routes/settings";
 
 dotenv.config();
@@ -56,6 +57,7 @@ app.use(morgan(config.nodeEnv === "production" ? "json" : "dev"));
 app.use("/api/health", healthRouter);
 app.use("/api/registrations", registrationsRouter);
 app.use("/api/settings", settingsRouter);
+app.use("/api/scores", scoresRouter);
 app.use("/api/admin", adminRouter);
 
 app.use((_req, res) => {
