@@ -45,7 +45,7 @@ export function PlayerProfileSummaryPanel({
           No player profiles yet. Archive at least one week to build participation history.
         </p>
       ) : (
-        <div className="mt-4 grid gap-3 xl:grid-cols-2">
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
           {visibleProfiles.map((profile) => (
             <PlayerProfileCard key={profile.nickname.toLowerCase()} profile={profile} />
           ))}
@@ -61,12 +61,12 @@ function PlayerProfileCard({ profile }: { profile: PlayerProfileSummary }) {
   const TrendIcon = profile.scoreDelta === null || profile.scoreDelta >= 0 ? TrendingUp : TrendingDown;
 
   return (
-    <article className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-4">
+    <article className="min-w-0 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <UserRound className="h-4 w-4 text-amber-300" />
-            <h3 className="text-base font-semibold text-frost">{profile.nickname}</h3>
+            <UserRound className="h-4 w-4 shrink-0 text-amber-300" />
+            <h3 className="min-w-0 break-words text-base font-semibold text-frost">{profile.nickname}</h3>
           </div>
           <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
             Last seen {formatArchiveDate(profile.latestArchivedAt)}
@@ -78,13 +78,13 @@ function PlayerProfileCard({ profile }: { profile: PlayerProfileSummary }) {
         </span>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
         <ProfileMetric label="Latest score" value={formatScore(profile.latestScore)} />
         <ProfileMetric label="Best score" value={formatScore(profile.bestScore)} />
         <ProfileMetric label="Average score" value={formatScore(profile.averageScore)} />
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
         <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
           <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Score change</p>
           <p
@@ -114,16 +114,16 @@ function PlayerProfileCard({ profile }: { profile: PlayerProfileSummary }) {
           <Medal className="h-4 w-4 text-amber-300" />
           <p className="text-sm font-semibold text-frost">Latest roster snapshot</p>
         </div>
-        <div className="mt-3 grid gap-3 text-sm text-slate-300 sm:grid-cols-3">
-          <p>
+        <div className="mt-3 grid gap-3 text-sm text-slate-300 md:grid-cols-3">
+          <p className="min-w-0 break-words">
             <span className="block text-xs uppercase tracking-[0.18em] text-slate-500">Troops</span>
             {profile.latestTroopCount.toLocaleString("en-US")}
           </p>
-          <p>
+          <p className="min-w-0 break-words">
             <span className="block text-xs uppercase tracking-[0.18em] text-slate-500">Top tier</span>
             T{profile.latestTroopLevel}
           </p>
-          <p>
+          <p className="min-w-0 break-words">
             <span className="block text-xs uppercase tracking-[0.18em] text-slate-500">Partners</span>
             {profile.latestPartners.length > 0 ? profile.latestPartners.join(", ") : "None"}
           </p>
@@ -135,9 +135,9 @@ function PlayerProfileCard({ profile }: { profile: PlayerProfileSummary }) {
 
 function ProfileMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
-      <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{label}</p>
-      <p className="mt-2 text-sm font-semibold text-frost">{value}</p>
+    <div className="min-w-0 rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
+      <p className="break-words text-xs uppercase tracking-[0.14em] text-slate-500">{label}</p>
+      <p className="mt-2 break-words text-sm font-semibold text-frost">{value}</p>
     </div>
   );
 }

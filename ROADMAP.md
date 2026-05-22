@@ -28,6 +28,7 @@ Focus: finish the Viking Vengeance planner without overloading the casual player
 - [x] Review weekly reset behavior and empty-state safety
 - [x] Mitigate iPhone Chrome reload/black-screen crashes while entering troop counts
 - [ ] Confirm the iPhone Chrome troop-count fix with the affected player in production
+- [x] Fix responsive UI overflow artifacts on the Score page and add global horizontal overflow protection
 
 ### Viking Planner UX
 

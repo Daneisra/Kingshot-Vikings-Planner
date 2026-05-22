@@ -16,9 +16,15 @@
   body {
     margin: 0;
     min-width: 320px;
+    overflow-x: clip;
     background:
       radial-gradient(circle at top, rgba(245, 158, 11, 0.1), transparent 30%),
       linear-gradient(180deg, #08111f 0%, #0d1728 52%, #07111e 100%);
+  }
+
+  #root {
+    min-height: 100vh;
+    overflow-x: clip;
   }
 
   input,

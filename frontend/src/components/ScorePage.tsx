@@ -65,7 +65,7 @@ export function ScorePage({
         </div>
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-6">
           <ArchiveAnalyticsPanel archives={archives} isAdminUnlocked isLoading={isLoading} errorMessage={errorMessage} />
           <AllianceScoreTrendPanel archives={archives} isAdminUnlocked isLoading={isLoading} errorMessage={errorMessage} />
@@ -80,14 +80,15 @@ export function ScorePage({
 
         <div className="space-y-6">
           <ParticipationTrendPanel archives={archives} isAdminUnlocked isLoading={isLoading} errorMessage={errorMessage} />
-          <PlayerProfileSummaryPanel
-            profiles={playerProfiles}
-            isAdminUnlocked
-            isLoading={isLoading}
-            errorMessage={errorMessage}
-          />
         </div>
       </div>
+
+      <PlayerProfileSummaryPanel
+        profiles={playerProfiles}
+        isAdminUnlocked
+        isLoading={isLoading}
+        errorMessage={errorMessage}
+      />
     </div>
   );
 }
