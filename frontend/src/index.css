@@ -16,7 +16,7 @@
   body {
     margin: 0;
     min-width: 320px;
-    overflow-x: clip;
+    overflow-x: hidden;
     background:
       radial-gradient(circle at top, rgba(245, 158, 11, 0.1), transparent 30%),
       linear-gradient(180deg, #08111f 0%, #0d1728 52%, #07111e 100%);
@@ -24,7 +24,7 @@
 
   #root {
     min-height: 100vh;
-    overflow-x: clip;
+    overflow-x: hidden;
   }
 
   input,
@@ -83,15 +83,35 @@
 
 @layer components {
   .primary-button {
-    @apply bg-amber-400 text-slate-950 hover:bg-amber-300;
+    @apply inline-flex max-w-full items-center justify-center gap-2 rounded-2xl bg-amber-400 px-4 py-3 text-center text-sm font-semibold text-slate-950 transition hover:bg-amber-300;
   }
 
   .secondary-button {
-    @apply border border-white/10 bg-white/5 text-frost hover:bg-white/10;
+    @apply inline-flex max-w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-semibold text-frost transition hover:bg-white/10;
   }
 
   .danger-button {
-    @apply bg-rose-500/15 text-rose-100 hover:bg-rose-500/25;
+    @apply inline-flex max-w-full items-center justify-center gap-2 rounded-2xl bg-rose-500/15 px-4 py-3 text-center text-sm font-semibold text-rose-100 transition hover:bg-rose-500/25;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .danger-button {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .primary-button svg,
+  .secondary-button svg,
+  .danger-button svg {
+    flex-shrink: 0;
+  }
+
+  .backdrop-blur,
+  .backdrop-blur-sm {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
   }
 
   .warning-banner::before {

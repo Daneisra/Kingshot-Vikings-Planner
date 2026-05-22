@@ -1115,7 +1115,7 @@ export default function App() {
                   {pageTitle}
                 </h1>
                 <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">{pageDescription}</p>
-                <div className="mt-5 flex flex-wrap gap-3">
+                <div className="mt-5 grid gap-3 sm:flex sm:flex-wrap">
                   <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-300">
                     Version {APP_VERSION_LABEL}
                   </span>
@@ -1164,7 +1164,7 @@ export default function App() {
               </button>
             </div>
 
-            <nav className="flex flex-wrap gap-3">
+            <nav className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
               <button
                 type="button"
                 className={appView === "home" ? "primary-button" : "secondary-button"}
