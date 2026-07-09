@@ -150,6 +150,7 @@ Focus: evolve from a Viking-only planner into a broader alliance coordination hu
 - [x] Add Bear Trap, Vikings, and Battle formation presets with persisted available troops, editable slots, calculated remainder, Discord summary copy, and CSV export
 - [x] Store player Troop Formations edits locally per browser and per event preset to avoid shared template conflicts
 - [x] Add tier-based available troop inventory and automatic strongest-first allocation for Troop Formations slots
+- [x] Improve Troop Formations UX with collapsible tier cards, readable allocation badges, compact actions, and mobile-first slot cards
 - [ ] Add a global event navigation model:
   Home, Viking Vengeance, Auto Groups, Guide, Admin, future events
 - [ ] Add a simple alliance calendar for planned event times

@@ -398,44 +398,7 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
               ) : null}
             </div>
 
-            <div className="mt-5 hidden overflow-x-auto xl:block">
-              <table className="w-full min-w-[1260px] border-separate border-spacing-y-3 text-left text-sm">
-                <thead className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                  <tr>
-                    <th className="px-3">Name</th>
-                    <th className="px-3">Hero</th>
-                    <th className="px-3">Infantry</th>
-                    <th className="px-3">Lancer</th>
-                    <th className="px-3">Marksman</th>
-                    <th className="px-3">Total</th>
-                    <th className="px-3">Ratios</th>
-                    <th className="px-3">Auto allocation</th>
-                    <th className="px-3">Notes</th>
-                    <th className="px-3">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {draftSlots.map((slot, index) => (
-                    <SlotTableRow
-                      key={slot.id}
-                      slot={slot}
-                      index={index}
-                      slotCount={draftSlots.length}
-                      disabled={isSaving}
-                      allocation={allocationResult.slots[slot.id]}
-                      shortage={allocationResult.shortages[slot.id]}
-                      onChange={updateSlotDraft}
-                      onDuplicate={duplicateSlot}
-                      onDelete={deleteSlot}
-                      onMove={moveSlot}
-                    />
-                  ))}
-                  <RemainderTableRow remaining={remainingTroops} remainingByTier={allocationResult.remainingByTier} />
-                </tbody>
-              </table>
-            </div>
-
-            <div className="mt-5 grid gap-4 xl:hidden">
+            <div className="mt-5 grid gap-4">
               {draftSlots.map((slot, index) => (
                 <SlotCard
                   key={slot.id}
@@ -470,6 +433,11 @@ function AvailableTroopsPanel({
   onChange: (inventory: FormationTierInventory) => void;
 }) {
   const totals = sumTierInventory(inventory);
+  const [expandedTroopTypes, setExpandedTroopTypes] = useState<Record<TroopType, boolean>>({
+    infantry: false,
+    lancer: false,
+    marksman: false
+  });
 
   function updateTierCount(troopType: TroopType, tier: TroopTier, count: number) {
     onChange({
@@ -487,27 +455,44 @@ function AvailableTroopsPanel({
       <p className="mt-2 text-sm leading-6 text-slate-400">
         Enter your troops by tier. The formation planner consumes the strongest tiers first, from T16 down to T7.
       </p>
-      <div className="mt-4 grid gap-4">
+      <div className="mt-4 grid gap-4 lg:grid-cols-3">
         {troopTypes.map(({ key, label }) => (
           <div key={key} className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="font-semibold text-frost">{label}</p>
-              <p className="text-sm text-slate-400">Total {formatNumber(totals[key])}</p>
+              <div>
+                <p className="font-semibold text-frost">{label}</p>
+                <p className="mt-1 text-2xl font-semibold text-frost">{formatNumber(totals[key])}</p>
+              </div>
+              <button
+                type="button"
+                className="secondary-button px-3 py-2 text-xs"
+                onClick={() =>
+                  setExpandedTroopTypes((current) => ({
+                    ...current,
+                    [key]: !current[key]
+                  }))
+                }
+              >
+                {expandedTroopTypes[key] ? "Hide tiers" : "Edit tiers"}
+              </button>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5 xl:grid-cols-10">
-              {troopTiers.map((tier) => (
-                <label key={tier} className="min-w-0">
-                  <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                    T{tier}
-                  </span>
-                  <NumericInput
-                    value={inventory[key][tier]}
-                    disabled={disabled}
-                    onChange={(value) => updateTierCount(key, tier, value)}
-                  />
-                </label>
-              ))}
-            </div>
+            <p className="mt-3 min-h-10 text-sm leading-5 text-slate-400">{formatTierSummary(inventory[key])}</p>
+            {expandedTroopTypes[key] ? (
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5 lg:grid-cols-2 xl:grid-cols-5">
+                {troopTiers.map((tier) => (
+                  <label key={tier} className="min-w-0">
+                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      T{tier}
+                    </span>
+                    <NumericInput
+                      value={inventory[key][tier]}
+                      disabled={disabled}
+                      onChange={(value) => updateTierCount(key, tier, value)}
+                    />
+                  </label>
+                ))}
+              </div>
+            ) : null}
           </div>
         ))}
       </div>
@@ -544,60 +529,10 @@ function FormationSummaryPanel({
         </p>
       ) : (
         <p className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-          No overassignment detected.
+          No shortage detected.
         </p>
       )}
     </section>
-  );
-}
-
-function SlotTableRow({
-  slot,
-  index,
-  slotCount,
-  disabled,
-  allocation,
-  shortage,
-  onChange,
-  onDuplicate,
-  onDelete,
-  onMove
-}: SlotEditorProps) {
-  const total = getSlotTotal(slot);
-
-  return (
-    <tr className="rounded-2xl bg-slate-950/70 align-top">
-      <td className="rounded-l-2xl px-3 py-3">
-        <TextInput value={slot.name} disabled={disabled} onChange={(value) => onChange(slot.id, { name: value })} />
-      </td>
-      <td className="px-3 py-3">
-        <TextInput value={slot.hero} disabled={disabled} onChange={(value) => onChange(slot.id, { hero: value })} />
-      </td>
-      {troopTypes.map(({ key }) => (
-        <td key={key} className="px-3 py-3">
-          <NumericInput value={slot[key]} disabled={disabled} onChange={(value) => onChange(slot.id, { [key]: value })} />
-        </td>
-      ))}
-      <td className="px-3 py-3 font-semibold text-frost">{formatNumber(total)}</td>
-      <td className="px-3 py-3 text-xs text-slate-300">{formatSlotRatios(slot)}</td>
-      <td className="px-3 py-3 text-xs text-slate-300">
-        <AllocationSummary allocation={allocation} shortage={shortage} />
-      </td>
-      <td className="px-3 py-3">
-        <TextInput value={slot.notes} disabled={disabled} onChange={(value) => onChange(slot.id, { notes: value })} />
-      </td>
-      <td className="rounded-r-2xl px-3 py-3">
-        <SlotActions
-          slot={slot}
-          index={index}
-          slotCount={slotCount}
-          disabled={disabled}
-          onDuplicate={onDuplicate}
-          onDelete={onDelete}
-          onMove={onMove}
-        />
-      </td>
-    </tr>
   );
 }
 
@@ -607,38 +542,50 @@ function SlotCard(props: SlotEditorProps) {
 
   return (
     <article className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
-      <div className="grid gap-3 md:grid-cols-2">
-        <label>
-          <span className="mb-2 block text-sm font-medium text-slate-300">Name</span>
-          <TextInput value={slot.name} disabled={disabled} onChange={(value) => onChange(slot.id, { name: value })} />
-        </label>
-        <label>
-          <span className="mb-2 block text-sm font-medium text-slate-300">Hero</span>
-          <TextInput value={slot.hero} disabled={disabled} onChange={(value) => onChange(slot.id, { hero: value })} />
-        </label>
-        {troopTypes.map(({ key, label }) => (
-          <label key={key}>
-            <span className="mb-2 block text-sm font-medium text-slate-300">{label}</span>
-            <NumericInput value={slot[key]} disabled={disabled} onChange={(value) => onChange(slot.id, { [key]: value })} />
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div className="grid flex-1 gap-3 sm:grid-cols-2 xl:max-w-md">
+          <label>
+            <span className="mb-2 block text-sm font-medium text-slate-300">Name</span>
+            <TextInput value={slot.name} disabled={disabled} onChange={(value) => onChange(slot.id, { name: value })} />
           </label>
-        ))}
-        <label>
-          <span className="mb-2 block text-sm font-medium text-slate-300">Notes</span>
-          <TextInput value={slot.notes} disabled={disabled} onChange={(value) => onChange(slot.id, { notes: value })} />
-        </label>
+          <label>
+            <span className="mb-2 block text-sm font-medium text-slate-300">Hero</span>
+            <TextInput value={slot.hero} disabled={disabled} onChange={(value) => onChange(slot.id, { hero: value })} />
+          </label>
+        </div>
+        <SlotActions {...props} />
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <SummaryPill label="Total" value={formatNumber(total)} />
-        <SummaryPill label="Ratios" value={formatSlotRatios(slot)} />
-      </div>
-      <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Auto allocation</p>
-        <div className="mt-2 text-sm text-slate-300">
-          <AllocationSummary allocation={allocation} shortage={shortage} />
+
+      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Needs</p>
+            <p className="text-sm font-semibold text-frost">Total {formatNumber(total)}</p>
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            {troopTypes.map(({ key, label }) => (
+              <label key={key}>
+                <span className="mb-2 block text-sm font-medium text-slate-300">{label}</span>
+                <NumericInput value={slot[key]} disabled={disabled} onChange={(value) => onChange(slot.id, { [key]: value })} />
+              </label>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-slate-500">{formatSlotRatios(slot)}</p>
+        </div>
+
+        <div className="rounded-2xl border border-cyan-300/10 bg-cyan-300/5 p-4">
+          <p className="text-xs uppercase tracking-[0.18em] text-cyan-200">Auto allocation</p>
+          <div className="mt-3">
+            <AllocationSummary allocation={allocation} shortage={shortage} />
+          </div>
         </div>
       </div>
+
       <div className="mt-4">
-        <SlotActions {...props} />
+        <label>
+          <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Notes</span>
+          <TextInput value={slot.notes} disabled={disabled} onChange={(value) => onChange(slot.id, { notes: value })} />
+        </label>
       </div>
     </article>
   );
@@ -678,66 +625,84 @@ function SlotActions({
 }: SlotActionsProps) {
   return (
     <div className="flex flex-wrap gap-2">
-      <button type="button" className="secondary-button" onClick={() => onMove(index, -1)} disabled={disabled || index === 0}>
-        Up
+      <button
+        type="button"
+        className="secondary-button h-10 min-w-10 px-3 text-sm"
+        title="Move up"
+        onClick={() => onMove(index, -1)}
+        disabled={disabled || index === 0}
+      >
+        ↑
       </button>
-      <button type="button" className="secondary-button" onClick={() => onMove(index, 1)} disabled={disabled || index === slotCount - 1}>
-        Down
+      <button
+        type="button"
+        className="secondary-button h-10 min-w-10 px-3 text-sm"
+        title="Move down"
+        onClick={() => onMove(index, 1)}
+        disabled={disabled || index === slotCount - 1}
+      >
+        ↓
       </button>
-      <button type="button" className="secondary-button" onClick={() => onDuplicate(slot)} disabled={disabled}>
+      <button
+        type="button"
+        className="secondary-button h-10 min-w-10 px-3 text-sm"
+        title="Duplicate"
+        onClick={() => onDuplicate(slot)}
+        disabled={disabled}
+      >
         Copy
       </button>
-      <button type="button" className="danger-button" onClick={() => onDelete(slot)} disabled={disabled}>
+      <button
+        type="button"
+        className="danger-button h-10 min-w-10 px-3 text-sm"
+        title="Delete"
+        onClick={() => onDelete(slot)}
+        disabled={disabled}
+      >
         <Trash2 className="h-4 w-4" />
-        Delete
       </button>
     </div>
   );
 }
 
 function AllocationSummary({ allocation, shortage }: { allocation: SlotTroopAllocation; shortage: SlotShortage }) {
+  const hasAllocation = troopTypes.some(({ key }) => allocation[key].length > 0);
+  const hasShortage = troopTypes.some(({ key }) => shortage[key] > 0);
+
+  if (!hasAllocation && !hasShortage) {
+    return <p className="text-sm text-slate-500">No troops assigned</p>;
+  }
+
   return (
-    <div className="space-y-1">
+    <div className="space-y-3">
       {troopTypes.map(({ key, label }) => {
-        const allocationText = formatAllocationEntries(allocation[key]);
+        const allocationEntries = allocation[key];
         const shortageCount = shortage[key];
 
-        if (allocationText === "None" && shortageCount <= 0) {
+        if (allocationEntries.length === 0 && shortageCount <= 0) {
           return null;
         }
 
         return (
-          <p key={key}>
-            <span className="font-semibold text-slate-200">{label}:</span> {allocationText}
-            {shortageCount > 0 ? <span className="text-rose-200"> / short {formatNumber(shortageCount)}</span> : null}
-          </p>
+          <div key={key} className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</span>
+            {allocationEntries.map((entry) => (
+              <span
+                key={`${key}-${entry.tier}`}
+                className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-semibold text-cyan-50"
+              >
+                {formatNumber(entry.count)} T{entry.tier}
+              </span>
+            ))}
+            {shortageCount > 0 ? (
+              <span className="rounded-full border border-rose-400/30 bg-rose-500/15 px-3 py-1 text-xs font-semibold text-rose-100">
+                Shortage: {formatNumber(shortageCount)} {label}
+              </span>
+            ) : null}
+          </div>
         );
       })}
     </div>
-  );
-}
-
-function RemainderTableRow({
-  remaining,
-  remainingByTier
-}: {
-  remaining: FormationTroopCounts;
-  remainingByTier: FormationTierInventory;
-}) {
-  const total = getTotal(remaining);
-
-  return (
-    <tr className="rounded-2xl border border-amber-300/20 bg-amber-300/10 align-top">
-      <td className="rounded-l-2xl px-3 py-4 font-semibold text-frost">Remainder</td>
-      <td className="px-3 py-4 text-slate-300">No hero</td>
-      <td className={getRemainingClassName(remaining.infantry)}>{formatNumber(remaining.infantry)}</td>
-      <td className={getRemainingClassName(remaining.lancer)}>{formatNumber(remaining.lancer)}</td>
-      <td className={getRemainingClassName(remaining.marksman)}>{formatNumber(remaining.marksman)}</td>
-      <td className="px-3 py-4 font-semibold text-frost">{formatNumber(total)}</td>
-      <td className="px-3 py-4 text-xs text-slate-300">{formatRemainingByTier(remainingByTier)}</td>
-      <td className="px-3 py-4 text-slate-300">Automatic remaining troops</td>
-      <td className="rounded-r-2xl px-3 py-4 text-slate-500">Locked</td>
-    </tr>
   );
 }
 
@@ -749,13 +714,20 @@ function RemainderCard({
   remainingByTier: FormationTierInventory;
 }) {
   return (
-    <article className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4">
-      <p className="text-sm uppercase tracking-[0.2em] text-amber-200">Remainder</p>
-      <p className="mt-2 text-sm text-amber-50/85">Calculated automatically from available minus assigned troops.</p>
-      <div className="mt-4 grid gap-3">
-        <SummaryRow label="Remaining" counts={remaining} highlightNegative />
+    <article className="rounded-3xl border border-amber-300/20 bg-amber-300/10 p-5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-sm uppercase tracking-[0.2em] text-amber-200">Remainder</p>
+          <p className="mt-2 text-sm text-amber-50/85">Calculated automatically after all slots consume troops.</p>
+        </div>
+        <p className="text-2xl font-semibold text-frost">{formatNumber(getTotal(remaining))}</p>
       </div>
-      <p className="mt-3 text-xs leading-5 text-slate-400">{formatRemainingByTier(remainingByTier)}</p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        {troopTypes.map(({ key, label }) => (
+          <SummaryPill key={key} label={label} value={formatNumber(remaining[key])} />
+        ))}
+      </div>
+      <p className="mt-4 text-xs leading-5 text-slate-400">{formatRemainingByTier(remainingByTier)}</p>
     </article>
   );
 }
@@ -952,6 +924,14 @@ function formatAllocationEntries(entries: TroopAllocationEntry[]) {
   return entries.map((entry) => `T${entry.tier} ${formatNumber(entry.count)}`).join(", ");
 }
 
+function formatTierSummary(inventory: TierInventory) {
+  const nonEmptyTiers = troopTiers
+    .filter((tier) => inventory[tier] > 0)
+    .map((tier) => `T${tier} ${formatNumber(inventory[tier])}`);
+
+  return nonEmptyTiers.length > 0 ? nonEmptyTiers.join(" · ") : "No troops entered yet.";
+}
+
 function formatSlotAllocation(allocation: SlotTroopAllocation, shortage: SlotShortage) {
   return troopTypes
     .map(({ key, label }) => {
@@ -992,10 +972,6 @@ function parseIntegerInput(value: string) {
 
 function formatNumber(value: number) {
   return value.toLocaleString("en-US");
-}
-
-function getRemainingClassName(value: number) {
-  return `px-3 py-4 font-semibold ${value < 0 ? "text-rose-200" : "text-frost"}`;
 }
 
 function getLocalStorageKey(eventKey: FormationEventKey) {
