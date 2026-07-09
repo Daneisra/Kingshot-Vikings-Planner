@@ -185,6 +185,7 @@ The production backend also creates the `troop_formation_presets` table idempote
 Troop Formations player edits are not stored in PostgreSQL.
 They are browser-local drafts saved under keys such as `troop-formations:vikings`, `troop-formations:bear-trap`, and `troop-formations:battle`.
 The database table stores shared default templates only.
+The frontend stores available troops by tier locally and calculates strongest-first slot allocation without a backend write.
 
 Check Troop Formations data:
 

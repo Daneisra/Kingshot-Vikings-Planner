@@ -138,6 +138,7 @@ psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingsho
 
 The shared templates are not used as live collaborative documents.
 Each player can edit formations freely without admin access because normal edits stay local to that device/browser.
+The local Troop Formations draft stores available troops by type and tier from T7 to T16, then calculates strongest-first slot allocation in the frontend.
 
 ### Create server-side environment files
 

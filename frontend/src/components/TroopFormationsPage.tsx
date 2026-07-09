@@ -16,12 +16,31 @@ interface TroopFormationsPageProps {
 }
 
 type TroopType = keyof FormationTroopCounts;
+type TroopTier = 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
+type TierInventory = Record<TroopTier, number>;
+type FormationTierInventory = Record<TroopType, TierInventory>;
+
+interface TroopAllocationEntry {
+  tier: TroopTier;
+  count: number;
+}
+
+type SlotTroopAllocation = Record<TroopType, TroopAllocationEntry[]>;
+type SlotShortage = Record<TroopType, number>;
+
+interface AllocationResult {
+  slots: Record<string, SlotTroopAllocation>;
+  shortages: Record<string, SlotShortage>;
+  remainingByTier: FormationTierInventory;
+}
 
 const troopTypes: Array<{ key: TroopType; label: string }> = [
   { key: "infantry", label: "Infantry" },
   { key: "lancer", label: "Lancer" },
   { key: "marksman", label: "Marksman" }
 ];
+
+const troopTiers: TroopTier[] = [16, 15, 14, 13, 12, 11, 10, 9, 8, 7];
 
 const defaultSlotDraft: Omit<FormationSlot, "id" | "sortOrder"> = {
   name: "New formation",
@@ -33,7 +52,8 @@ const defaultSlotDraft: Omit<FormationSlot, "id" | "sortOrder"> = {
 };
 
 interface LocalFormationDraft {
-  availableTroops: FormationTroopCounts;
+  availableTroops?: FormationTroopCounts;
+  availableTroopsByTier?: FormationTierInventory;
   slots: FormationSlot[];
   savedAt: string;
 }
@@ -42,23 +62,25 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
   const [summaries, setSummaries] = useState<FormationPresetSummary[]>([]);
   const [selectedEventKey, setSelectedEventKey] = useState<FormationEventKey>("vikings");
   const [preset, setPreset] = useState<FormationPreset | null>(null);
-  const [draftTotals, setDraftTotals] = useState<FormationTroopCounts>({ infantry: 0, lancer: 0, marksman: 0 });
+  const [draftAvailableByTier, setDraftAvailableByTier] = useState<FormationTierInventory>(createEmptyTierInventory());
   const [draftSlots, setDraftSlots] = useState<FormationSlot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [localSavedAt, setLocalSavedAt] = useState<string | null>(null);
 
+  const availableTroops = useMemo(() => sumTierInventory(draftAvailableByTier), [draftAvailableByTier]);
   const assignedTroops = useMemo(() => sumSlots(draftSlots), [draftSlots]);
-  const remainingTroops = useMemo(
-    () => ({
-      infantry: draftTotals.infantry - assignedTroops.infantry,
-      lancer: draftTotals.lancer - assignedTroops.lancer,
-      marksman: draftTotals.marksman - assignedTroops.marksman
-    }),
-    [assignedTroops, draftTotals]
+  const allocationResult = useMemo(
+    () => allocateSlotsByTier(draftAvailableByTier, draftSlots),
+    [draftAvailableByTier, draftSlots]
   );
-  const overAssignedTypes = troopTypes.filter(({ key }) => remainingTroops[key] < 0);
+  const remainingTroops = useMemo(
+    () => sumTierInventory(allocationResult.remainingByTier),
+    [allocationResult.remainingByTier]
+  );
+  const shortageTotals = useMemo(() => sumSlotShortages(allocationResult.shortages), [allocationResult.shortages]);
+  const overAssignedTypes = troopTypes.filter(({ key }) => shortageTotals[key] > 0);
 
   useEffect(() => {
     void loadSummaries();
@@ -75,12 +97,12 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
 
     const savedAt = new Date().toISOString();
     saveLocalDraft(selectedEventKey, {
-      availableTroops: draftTotals,
+      availableTroopsByTier: draftAvailableByTier,
       slots: draftSlots,
       savedAt
     });
     setLocalSavedAt(savedAt);
-  }, [draftSlots, draftTotals, isLoading, preset, selectedEventKey]);
+  }, [draftAvailableByTier, draftSlots, isLoading, preset, selectedEventKey]);
 
   async function loadSummaries() {
     try {
@@ -107,7 +129,10 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
 
   function applyPreset(nextPreset: FormationPreset, localDraft?: LocalFormationDraft | null) {
     setPreset(nextPreset);
-    setDraftTotals(localDraft?.availableTroops ?? nextPreset.availableTroops);
+    setDraftAvailableByTier(
+      localDraft?.availableTroopsByTier ??
+        convertTotalsToTierInventory(localDraft?.availableTroops ?? nextPreset.availableTroops)
+    );
     setDraftSlots(localDraft?.slots ?? nextPreset.slots);
     setLocalSavedAt(localDraft?.savedAt ?? null);
   }
@@ -115,7 +140,7 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
   function saveLocalNow() {
     const savedAt = new Date().toISOString();
     saveLocalDraft(selectedEventKey, {
-      availableTroops: draftTotals,
+      availableTroopsByTier: draftAvailableByTier,
       slots: draftSlots,
       savedAt
     });
@@ -183,7 +208,7 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
     }
 
     localStorage.removeItem(getLocalStorageKey(selectedEventKey));
-    setDraftTotals(preset.availableTroops);
+    setDraftAvailableByTier(convertTotalsToTierInventory(preset.availableTroops));
     setDraftSlots(preset.slots);
     setLocalSavedAt(null);
     onNotify("success", "Your local formation draft was reset.");
@@ -220,9 +245,12 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
 
     const summary = [
       `Event: ${preset.eventName}`,
-      `Available: Infantry ${formatNumber(draftTotals.infantry)} / Lancer ${formatNumber(draftTotals.lancer)} / Marksman ${formatNumber(draftTotals.marksman)}`,
+      `Available: Infantry ${formatNumber(availableTroops.infantry)} / Lancer ${formatNumber(availableTroops.lancer)} / Marksman ${formatNumber(availableTroops.marksman)}`,
       `Assigned: Infantry ${formatNumber(assignedTroops.infantry)} / Lancer ${formatNumber(assignedTroops.lancer)} / Marksman ${formatNumber(assignedTroops.marksman)}`,
-      `Remaining: Infantry ${formatNumber(remainingTroops.infantry)} / Lancer ${formatNumber(remainingTroops.lancer)} / Marksman ${formatNumber(remainingTroops.marksman)}`
+      `Remaining: Infantry ${formatNumber(remainingTroops.infantry)} / Lancer ${formatNumber(remainingTroops.lancer)} / Marksman ${formatNumber(remainingTroops.marksman)}`,
+      "",
+      "Auto allocation:",
+      ...draftSlots.map((slot) => `${slot.name}: ${formatSlotAllocation(allocationResult.slots[slot.id], allocationResult.shortages[slot.id])}`)
     ].join("\n");
 
     try {
@@ -240,8 +268,9 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
       const { blob, filename } = buildLocalFormationCsv({
         eventName: preset?.eventName ?? selectedEventKey,
         eventKey: selectedEventKey,
-        availableTroops: draftTotals,
-        slots: draftSlots
+        availableTroopsByTier: draftAvailableByTier,
+        slots: draftSlots,
+        allocationResult
       });
       downloadBlob(blob, filename);
       onNotify("success", "Formation CSV exported.");
@@ -266,8 +295,8 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
               Plan march splits by event
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-cyan-50/85">
-              Track available Infantry, Lancer, and Marksman troops, distribute them into event formations, and keep
-              remaining troops visible before the event starts.
+              Track available Infantry, Lancer, and Marksman troops by tier, define formation needs, and let the
+              planner assign your strongest available troops first.
             </p>
           </div>
 
@@ -319,14 +348,15 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
         <>
           <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
             <AvailableTroopsPanel
-              totals={draftTotals}
+              inventory={draftAvailableByTier}
               disabled={isSaving}
-              onChange={setDraftTotals}
+              onChange={setDraftAvailableByTier}
             />
 
             <FormationSummaryPanel
               assigned={assignedTroops}
               remaining={remainingTroops}
+              shortageTotals={shortageTotals}
               overAssignedTypes={overAssignedTypes.map((troopType) => troopType.label)}
             />
           </section>
@@ -337,7 +367,8 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
                 <p className="text-sm uppercase tracking-[0.2em] text-amber-300">{preset.eventName} slots</p>
                 <h2 className="mt-2 text-xl font-semibold text-frost">Editable formation plan</h2>
                 <p className="mt-2 text-sm leading-6 text-slate-400">
-                  The Remainder line is calculated automatically from the remaining troops and is not edited directly.
+                  Enter the troop counts each slot needs. Auto allocation follows the slot order and consumes your
+                  strongest available tiers first.
                 </p>
               </div>
 
@@ -368,7 +399,7 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
             </div>
 
             <div className="mt-5 hidden overflow-x-auto xl:block">
-              <table className="w-full min-w-[1080px] border-separate border-spacing-y-3 text-left text-sm">
+              <table className="w-full min-w-[1260px] border-separate border-spacing-y-3 text-left text-sm">
                 <thead className="text-xs uppercase tracking-[0.18em] text-slate-500">
                   <tr>
                     <th className="px-3">Name</th>
@@ -378,6 +409,7 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
                     <th className="px-3">Marksman</th>
                     <th className="px-3">Total</th>
                     <th className="px-3">Ratios</th>
+                    <th className="px-3">Auto allocation</th>
                     <th className="px-3">Notes</th>
                     <th className="px-3">Actions</th>
                   </tr>
@@ -390,13 +422,15 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
                       index={index}
                       slotCount={draftSlots.length}
                       disabled={isSaving}
+                      allocation={allocationResult.slots[slot.id]}
+                      shortage={allocationResult.shortages[slot.id]}
                       onChange={updateSlotDraft}
                       onDuplicate={duplicateSlot}
                       onDelete={deleteSlot}
                       onMove={moveSlot}
                     />
                   ))}
-                  <RemainderTableRow remaining={remainingTroops} />
+                  <RemainderTableRow remaining={remainingTroops} remainingByTier={allocationResult.remainingByTier} />
                 </tbody>
               </table>
             </div>
@@ -409,13 +443,15 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
                   index={index}
                   slotCount={draftSlots.length}
                   disabled={isSaving}
+                  allocation={allocationResult.slots[slot.id]}
+                  shortage={allocationResult.shortages[slot.id]}
                   onChange={updateSlotDraft}
                   onDuplicate={duplicateSlot}
                   onDelete={deleteSlot}
                   onMove={moveSlot}
                 />
               ))}
-              <RemainderCard remaining={remainingTroops} />
+              <RemainderCard remaining={remainingTroops} remainingByTier={allocationResult.remainingByTier} />
             </div>
           </section>
         </>
@@ -425,27 +461,54 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
 }
 
 function AvailableTroopsPanel({
-  totals,
+  inventory,
   disabled,
   onChange
 }: {
-  totals: FormationTroopCounts;
+  inventory: FormationTierInventory;
   disabled: boolean;
-  onChange: (totals: FormationTroopCounts) => void;
+  onChange: (inventory: FormationTierInventory) => void;
 }) {
+  const totals = sumTierInventory(inventory);
+
+  function updateTierCount(troopType: TroopType, tier: TroopTier, count: number) {
+    onChange({
+      ...inventory,
+      [troopType]: {
+        ...inventory[troopType],
+        [tier]: count
+      }
+    });
+  }
+
   return (
     <section className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-panel">
       <p className="text-sm uppercase tracking-[0.2em] text-amber-300">Available troops</p>
-      <div className="mt-4 grid gap-3 md:grid-cols-3">
+      <p className="mt-2 text-sm leading-6 text-slate-400">
+        Enter your troops by tier. The formation planner consumes the strongest tiers first, from T16 down to T7.
+      </p>
+      <div className="mt-4 grid gap-4">
         {troopTypes.map(({ key, label }) => (
-          <label key={key}>
-            <span className="mb-2 block text-sm font-medium text-slate-300">{label}</span>
-            <NumericInput
-              value={totals[key]}
-              disabled={disabled}
-              onChange={(value) => onChange({ ...totals, [key]: value })}
-            />
-          </label>
+          <div key={key} className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-semibold text-frost">{label}</p>
+              <p className="text-sm text-slate-400">Total {formatNumber(totals[key])}</p>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5 xl:grid-cols-10">
+              {troopTiers.map((tier) => (
+                <label key={tier} className="min-w-0">
+                  <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    T{tier}
+                  </span>
+                  <NumericInput
+                    value={inventory[key][tier]}
+                    disabled={disabled}
+                    onChange={(value) => updateTierCount(key, tier, value)}
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -459,10 +522,12 @@ function AvailableTroopsPanel({
 function FormationSummaryPanel({
   assigned,
   remaining,
+  shortageTotals,
   overAssignedTypes
 }: {
   assigned: FormationTroopCounts;
   remaining: FormationTroopCounts;
+  shortageTotals: FormationTroopCounts;
   overAssignedTypes: string[];
 }) {
   return (
@@ -474,7 +539,8 @@ function FormationSummaryPanel({
       </div>
       {overAssignedTypes.length > 0 ? (
         <p className="mt-4 rounded-2xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-          Overassigned: {overAssignedTypes.join(", ")}. Reduce one or more formation slots before the event.
+          Shortage: {overAssignedTypes.join(", ")}. Missing Infantry {formatNumber(shortageTotals.infantry)} / Lancer{" "}
+          {formatNumber(shortageTotals.lancer)} / Marksman {formatNumber(shortageTotals.marksman)}.
         </p>
       ) : (
         <p className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
@@ -490,6 +556,8 @@ function SlotTableRow({
   index,
   slotCount,
   disabled,
+  allocation,
+  shortage,
   onChange,
   onDuplicate,
   onDelete,
@@ -512,6 +580,9 @@ function SlotTableRow({
       ))}
       <td className="px-3 py-3 font-semibold text-frost">{formatNumber(total)}</td>
       <td className="px-3 py-3 text-xs text-slate-300">{formatSlotRatios(slot)}</td>
+      <td className="px-3 py-3 text-xs text-slate-300">
+        <AllocationSummary allocation={allocation} shortage={shortage} />
+      </td>
       <td className="px-3 py-3">
         <TextInput value={slot.notes} disabled={disabled} onChange={(value) => onChange(slot.id, { notes: value })} />
       </td>
@@ -531,7 +602,7 @@ function SlotTableRow({
 }
 
 function SlotCard(props: SlotEditorProps) {
-  const { slot, disabled, onChange } = props;
+  const { slot, disabled, allocation, shortage, onChange } = props;
   const total = getSlotTotal(slot);
 
   return (
@@ -560,6 +631,12 @@ function SlotCard(props: SlotEditorProps) {
         <SummaryPill label="Total" value={formatNumber(total)} />
         <SummaryPill label="Ratios" value={formatSlotRatios(slot)} />
       </div>
+      <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Auto allocation</p>
+        <div className="mt-2 text-sm text-slate-300">
+          <AllocationSummary allocation={allocation} shortage={shortage} />
+        </div>
+      </div>
       <div className="mt-4">
         <SlotActions {...props} />
       </div>
@@ -572,6 +649,8 @@ interface SlotEditorProps {
   index: number;
   slotCount: number;
   disabled: boolean;
+  allocation: SlotTroopAllocation;
+  shortage: SlotShortage;
   onChange: (slotId: string, patch: Partial<FormationSlot>) => void;
   onDuplicate: (slot: FormationSlot) => void;
   onDelete: (slot: FormationSlot) => void;
@@ -616,7 +695,35 @@ function SlotActions({
   );
 }
 
-function RemainderTableRow({ remaining }: { remaining: FormationTroopCounts }) {
+function AllocationSummary({ allocation, shortage }: { allocation: SlotTroopAllocation; shortage: SlotShortage }) {
+  return (
+    <div className="space-y-1">
+      {troopTypes.map(({ key, label }) => {
+        const allocationText = formatAllocationEntries(allocation[key]);
+        const shortageCount = shortage[key];
+
+        if (allocationText === "None" && shortageCount <= 0) {
+          return null;
+        }
+
+        return (
+          <p key={key}>
+            <span className="font-semibold text-slate-200">{label}:</span> {allocationText}
+            {shortageCount > 0 ? <span className="text-rose-200"> / short {formatNumber(shortageCount)}</span> : null}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+function RemainderTableRow({
+  remaining,
+  remainingByTier
+}: {
+  remaining: FormationTroopCounts;
+  remainingByTier: FormationTierInventory;
+}) {
   const total = getTotal(remaining);
 
   return (
@@ -627,14 +734,20 @@ function RemainderTableRow({ remaining }: { remaining: FormationTroopCounts }) {
       <td className={getRemainingClassName(remaining.lancer)}>{formatNumber(remaining.lancer)}</td>
       <td className={getRemainingClassName(remaining.marksman)}>{formatNumber(remaining.marksman)}</td>
       <td className="px-3 py-4 font-semibold text-frost">{formatNumber(total)}</td>
-      <td className="px-3 py-4 text-xs text-slate-300">Calculated</td>
+      <td className="px-3 py-4 text-xs text-slate-300">{formatRemainingByTier(remainingByTier)}</td>
       <td className="px-3 py-4 text-slate-300">Automatic remaining troops</td>
       <td className="rounded-r-2xl px-3 py-4 text-slate-500">Locked</td>
     </tr>
   );
 }
 
-function RemainderCard({ remaining }: { remaining: FormationTroopCounts }) {
+function RemainderCard({
+  remaining,
+  remainingByTier
+}: {
+  remaining: FormationTroopCounts;
+  remainingByTier: FormationTierInventory;
+}) {
   return (
     <article className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4">
       <p className="text-sm uppercase tracking-[0.2em] text-amber-200">Remainder</p>
@@ -642,6 +755,7 @@ function RemainderCard({ remaining }: { remaining: FormationTroopCounts }) {
       <div className="mt-4 grid gap-3">
         <SummaryRow label="Remaining" counts={remaining} highlightNegative />
       </div>
+      <p className="mt-3 text-xs leading-5 text-slate-400">{formatRemainingByTier(remainingByTier)}</p>
     </article>
   );
 }
@@ -708,6 +822,114 @@ function sumSlots(slots: FormationSlot[]): FormationTroopCounts {
   );
 }
 
+function createEmptyTierInventory(): FormationTierInventory {
+  return troopTypes.reduce((inventory, { key }) => {
+    inventory[key] = troopTiers.reduce((tiers, tier) => {
+      tiers[tier] = 0;
+      return tiers;
+    }, {} as TierInventory);
+    return inventory;
+  }, {} as FormationTierInventory);
+}
+
+function convertTotalsToTierInventory(totals: FormationTroopCounts): FormationTierInventory {
+  const inventory = createEmptyTierInventory();
+
+  for (const { key } of troopTypes) {
+    inventory[key][7] = normalizeCount(totals[key]);
+  }
+
+  return inventory;
+}
+
+function cloneTierInventory(inventory: FormationTierInventory): FormationTierInventory {
+  return troopTypes.reduce((nextInventory, { key }) => {
+    nextInventory[key] = troopTiers.reduce((tiers, tier) => {
+      tiers[tier] = normalizeCount(inventory[key]?.[tier] ?? 0);
+      return tiers;
+    }, {} as TierInventory);
+    return nextInventory;
+  }, {} as FormationTierInventory);
+}
+
+function sumTierInventory(inventory: FormationTierInventory): FormationTroopCounts {
+  return troopTypes.reduce(
+    (totals, { key }) => {
+      totals[key] = troopTiers.reduce((total, tier) => total + normalizeCount(inventory[key]?.[tier] ?? 0), 0);
+      return totals;
+    },
+    { infantry: 0, lancer: 0, marksman: 0 } as FormationTroopCounts
+  );
+}
+
+function sumSlotShortages(shortages: Record<string, SlotShortage>): FormationTroopCounts {
+  return Object.values(shortages).reduce(
+    (totals, shortage) => {
+      for (const { key } of troopTypes) {
+        totals[key] += shortage[key];
+      }
+
+      return totals;
+    },
+    { infantry: 0, lancer: 0, marksman: 0 } as FormationTroopCounts
+  );
+}
+
+function allocateSlotsByTier(availableByTier: FormationTierInventory, slots: FormationSlot[]): AllocationResult {
+  const remainingByTier = cloneTierInventory(availableByTier);
+  const slotAllocations: Record<string, SlotTroopAllocation> = {};
+  const slotShortages: Record<string, SlotShortage> = {};
+
+  for (const slot of slots) {
+    const allocation = createEmptySlotAllocation();
+    const shortage = createEmptySlotShortage();
+
+    for (const { key } of troopTypes) {
+      let requestedCount = normalizeCount(slot[key]);
+
+      for (const tier of troopTiers) {
+        if (requestedCount <= 0) {
+          break;
+        }
+
+        const availableCount = remainingByTier[key][tier];
+        const allocatedCount = Math.min(availableCount, requestedCount);
+
+        if (allocatedCount > 0) {
+          allocation[key].push({ tier, count: allocatedCount });
+          remainingByTier[key][tier] -= allocatedCount;
+          requestedCount -= allocatedCount;
+        }
+      }
+
+      shortage[key] = requestedCount;
+    }
+
+    slotAllocations[slot.id] = allocation;
+    slotShortages[slot.id] = shortage;
+  }
+
+  return {
+    slots: slotAllocations,
+    shortages: slotShortages,
+    remainingByTier
+  };
+}
+
+function createEmptySlotAllocation(): SlotTroopAllocation {
+  return troopTypes.reduce((allocation, { key }) => {
+    allocation[key] = [];
+    return allocation;
+  }, {} as SlotTroopAllocation);
+}
+
+function createEmptySlotShortage(): SlotShortage {
+  return troopTypes.reduce((shortage, { key }) => {
+    shortage[key] = 0;
+    return shortage;
+  }, {} as SlotShortage);
+}
+
 function getTotal(counts: FormationTroopCounts) {
   return counts.infantry + counts.lancer + counts.marksman;
 }
@@ -720,6 +942,39 @@ function formatSlotRatios(slot: FormationSlot) {
   const total = getSlotTotal(slot);
 
   return troopTypes.map(({ key, label }) => `${label} ${formatRatio(slot[key], total)}`).join(" / ");
+}
+
+function formatAllocationEntries(entries: TroopAllocationEntry[]) {
+  if (entries.length === 0) {
+    return "None";
+  }
+
+  return entries.map((entry) => `T${entry.tier} ${formatNumber(entry.count)}`).join(", ");
+}
+
+function formatSlotAllocation(allocation: SlotTroopAllocation, shortage: SlotShortage) {
+  return troopTypes
+    .map(({ key, label }) => {
+      const allocationText = formatAllocationEntries(allocation[key]);
+      const shortageText = shortage[key] > 0 ? ` / short ${formatNumber(shortage[key])}` : "";
+      return `${label} ${allocationText}${shortageText}`;
+    })
+    .join(" | ");
+}
+
+function formatRemainingByTier(inventory: FormationTierInventory) {
+  const details = troopTypes
+    .map(({ key, label }) => {
+      const tierDetails = troopTiers
+        .filter((tier) => inventory[key][tier] > 0)
+        .map((tier) => `T${tier} ${formatNumber(inventory[key][tier])}`)
+        .join(", ");
+
+      return tierDetails ? `${label}: ${tierDetails}` : "";
+    })
+    .filter(Boolean);
+
+  return details.length > 0 ? details.join(" / ") : "No troops remaining by tier.";
 }
 
 function formatRatio(value: number, total: number) {
@@ -757,12 +1012,20 @@ function getLocalDraft(eventKey: FormationEventKey): LocalFormationDraft | null 
   try {
     const parsedDraft = JSON.parse(rawDraft) as LocalFormationDraft;
 
-    if (!isValidTroopCounts(parsedDraft.availableTroops) || !Array.isArray(parsedDraft.slots)) {
+    if (!Array.isArray(parsedDraft.slots)) {
       return null;
     }
 
+    const availableTroopsByTier = isValidTierInventory(parsedDraft.availableTroopsByTier)
+      ? normalizeTierInventory(parsedDraft.availableTroopsByTier)
+      : convertTotalsToTierInventory(
+          isValidTroopCounts(parsedDraft.availableTroops)
+            ? parsedDraft.availableTroops
+            : { infantry: 0, lancer: 0, marksman: 0 }
+        );
+
     return {
-      availableTroops: normalizeTroopCounts(parsedDraft.availableTroops),
+      availableTroopsByTier,
       slots: normalizeSlotOrder(parsedDraft.slots.map(normalizeSlotDraft)),
       savedAt: typeof parsedDraft.savedAt === "string" ? parsedDraft.savedAt : new Date().toISOString()
     };
@@ -775,12 +1038,8 @@ function saveLocalDraft(eventKey: FormationEventKey, draft: LocalFormationDraft)
   localStorage.setItem(getLocalStorageKey(eventKey), JSON.stringify(draft));
 }
 
-function normalizeTroopCounts(counts: FormationTroopCounts): FormationTroopCounts {
-  return {
-    infantry: normalizeCount(counts.infantry),
-    lancer: normalizeCount(counts.lancer),
-    marksman: normalizeCount(counts.marksman)
-  };
+function normalizeTierInventory(inventory: FormationTierInventory): FormationTierInventory {
+  return cloneTierInventory(inventory);
 }
 
 function normalizeSlotDraft(slot: FormationSlot): FormationSlot {
@@ -812,6 +1071,23 @@ function isValidTroopCounts(value: unknown): value is FormationTroopCounts {
   return Number.isFinite(counts.infantry) && Number.isFinite(counts.lancer) && Number.isFinite(counts.marksman);
 }
 
+function isValidTierInventory(value: unknown): value is FormationTierInventory {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const inventory = value as FormationTierInventory;
+  return troopTypes.every(({ key }) => {
+    const tierInventory = inventory[key];
+
+    if (!tierInventory || typeof tierInventory !== "object") {
+      return false;
+    }
+
+    return troopTiers.every((tier) => Number.isFinite(tierInventory[tier]));
+  });
+}
+
 function normalizeCount(value: number) {
   return Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : 0;
 }
@@ -827,20 +1103,19 @@ function createLocalSlotId() {
 function buildLocalFormationCsv({
   eventName,
   eventKey,
-  availableTroops,
-  slots
+  availableTroopsByTier,
+  slots,
+  allocationResult
 }: {
   eventName: string;
   eventKey: FormationEventKey;
-  availableTroops: FormationTroopCounts;
+  availableTroopsByTier: FormationTierInventory;
   slots: FormationSlot[];
+  allocationResult: AllocationResult;
 }) {
+  const availableTroops = sumTierInventory(availableTroopsByTier);
   const assigned = sumSlots(slots);
-  const remaining = {
-    infantry: availableTroops.infantry - assigned.infantry,
-    lancer: availableTroops.lancer - assigned.lancer,
-    marksman: availableTroops.marksman - assigned.marksman
-  };
+  const remaining = sumTierInventory(allocationResult.remainingByTier);
   const exportDate = new Date().toISOString().slice(0, 10);
   const rows: Array<Array<string | number>> = [
     ["Kingshot Troop Formation Export"],
@@ -852,7 +1127,27 @@ function buildLocalFormationCsv({
     ["Assigned", assigned.infantry, assigned.lancer, assigned.marksman],
     ["Remaining", remaining.infantry, remaining.lancer, remaining.marksman],
     [""],
-    ["Name", "Hero", "Infantry", "Lancer", "Marksman", "Total", "Infantry Ratio", "Lancer Ratio", "Marksman Ratio", "Notes"],
+    ["Available By Tier"],
+    ["Troop Type", ...troopTiers.map((tier) => `T${tier}`), "Total"],
+    ...troopTypes.map(({ key, label }) => [
+      label,
+      ...troopTiers.map((tier) => availableTroopsByTier[key][tier]),
+      availableTroops[key]
+    ]),
+    [""],
+    [
+      "Name",
+      "Hero",
+      "Infantry",
+      "Lancer",
+      "Marksman",
+      "Total",
+      "Infantry Ratio",
+      "Lancer Ratio",
+      "Marksman Ratio",
+      "Auto Allocation",
+      "Notes"
+    ],
     ...slots.map((slot) => {
       const total = getSlotTotal(slot);
 
@@ -866,6 +1161,7 @@ function buildLocalFormationCsv({
         formatRatio(slot.infantry, total),
         formatRatio(slot.lancer, total),
         formatRatio(slot.marksman, total),
+        formatSlotAllocation(allocationResult.slots[slot.id], allocationResult.shortages[slot.id]),
         slot.notes
       ];
     }),
@@ -879,6 +1175,7 @@ function buildLocalFormationCsv({
       "",
       "",
       "",
+      formatRemainingByTier(allocationResult.remainingByTier),
       "Calculated automatically"
     ]
   ];
