@@ -182,6 +182,10 @@ psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingsho
 
 The production backend also creates the `troop_formation_presets` table idempotently on startup and seeds the default Bear Trap, Vikings, and Battle presets when missing.
 
+Troop Formations player edits are not stored in PostgreSQL.
+They are browser-local drafts saved under keys such as `troop-formations:vikings`, `troop-formations:bear-trap`, and `troop-formations:battle`.
+The database table stores shared default templates only.
+
 Check Troop Formations data:
 
 ```bash

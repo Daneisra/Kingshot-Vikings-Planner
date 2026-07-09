@@ -30,6 +30,7 @@ Focus: finish the Viking Vengeance planner without overloading the casual player
 - [ ] Confirm the iPhone Chrome troop-count fix with the affected player in production
 - [x] Fix responsive UI overflow artifacts on the Score page and add global horizontal overflow protection
 - [x] Fix mobile header/navigation rendering artifacts across app pages
+- [x] Fix Troop Formations permissions so players can edit local drafts without admin access
 
 ### Viking Planner UX
 
@@ -147,6 +148,7 @@ Focus: evolve from a Viking-only planner into a broader alliance coordination hu
   announcements, event shortcuts, Discord link, GitHub issues link, and quick status cards
 - [x] Add a dedicated Troop Formations page as the first reusable event-planning module beyond the Viking sign-up board
 - [x] Add Bear Trap, Vikings, and Battle formation presets with persisted available troops, editable slots, calculated remainder, Discord summary copy, and CSV export
+- [x] Store player Troop Formations edits locally per browser and per event preset to avoid shared template conflicts
 - [ ] Add a global event navigation model:
   Home, Viking Vengeance, Auto Groups, Guide, Admin, future events
 - [ ] Add a simple alliance calendar for planned event times

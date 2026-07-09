@@ -10,6 +10,7 @@ It gives guilds a shared board to collect registrations, track troop strength, r
 - Local development setup is documented
 - Native Debian 12 self-hosting is supported
 - Production deployment uses Nginx, PM2, PostgreSQL, and GitHub Actions over SSH
+- Troop Formations uses browser-local drafts for player edits, with server presets as shared templates
 - Ongoing work is focused on polish, validation, and deployment stability
 
 ## Why this project exists
@@ -42,8 +43,8 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 - Manual archive stat fields for alliance metrics outside the sign-up sheet
 - Automatic 7-player reinforcement cell suggestions based on availability, partner preferences, troop strength, personal score, and role hints
 - HQ defense planner for Viking Vengeance waves 10 and 20
-- Troop Formations page for Bear Trap, Vikings, and Battle march planning with available, assigned, and remaining troop totals
-- Admin-protected formation editing with slot duplication, ordering, preset reset, Discord summary copy, and CSV export
+- Public Troop Formations page for Bear Trap, Vikings, and Battle march planning with available, assigned, and remaining troop totals
+- Browser-local formation drafts with slot duplication, ordering, local reset, Discord summary copy, and CSV export
 - Track up to 2 strongest troop tiers, from T7 to T16, with separate Infantry, Lancer, and Marksman counts
 - Select up to 5 regular partners, with an optional 6 marches mode for a 6th reinforcement partner slot
 - Visible app version in the UI for easier support and deployment checks

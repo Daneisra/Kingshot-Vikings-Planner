@@ -49,6 +49,8 @@ psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingsho
 
 For existing deployments, feature migrations live in `db/migrations/`.
 The backend also runs an idempotent schema check on startup, so the Troop Formations table is created automatically after a backend restart.
+Player edits on the Troop Formations page are saved in each browser with `localStorage` keys such as `troop-formations:vikings`.
+PostgreSQL stores only the shared default templates used when a player opens or resets a local draft.
 
 Optional manual migration command:
 
@@ -133,6 +135,9 @@ If you prefer to apply the Troop Formations migration manually before restarting
 psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings" \
   -f /opt/kingshot-vikings-planner/db/migrations/2026-07-09_troop_formations.sql
 ```
+
+The shared templates are not used as live collaborative documents.
+Each player can edit formations freely without admin access because normal edits stay local to that device/browser.
 
 ### Create server-side environment files
 

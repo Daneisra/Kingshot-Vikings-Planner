@@ -32,6 +32,12 @@ const defaultSlotDraft: Omit<FormationSlot, "id" | "sortOrder"> = {
   notes: ""
 };
 
+interface LocalFormationDraft {
+  availableTroops: FormationTroopCounts;
+  slots: FormationSlot[];
+  savedAt: string;
+}
+
 export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: TroopFormationsPageProps) {
   const [summaries, setSummaries] = useState<FormationPresetSummary[]>([]);
   const [selectedEventKey, setSelectedEventKey] = useState<FormationEventKey>("vikings");
@@ -41,6 +47,7 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [localSavedAt, setLocalSavedAt] = useState<string | null>(null);
 
   const assignedTroops = useMemo(() => sumSlots(draftSlots), [draftSlots]);
   const remainingTroops = useMemo(
@@ -61,6 +68,20 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
     void loadPreset(selectedEventKey);
   }, [selectedEventKey]);
 
+  useEffect(() => {
+    if (!preset || preset.eventKey !== selectedEventKey || isLoading) {
+      return;
+    }
+
+    const savedAt = new Date().toISOString();
+    saveLocalDraft(selectedEventKey, {
+      availableTroops: draftTotals,
+      slots: draftSlots,
+      savedAt
+    });
+    setLocalSavedAt(savedAt);
+  }, [draftSlots, draftTotals, isLoading, preset, selectedEventKey]);
+
   async function loadSummaries() {
     try {
       const nextSummaries = await api.listFormationPresets();
@@ -76,7 +97,7 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
 
     try {
       const nextPreset = await api.getFormationPreset(eventKey);
-      applyPreset(nextPreset);
+      applyPreset(nextPreset, getLocalDraft(eventKey));
     } catch (error) {
       setErrorMessage(getErrorMessage(error, "Unable to load troop formations."));
     } finally {
@@ -84,152 +105,97 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
     }
   }
 
-  function applyPreset(nextPreset: FormationPreset) {
+  function applyPreset(nextPreset: FormationPreset, localDraft?: LocalFormationDraft | null) {
     setPreset(nextPreset);
-    setDraftTotals(nextPreset.availableTroops);
-    setDraftSlots(nextPreset.slots);
+    setDraftTotals(localDraft?.availableTroops ?? nextPreset.availableTroops);
+    setDraftSlots(localDraft?.slots ?? nextPreset.slots);
+    setLocalSavedAt(localDraft?.savedAt ?? null);
   }
 
-  async function saveTotals() {
-    if (!canEdit()) {
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      const nextPreset = await api.updateFormationTotals(adminToken, selectedEventKey, draftTotals);
-      applyPreset(nextPreset);
-      onNotify("success", "Available troops updated.");
-    } catch (error) {
-      onNotify("error", getErrorMessage(error, "Unable to update available troops."));
-    } finally {
-      setIsSaving(false);
-    }
+  function saveLocalNow() {
+    const savedAt = new Date().toISOString();
+    saveLocalDraft(selectedEventKey, {
+      availableTroops: draftTotals,
+      slots: draftSlots,
+      savedAt
+    });
+    setLocalSavedAt(savedAt);
+    onNotify("success", "Formation draft saved locally on this device.");
   }
 
-  async function addSlot() {
-    if (!canEdit()) {
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      const nextPreset = await api.createFormationSlot(adminToken, selectedEventKey, defaultSlotDraft);
-      applyPreset(nextPreset);
-      onNotify("success", "Formation slot added.");
-    } catch (error) {
-      onNotify("error", getErrorMessage(error, "Unable to add formation slot."));
-    } finally {
-      setIsSaving(false);
-    }
+  function addSlot() {
+    setDraftSlots((current) => [
+      ...current,
+      {
+        ...defaultSlotDraft,
+        id: createLocalSlotId(),
+        sortOrder: current.length + 1
+      }
+    ]);
+    onNotify("success", "Formation slot added to your local draft.");
   }
 
-  async function duplicateSlot(slot: FormationSlot) {
-    if (!canEdit()) {
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      const nextPreset = await api.createFormationSlot(adminToken, selectedEventKey, {
+  function duplicateSlot(slot: FormationSlot) {
+    setDraftSlots((current) => [
+      ...current,
+      {
         name: `${slot.name} copy`,
         hero: slot.hero,
         infantry: slot.infantry,
         lancer: slot.lancer,
         marksman: slot.marksman,
-        notes: slot.notes
-      });
-      applyPreset(nextPreset);
-      onNotify("success", "Formation slot duplicated.");
-    } catch (error) {
-      onNotify("error", getErrorMessage(error, "Unable to duplicate formation slot."));
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  async function saveSlot(slot: FormationSlot) {
-    if (!canEdit()) {
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      const nextPreset = await api.updateFormationSlot(adminToken, selectedEventKey, slot.id, {
-        name: slot.name,
-        hero: slot.hero,
-        infantry: slot.infantry,
-        lancer: slot.lancer,
-        marksman: slot.marksman,
         notes: slot.notes,
-        sortOrder: slot.sortOrder
-      });
-      applyPreset(nextPreset);
-      onNotify("success", "Formation slot saved.");
-    } catch (error) {
-      onNotify("error", getErrorMessage(error, "Unable to save formation slot."));
-    } finally {
-      setIsSaving(false);
-    }
+        id: createLocalSlotId(),
+        sortOrder: current.length + 1
+      }
+    ]);
+    onNotify("success", "Formation slot duplicated in your local draft.");
   }
 
-  async function deleteSlot(slot: FormationSlot) {
-    if (!canEdit() || !window.confirm(`Delete ${slot.name}?`)) {
+  function deleteSlot(slot: FormationSlot) {
+    if (!window.confirm(`Delete ${slot.name} from your local draft?`)) {
       return;
     }
 
-    setIsSaving(true);
-
-    try {
-      const nextPreset = await api.deleteFormationSlot(adminToken, selectedEventKey, slot.id);
-      applyPreset(nextPreset);
-      onNotify("success", "Formation slot deleted.");
-    } catch (error) {
-      onNotify("error", getErrorMessage(error, "Unable to delete formation slot."));
-    } finally {
-      setIsSaving(false);
-    }
+    setDraftSlots((current) => normalizeSlotOrder(current.filter((currentSlot) => currentSlot.id !== slot.id)));
+    onNotify("success", "Formation slot deleted from your local draft.");
   }
 
-  async function moveSlot(slotIndex: number, direction: -1 | 1) {
-    if (!canEdit()) {
-      return;
-    }
-
+  function moveSlot(slotIndex: number, direction: -1 | 1) {
     const targetIndex = slotIndex + direction;
-    const currentSlot = draftSlots[slotIndex];
-    const targetSlot = draftSlots[targetIndex];
 
-    if (!currentSlot || !targetSlot) {
+    if (targetIndex < 0 || targetIndex >= draftSlots.length) {
       return;
     }
 
-    setIsSaving(true);
-
-    try {
-      await api.updateFormationSlot(adminToken, selectedEventKey, currentSlot.id, {
-        ...currentSlot,
-        sortOrder: targetSlot.sortOrder
-      });
-      const nextPreset = await api.updateFormationSlot(adminToken, selectedEventKey, targetSlot.id, {
-        ...targetSlot,
-        sortOrder: currentSlot.sortOrder
-      });
-      applyPreset(nextPreset);
-      onNotify("success", "Formation order updated.");
-    } catch (error) {
-      onNotify("error", getErrorMessage(error, "Unable to reorder formation slots."));
-    } finally {
-      setIsSaving(false);
-    }
+    setDraftSlots((current) => {
+      const nextSlots = [...current];
+      const movedSlot = nextSlots[slotIndex];
+      nextSlots[slotIndex] = nextSlots[targetIndex];
+      nextSlots[targetIndex] = movedSlot;
+      return normalizeSlotOrder(nextSlots);
+    });
   }
 
-  async function resetPreset() {
-    if (!canEdit() || !window.confirm(`Reset ${preset?.eventName ?? "this preset"} to the default template?`)) {
+  function resetLocalDraft() {
+    if (!preset || !window.confirm(`Reset your local ${preset.eventName} draft to the shared default template?`)) {
+      return;
+    }
+
+    localStorage.removeItem(getLocalStorageKey(selectedEventKey));
+    setDraftTotals(preset.availableTroops);
+    setDraftSlots(preset.slots);
+    setLocalSavedAt(null);
+    onNotify("success", "Your local formation draft was reset.");
+  }
+
+  async function resetSharedTemplate() {
+    if (!isAdminUnlocked || !adminToken.trim()) {
+      onNotify("error", "Unlock Admin before resetting the shared template.");
+      return;
+    }
+
+    if (!window.confirm(`Reset the shared ${preset?.eventName ?? "formation"} template for everyone?`)) {
       return;
     }
 
@@ -237,10 +203,11 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
 
     try {
       const nextPreset = await api.resetFormationPreset(adminToken, selectedEventKey);
-      applyPreset(nextPreset);
-      onNotify("success", "Formation preset reset.");
+      localStorage.removeItem(getLocalStorageKey(selectedEventKey));
+      applyPreset(nextPreset, null);
+      onNotify("success", "Shared formation template reset.");
     } catch (error) {
-      onNotify("error", getErrorMessage(error, "Unable to reset formation preset."));
+      onNotify("error", getErrorMessage(error, "Unable to reset shared formation template."));
     } finally {
       setIsSaving(false);
     }
@@ -270,7 +237,12 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
     setIsSaving(true);
 
     try {
-      const { blob, filename } = await api.exportFormationCsv(selectedEventKey);
+      const { blob, filename } = buildLocalFormationCsv({
+        eventName: preset?.eventName ?? selectedEventKey,
+        eventKey: selectedEventKey,
+        availableTroops: draftTotals,
+        slots: draftSlots
+      });
       downloadBlob(blob, filename);
       onNotify("success", "Formation CSV exported.");
     } catch (error) {
@@ -282,15 +254,6 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
 
   function updateSlotDraft(slotId: string, patch: Partial<FormationSlot>) {
     setDraftSlots((current) => current.map((slot) => (slot.id === slotId ? { ...slot, ...patch } : slot)));
-  }
-
-  function canEdit() {
-    if (isAdminUnlocked && adminToken.trim()) {
-      return true;
-    }
-
-    onNotify("error", "Unlock the admin panel before editing troop formations.");
-    return false;
   }
 
   return (
@@ -312,6 +275,10 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
             <button type="button" className="secondary-button" onClick={() => void loadPreset(selectedEventKey)}>
               <RefreshCw className="h-4 w-4" />
               Refresh
+            </button>
+            <button type="button" className="secondary-button" onClick={saveLocalNow}>
+              <Save className="h-4 w-4" />
+              Save locally
             </button>
             <button type="button" className="secondary-button" onClick={() => void copySummary()}>
               <Copy className="h-4 w-4" />
@@ -353,10 +320,8 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
           <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
             <AvailableTroopsPanel
               totals={draftTotals}
-              disabled={!isAdminUnlocked || isSaving}
-              showSaveButton={isAdminUnlocked}
+              disabled={isSaving}
               onChange={setDraftTotals}
-              onSave={() => void saveTotals()}
             />
 
             <FormationSummaryPanel
@@ -376,25 +341,31 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
                 </p>
               </div>
 
-              {isAdminUnlocked ? (
-                <div className="grid gap-3 sm:flex sm:flex-wrap">
-                  <button type="button" className="secondary-button" onClick={() => void resetPreset()} disabled={isSaving}>
-                    <RotateCcw className="h-4 w-4" />
-                    Reset preset
-                  </button>
-                  <button type="button" className="primary-button" onClick={() => void addSlot()} disabled={isSaving}>
-                    <Plus className="h-4 w-4" />
-                    Add slot
-                  </button>
-                </div>
-              ) : null}
+              <div className="grid gap-3 sm:flex sm:flex-wrap">
+                <button type="button" className="secondary-button" onClick={resetLocalDraft} disabled={isSaving}>
+                  <RotateCcw className="h-4 w-4" />
+                  Reset my formation
+                </button>
+                <button type="button" className="primary-button" onClick={addSlot} disabled={isSaving}>
+                  <Plus className="h-4 w-4" />
+                  Add slot
+                </button>
+              </div>
             </div>
 
-            {!isAdminUnlocked ? (
-              <p className="mt-4 rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-slate-400">
-                Unlock the Admin page to edit totals, slots, reset presets, or delete rows.
+            <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+              <p className="rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-slate-400">
+                Your changes are saved locally on this device. Admin access is only required to reset shared default templates.
+                {localSavedAt ? (
+                  <span className="mt-1 block text-emerald-200">Saved locally at {formatLocalTime(localSavedAt)}.</span>
+                ) : null}
               </p>
-            ) : null}
+              {isAdminUnlocked ? (
+                <button type="button" className="danger-button" onClick={() => void resetSharedTemplate()} disabled={isSaving}>
+                  Reset shared template
+                </button>
+              ) : null}
+            </div>
 
             <div className="mt-5 hidden overflow-x-auto xl:block">
               <table className="w-full min-w-[1080px] border-separate border-spacing-y-3 text-left text-sm">
@@ -418,10 +389,8 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
                       slot={slot}
                       index={index}
                       slotCount={draftSlots.length}
-                      disabled={!isAdminUnlocked || isSaving}
-                      showAdminActions={isAdminUnlocked}
+                      disabled={isSaving}
                       onChange={updateSlotDraft}
-                      onSave={saveSlot}
                       onDuplicate={duplicateSlot}
                       onDelete={deleteSlot}
                       onMove={moveSlot}
@@ -439,10 +408,8 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
                   slot={slot}
                   index={index}
                   slotCount={draftSlots.length}
-                  disabled={!isAdminUnlocked || isSaving}
-                  showAdminActions={isAdminUnlocked}
+                  disabled={isSaving}
                   onChange={updateSlotDraft}
-                  onSave={saveSlot}
                   onDuplicate={duplicateSlot}
                   onDelete={deleteSlot}
                   onMove={moveSlot}
@@ -460,15 +427,11 @@ export function TroopFormationsPage({ isAdminUnlocked, adminToken, onNotify }: T
 function AvailableTroopsPanel({
   totals,
   disabled,
-  showSaveButton,
-  onChange,
-  onSave
+  onChange
 }: {
   totals: FormationTroopCounts;
   disabled: boolean;
-  showSaveButton: boolean;
   onChange: (totals: FormationTroopCounts) => void;
-  onSave: () => void;
 }) {
   return (
     <section className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-panel">
@@ -487,12 +450,7 @@ function AvailableTroopsPanel({
       </div>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-slate-400">Total available: {formatNumber(getTotal(totals))}</p>
-        {showSaveButton ? (
-          <button type="button" className="primary-button" onClick={onSave} disabled={disabled}>
-            <Save className="h-4 w-4" />
-            Save troops
-          </button>
-        ) : null}
+        <p className="text-xs uppercase tracking-[0.16em] text-emerald-200">Auto-saved locally</p>
       </div>
     </section>
   );
@@ -532,9 +490,7 @@ function SlotTableRow({
   index,
   slotCount,
   disabled,
-  showAdminActions,
   onChange,
-  onSave,
   onDuplicate,
   onDelete,
   onMove
@@ -565,8 +521,6 @@ function SlotTableRow({
           index={index}
           slotCount={slotCount}
           disabled={disabled}
-          showAdminActions={showAdminActions}
-          onSave={onSave}
           onDuplicate={onDuplicate}
           onDelete={onDelete}
           onMove={onMove}
@@ -618,9 +572,7 @@ interface SlotEditorProps {
   index: number;
   slotCount: number;
   disabled: boolean;
-  showAdminActions: boolean;
   onChange: (slotId: string, patch: Partial<FormationSlot>) => void;
-  onSave: (slot: FormationSlot) => void;
   onDuplicate: (slot: FormationSlot) => void;
   onDelete: (slot: FormationSlot) => void;
   onMove: (slotIndex: number, direction: -1 | 1) => void;
@@ -631,8 +583,6 @@ interface SlotActionsProps {
   index: number;
   slotCount: number;
   disabled: boolean;
-  showAdminActions: boolean;
-  onSave: (slot: FormationSlot) => void;
   onDuplicate: (slot: FormationSlot) => void;
   onDelete: (slot: FormationSlot) => void;
   onMove: (slotIndex: number, direction: -1 | 1) => void;
@@ -643,16 +593,10 @@ function SlotActions({
   index,
   slotCount,
   disabled,
-  showAdminActions,
-  onSave,
   onDuplicate,
   onDelete,
   onMove
 }: SlotActionsProps) {
-  if (!showAdminActions) {
-    return <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Locked</p>;
-  }
-
   return (
     <div className="flex flex-wrap gap-2">
       <button type="button" className="secondary-button" onClick={() => onMove(index, -1)} disabled={disabled || index === 0}>
@@ -660,10 +604,6 @@ function SlotActions({
       </button>
       <button type="button" className="secondary-button" onClick={() => onMove(index, 1)} disabled={disabled || index === slotCount - 1}>
         Down
-      </button>
-      <button type="button" className="secondary-button" onClick={() => onSave(slot)} disabled={disabled}>
-        <Save className="h-4 w-4" />
-        Save
       </button>
       <button type="button" className="secondary-button" onClick={() => onDuplicate(slot)} disabled={disabled}>
         Copy
@@ -801,6 +741,177 @@ function formatNumber(value: number) {
 
 function getRemainingClassName(value: number) {
   return `px-3 py-4 font-semibold ${value < 0 ? "text-rose-200" : "text-frost"}`;
+}
+
+function getLocalStorageKey(eventKey: FormationEventKey) {
+  return `troop-formations:${eventKey}`;
+}
+
+function getLocalDraft(eventKey: FormationEventKey): LocalFormationDraft | null {
+  const rawDraft = localStorage.getItem(getLocalStorageKey(eventKey));
+
+  if (!rawDraft) {
+    return null;
+  }
+
+  try {
+    const parsedDraft = JSON.parse(rawDraft) as LocalFormationDraft;
+
+    if (!isValidTroopCounts(parsedDraft.availableTroops) || !Array.isArray(parsedDraft.slots)) {
+      return null;
+    }
+
+    return {
+      availableTroops: normalizeTroopCounts(parsedDraft.availableTroops),
+      slots: normalizeSlotOrder(parsedDraft.slots.map(normalizeSlotDraft)),
+      savedAt: typeof parsedDraft.savedAt === "string" ? parsedDraft.savedAt : new Date().toISOString()
+    };
+  } catch {
+    return null;
+  }
+}
+
+function saveLocalDraft(eventKey: FormationEventKey, draft: LocalFormationDraft) {
+  localStorage.setItem(getLocalStorageKey(eventKey), JSON.stringify(draft));
+}
+
+function normalizeTroopCounts(counts: FormationTroopCounts): FormationTroopCounts {
+  return {
+    infantry: normalizeCount(counts.infantry),
+    lancer: normalizeCount(counts.lancer),
+    marksman: normalizeCount(counts.marksman)
+  };
+}
+
+function normalizeSlotDraft(slot: FormationSlot): FormationSlot {
+  return {
+    id: typeof slot.id === "string" && slot.id.trim() ? slot.id : createLocalSlotId(),
+    name: typeof slot.name === "string" && slot.name.trim() ? slot.name : "Formation",
+    hero: typeof slot.hero === "string" && slot.hero.trim() ? slot.hero : "No hero",
+    infantry: normalizeCount(slot.infantry),
+    lancer: normalizeCount(slot.lancer),
+    marksman: normalizeCount(slot.marksman),
+    notes: typeof slot.notes === "string" ? slot.notes : "",
+    sortOrder: normalizeCount(slot.sortOrder)
+  };
+}
+
+function normalizeSlotOrder(slots: FormationSlot[]) {
+  return slots.map((slot, index) => ({
+    ...normalizeSlotDraft(slot),
+    sortOrder: index + 1
+  }));
+}
+
+function isValidTroopCounts(value: unknown): value is FormationTroopCounts {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const counts = value as FormationTroopCounts;
+  return Number.isFinite(counts.infantry) && Number.isFinite(counts.lancer) && Number.isFinite(counts.marksman);
+}
+
+function normalizeCount(value: number) {
+  return Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : 0;
+}
+
+function createLocalSlotId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function buildLocalFormationCsv({
+  eventName,
+  eventKey,
+  availableTroops,
+  slots
+}: {
+  eventName: string;
+  eventKey: FormationEventKey;
+  availableTroops: FormationTroopCounts;
+  slots: FormationSlot[];
+}) {
+  const assigned = sumSlots(slots);
+  const remaining = {
+    infantry: availableTroops.infantry - assigned.infantry,
+    lancer: availableTroops.lancer - assigned.lancer,
+    marksman: availableTroops.marksman - assigned.marksman
+  };
+  const exportDate = new Date().toISOString().slice(0, 10);
+  const rows: Array<Array<string | number>> = [
+    ["Kingshot Troop Formation Export"],
+    ["Exported At (UTC)", new Date().toISOString()],
+    ["Event", eventName],
+    ["Source", "Local browser draft"],
+    [""],
+    ["Available", availableTroops.infantry, availableTroops.lancer, availableTroops.marksman],
+    ["Assigned", assigned.infantry, assigned.lancer, assigned.marksman],
+    ["Remaining", remaining.infantry, remaining.lancer, remaining.marksman],
+    [""],
+    ["Name", "Hero", "Infantry", "Lancer", "Marksman", "Total", "Infantry Ratio", "Lancer Ratio", "Marksman Ratio", "Notes"],
+    ...slots.map((slot) => {
+      const total = getSlotTotal(slot);
+
+      return [
+        slot.name,
+        slot.hero,
+        slot.infantry,
+        slot.lancer,
+        slot.marksman,
+        total,
+        formatRatio(slot.infantry, total),
+        formatRatio(slot.lancer, total),
+        formatRatio(slot.marksman, total),
+        slot.notes
+      ];
+    }),
+    [
+      "Remainder",
+      "No hero",
+      remaining.infantry,
+      remaining.lancer,
+      remaining.marksman,
+      getTotal(remaining),
+      "",
+      "",
+      "",
+      "Calculated automatically"
+    ]
+  ];
+
+  return {
+    blob: new Blob([`\ufeff${rows.map((row) => row.map(escapeCsvCell).join(",")).join("\r\n")}`], {
+      type: "text/csv;charset=utf-8"
+    }),
+    filename: `kingshot-formations-${eventKey}-local-${exportDate}.csv`
+  };
+}
+
+function escapeCsvCell(value: string | number) {
+  const text = String(value);
+
+  if (/[",\r\n]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+
+  return text;
+}
+
+function formatLocalTime(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "now";
+  }
+
+  return date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
