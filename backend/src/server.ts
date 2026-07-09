@@ -8,6 +8,7 @@ import { config } from "./config/env";
 import { errorHandler } from "./middleware/error-handler";
 import { attachRequestId } from "./middleware/request-id";
 import { adminRouter } from "./routes/admin";
+import { formationsRouter } from "./routes/formations";
 import { healthRouter } from "./routes/health";
 import { registrationsRouter } from "./routes/registrations";
 import { scoresRouter } from "./routes/scores";
@@ -58,6 +59,7 @@ app.use("/api/health", healthRouter);
 app.use("/api/registrations", registrationsRouter);
 app.use("/api/settings", settingsRouter);
 app.use("/api/scores", scoresRouter);
+app.use("/api/formations", formationsRouter);
 app.use("/api/admin", adminRouter);
 
 app.use((_req, res) => {

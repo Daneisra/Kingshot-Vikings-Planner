@@ -1,6 +1,6 @@
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { BookOpen, ClipboardCheck, Crown, Github, House, RefreshCw, ShieldCheck, Trophy, Users2 } from "lucide-react";
+import { BookOpen, ClipboardCheck, Crown, Github, House, RefreshCw, ShieldCheck, Swords, Trophy, Users2 } from "lucide-react";
 import { AdminPanel } from "./components/AdminPanel";
 import { AllianceHomePage } from "./components/AllianceHomePage";
 import { ArchivesPanel } from "./components/ArchivesPanel";
@@ -25,6 +25,7 @@ import { ScorePage } from "./components/ScorePage";
 import { StatsCards } from "./components/StatsCards";
 import { ToastStack } from "./components/ToastStack";
 import type { ToastItem } from "./components/ToastStack";
+import { TroopFormationsPage } from "./components/TroopFormationsPage";
 import { VikingWaveTimelinePanel } from "./components/VikingWaveTimelinePanel";
 import { useDebouncedValue } from "./hooks/useDebouncedValue";
 import { ApiError, api } from "./lib/api";
@@ -86,7 +87,7 @@ const kofiUrl = import.meta.env.VITE_KOFI_URL || "https://ko-fi.com/daneisra";
 const vikingVengeanceGuideUrl =
   "https://github.com/Daneisra/Kingshot-Vikings-Planner/blob/main/docs/VIKING_VENGEANCE_GUIDE.md";
 
-type AppView = "home" | "planner" | "prep" | "groups" | "score" | "guide" | "admin";
+type AppView = "home" | "planner" | "prep" | "groups" | "formations" | "score" | "guide" | "admin";
 
 interface ConfirmDialogState {
   title: string;
@@ -262,6 +263,10 @@ function readAppViewFromHash(): AppView {
     return "groups";
   }
 
+  if (hashValue === "formations" || hashValue === "troop-formations") {
+    return "formations";
+  }
+
   if (hashValue === "score") {
     return "score";
   }
@@ -404,6 +409,8 @@ export default function App() {
         ? "Alliance hub for Vikings coordination."
       : appView === "groups"
         ? "Build Viking reinforcement groups faster."
+        : appView === "formations"
+          ? "Plan troop formations for alliance events."
         : appView === "score"
           ? "Review public Viking score history."
         : appView === "prep"
@@ -418,6 +425,8 @@ export default function App() {
         ? "Jump into sign-ups, preparation, auto groups, guides, and community links from one clean entry point."
       : appView === "groups"
         ? "Use the current registration pool to review suggested reinforcement groups, HQ anchors, and pairing balance."
+        : appView === "formations"
+          ? "Distribute Infantry, Lancer, and Marksman troops into reusable Bear Trap, Vikings, and Battle formations."
         : appView === "score"
           ? "Alliance scores, personal score trends, participation charts, and public archive highlights live here outside the protected admin tools."
         : appView === "prep"
@@ -1199,6 +1208,14 @@ export default function App() {
               </button>
               <button
                 type="button"
+                className={appView === "formations" ? "primary-button" : "secondary-button"}
+                onClick={() => setAppView("formations")}
+              >
+                <Swords className="h-4 w-4" />
+                Formations
+              </button>
+              <button
+                type="button"
                 className={appView === "score" ? "primary-button" : "secondary-button"}
                 onClick={() => setAppView("score")}
               >
@@ -1299,6 +1316,12 @@ export default function App() {
               <StatsCards stats={stats} warningMessage={statsErrorMessage} />
             </div>
           </div>
+        ) : appView === "formations" ? (
+          <TroopFormationsPage
+            isAdminUnlocked={isAdminUnlocked}
+            adminToken={adminToken}
+            onNotify={pushToast}
+          />
         ) : appView === "score" ? (
           <ScorePage
             archives={publicScoreArchives}

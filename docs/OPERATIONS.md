@@ -173,6 +173,22 @@ Initialize schema:
 psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings" -f /opt/kingshot-vikings-planner/db/init.sql
 ```
 
+Apply the Troop Formations migration manually if you want to verify the database before restarting PM2:
+
+```bash
+psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings" \
+  -f /opt/kingshot-vikings-planner/db/migrations/2026-07-09_troop_formations.sql
+```
+
+The production backend also creates the `troop_formation_presets` table idempotently on startup and seeds the default Bear Trap, Vikings, and Battle presets when missing.
+
+Check Troop Formations data:
+
+```bash
+psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings" \
+  -c "SELECT event_key, event_name, jsonb_array_length(slots) AS slots, updated_at FROM troop_formation_presets ORDER BY event_key;"
+```
+
 ### Manual Backup
 
 The repository includes a production backup helper:

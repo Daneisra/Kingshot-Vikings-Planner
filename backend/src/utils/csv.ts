@@ -5,6 +5,7 @@ import {
   TroopLoadoutEntry,
   WeeklyArchiveSummary
 } from "../types/registration";
+import type { FormationPreset, FormationSlot } from "../types/formations";
 
 function escapeCell(value: string | number | boolean | null) {
   const rawValue = value === null ? "" : String(value);
@@ -194,8 +195,92 @@ export function buildEventNotesCsv(archives: WeeklyArchiveSummary[], exportedAt 
   return formatCsvRows(rows);
 }
 
+export function buildFormationPresetCsv(preset: FormationPreset, exportedAt = new Date()) {
+  const assigned = sumFormationSlots(preset.slots);
+  const remaining = {
+    infantry: preset.availableTroops.infantry - assigned.infantry,
+    lancer: preset.availableTroops.lancer - assigned.lancer,
+    marksman: preset.availableTroops.marksman - assigned.marksman
+  };
+  const rows = [
+    ["Kingshot Troop Formation Export"],
+    ["Exported At (UTC)", exportedAt.toISOString()],
+    ["Event", preset.eventName],
+    [""],
+    ["Available", preset.availableTroops.infantry, preset.availableTroops.lancer, preset.availableTroops.marksman],
+    ["Assigned", assigned.infantry, assigned.lancer, assigned.marksman],
+    ["Remaining", remaining.infantry, remaining.lancer, remaining.marksman],
+    [""],
+    [
+      "Name",
+      "Hero",
+      "Infantry",
+      "Lancer",
+      "Marksman",
+      "Total",
+      "Infantry Ratio",
+      "Lancer Ratio",
+      "Marksman Ratio",
+      "Notes"
+    ],
+    ...preset.slots.map((slot) => {
+      const total = slot.infantry + slot.lancer + slot.marksman;
+
+      return [
+        slot.name,
+        slot.hero,
+        slot.infantry,
+        slot.lancer,
+        slot.marksman,
+        total,
+        formatRatio(slot.infantry, total),
+        formatRatio(slot.lancer, total),
+        formatRatio(slot.marksman, total),
+        slot.notes
+      ];
+    }),
+    [
+      "Remainder",
+      "No hero",
+      remaining.infantry,
+      remaining.lancer,
+      remaining.marksman,
+      remaining.infantry + remaining.lancer + remaining.marksman,
+      "",
+      "",
+      "",
+      "Calculated automatically"
+    ]
+  ];
+
+  return formatCsvRows(rows);
+}
+
 function formatCsvRows(rows: Array<Array<string | number | boolean | null>>) {
   return `\ufeff${rows.map((row) => row.map((cell) => escapeCell(cell ?? null)).join(",")).join("\r\n")}`;
+}
+
+function sumFormationSlots(slots: FormationSlot[]) {
+  return slots.reduce(
+    (totals, slot) => ({
+      infantry: totals.infantry + slot.infantry,
+      lancer: totals.lancer + slot.lancer,
+      marksman: totals.marksman + slot.marksman
+    }),
+    {
+      infantry: 0,
+      lancer: 0,
+      marksman: 0
+    }
+  );
+}
+
+function formatRatio(value: number, total: number) {
+  if (total <= 0) {
+    return "0%";
+  }
+
+  return `${Math.round((value / total) * 100)}%`;
 }
 
 function formatFilters(filters: RegistrationFilters) {

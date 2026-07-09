@@ -1,4 +1,5 @@
 import { pool } from "../db/pool";
+import { seedDefaultFormationPresets } from "./formation-service";
 
 export async function ensureRegistrationSchema() {
   await pool.query(`
@@ -33,6 +34,21 @@ export async function ensureRegistrationSchema() {
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_app_settings_updated_at
       ON app_settings (updated_at DESC)
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS troop_formation_presets (
+      event_key VARCHAR(40) PRIMARY KEY,
+      event_name VARCHAR(80) NOT NULL,
+      available_troops JSONB NOT NULL DEFAULT '{"infantry":0,"lancer":0,"marksman":0}'::jsonb,
+      slots JSONB NOT NULL DEFAULT '[]'::jsonb,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_troop_formation_presets_updated_at
+      ON troop_formation_presets (updated_at DESC)
   `);
 
   await pool.query(`
@@ -93,4 +109,6 @@ export async function ensureRegistrationSchema() {
     WHERE partner_names IS NULL
       OR partner_names = '[]'::jsonb
   `);
+
+  await seedDefaultFormationPresets();
 }

@@ -24,7 +24,7 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 ## Features
 
 - Shared registration list for the current Vikings cycle
-- Dedicated Home, Planner, Prep, Auto Groups, Score, Guide, and Admin workspaces to keep each area focused
+- Dedicated Home, Planner, Prep, Auto Groups, Troop Formations, Score, Guide, and Admin workspaces to keep each area focused
 - Alliance home page with event shortcuts, quick status cards, GitHub Issues, and optional Discord link
 - Support section with PayPal and Ko-fi links
 - Create, edit, and delete player registrations
@@ -42,6 +42,8 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 - Manual archive stat fields for alliance metrics outside the sign-up sheet
 - Automatic 7-player reinforcement cell suggestions based on availability, partner preferences, troop strength, personal score, and role hints
 - HQ defense planner for Viking Vengeance waves 10 and 20
+- Troop Formations page for Bear Trap, Vikings, and Battle march planning with available, assigned, and remaining troop totals
+- Admin-protected formation editing with slot duplication, ordering, preset reset, Discord summary copy, and CSV export
 - Track up to 2 strongest troop tiers, from T7 to T16, with separate Infantry, Lancer, and Marksman counts
 - Select up to 5 regular partners, with an optional 6 marches mode for a 6th reinforcement partner slot
 - Visible app version in the UI for easier support and deployment checks
@@ -82,14 +84,14 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 
 ```text
 .
-├── backend/              # Express API and PostgreSQL access
-├── frontend/             # React app built with Vite
-├── db/                   # Database bootstrap SQL
-├── deploy/               # Deployment scripts and Nginx template
-├── docs/                 # Self-hosting, deployment, and operations docs
-├── .github/workflows/    # GitHub Actions
-├── README.md
-└── ROADMAP.md
+|-- backend/              # Express API and PostgreSQL access
+|-- frontend/             # React app built with Vite
+|-- db/                   # Database bootstrap SQL and migrations
+|-- deploy/               # Deployment scripts and Nginx template
+|-- docs/                 # Self-hosting, deployment, and operations docs
+|-- .github/workflows/    # GitHub Actions
+|-- README.md
+`-- ROADMAP.md
 ```
 
 ## Quick Start

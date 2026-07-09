@@ -145,12 +145,16 @@ Focus: evolve from a Viking-only planner into a broader alliance coordination hu
 
 - [x] Add an alliance home page with:
   announcements, event shortcuts, Discord link, GitHub issues link, and quick status cards
+- [x] Add a dedicated Troop Formations page as the first reusable event-planning module beyond the Viking sign-up board
+- [x] Add Bear Trap, Vikings, and Battle formation presets with persisted available troops, editable slots, calculated remainder, Discord summary copy, and CSV export
 - [ ] Add a global event navigation model:
   Home, Viking Vengeance, Auto Groups, Guide, Admin, future events
 - [ ] Add a simple alliance calendar for planned event times
 - [ ] Add admin-managed alliance announcements
 - [ ] Add a public guides page for alliance rules and event references
 - [x] Add a small "Support the project" section or button with PayPal and Ko-fi links
+- [ ] Add import/export helpers for sharing Troop Formations presets between alliances
+- [ ] Add formation templates per player role or event phase
 
 ### Future Kingshot Events
 

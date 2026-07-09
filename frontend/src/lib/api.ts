@@ -8,6 +8,13 @@ import type {
   PlayerProfileSummary,
   WeeklyArchiveSummary
 } from "../types/registration";
+import type {
+  FormationEventKey,
+  FormationPreset,
+  FormationPresetSummary,
+  FormationSlot,
+  FormationTroopCounts
+} from "../types/formations";
 import type { EventConfigurationSettings, EventWarningSettings, GuideNotesSettings } from "../types/settings";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
@@ -222,6 +229,54 @@ export const api = {
   listPublicPlayerProfiles() {
     return request<PlayerProfileSummary[]>("/scores/player-profiles");
   },
+  listFormationPresets() {
+    return request<FormationPresetSummary[]>("/formations");
+  },
+  getFormationPreset(eventKey: FormationEventKey) {
+    return request<FormationPreset>(`/formations/${eventKey}`);
+  },
+  updateFormationTotals(adminToken: string, eventKey: FormationEventKey, payload: FormationTroopCounts) {
+    return request<FormationPreset>(`/formations/${eventKey}/totals`, {
+      method: "PUT",
+      adminToken,
+      body: JSON.stringify(payload)
+    });
+  },
+  createFormationSlot(
+    adminToken: string,
+    eventKey: FormationEventKey,
+    payload: Omit<FormationSlot, "id" | "sortOrder">
+  ) {
+    return request<FormationPreset>(`/formations/${eventKey}/slots`, {
+      method: "POST",
+      adminToken,
+      body: JSON.stringify(payload)
+    });
+  },
+  updateFormationSlot(
+    adminToken: string,
+    eventKey: FormationEventKey,
+    slotId: string,
+    payload: Omit<FormationSlot, "id">
+  ) {
+    return request<FormationPreset>(`/formations/${eventKey}/slots/${slotId}`, {
+      method: "PUT",
+      adminToken,
+      body: JSON.stringify(payload)
+    });
+  },
+  deleteFormationSlot(adminToken: string, eventKey: FormationEventKey, slotId: string) {
+    return request<FormationPreset>(`/formations/${eventKey}/slots/${slotId}`, {
+      method: "DELETE",
+      adminToken
+    });
+  },
+  resetFormationPreset(adminToken: string, eventKey: FormationEventKey) {
+    return request<FormationPreset>(`/formations/${eventKey}/reset`, {
+      method: "POST",
+      adminToken
+    });
+  },
   createRegistration(payload: RegistrationPayload) {
     return request<Registration>("/registrations", {
       method: "POST",
@@ -370,8 +425,47 @@ export const api = {
   },
   async exportEventNotesCsv(adminToken: string) {
     return fetchCsv("/admin/archives/event-notes.csv", adminToken);
+  },
+  async exportFormationCsv(eventKey: FormationEventKey) {
+    return fetchPublicCsv(`/formations/${eventKey}/export.csv`);
   }
 };
+
+async function fetchPublicCsv(path: string) {
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`);
+  } catch (error) {
+    const apiError = new ApiError({
+      message: "The API is unreachable. Check the server connection and try again.",
+      path,
+      isNetworkError: true
+    });
+
+    logApiError(apiError, error);
+    throw apiError;
+  }
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as ErrorPayload | null;
+    const apiError = new ApiError({
+      message: buildErrorMessage(path, response.status, payload),
+      path,
+      status: response.status,
+      requestId: payload?.requestId ?? response.headers.get("x-request-id") ?? undefined,
+      issues: payload?.issues ?? []
+    });
+
+    logApiError(apiError);
+    throw apiError;
+  }
+
+  return {
+    blob: await response.blob(),
+    filename: getFilenameFromDisposition(response.headers.get("content-disposition"))
+  };
+}
 
 async function fetchCsv(path: string, adminToken: string) {
   let response: Response;

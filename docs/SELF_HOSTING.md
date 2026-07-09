@@ -47,6 +47,16 @@ CREATE DATABASE kingshot_vikings OWNER kingshot;
 psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings" -f db/init.sql
 ```
 
+For existing deployments, feature migrations live in `db/migrations/`.
+The backend also runs an idempotent schema check on startup, so the Troop Formations table is created automatically after a backend restart.
+
+Optional manual migration command:
+
+```bash
+psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings" \
+  -f db/migrations/2026-07-09_troop_formations.sql
+```
+
 ### Configure environment files
 
 ```bash
@@ -114,6 +124,14 @@ CREATE DATABASE kingshot_vikings OWNER kingshot;
 
 ```bash
 psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings" -f /opt/kingshot-vikings-planner/db/init.sql
+```
+
+For upgrades from an existing deployment, the backend performs idempotent schema checks at startup.
+If you prefer to apply the Troop Formations migration manually before restarting PM2:
+
+```bash
+psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings" \
+  -f /opt/kingshot-vikings-planner/db/migrations/2026-07-09_troop_formations.sql
 ```
 
 ### Create server-side environment files
