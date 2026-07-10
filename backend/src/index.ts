@@ -9,8 +9,8 @@ async function bootstrap() {
   await ensureRegistrationSchema();
   await ensureAuditTable();
 
-  app.listen(config.port, () => {
-    console.log(`Kingshot Vikings Planner API listening on port ${config.port}`);
+  app.listen(config.port, config.host, () => {
+    console.log(`Kingshot Vikings Planner API listening on ${config.host}:${config.port}`);
   });
 }
 

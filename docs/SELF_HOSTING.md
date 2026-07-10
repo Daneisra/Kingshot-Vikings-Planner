@@ -159,6 +159,7 @@ Example backend values:
 
 ```env
 NODE_ENV=production
+HOST=127.0.0.1
 PORT=4000
 DATABASE_URL=postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings
 CORS_ORIGIN=https://vikings.example.com

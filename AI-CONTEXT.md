@@ -4,14 +4,14 @@
 
 Dernière vérification complète du dépôt : **2026-07-10**.
 
-Ce document décrit l’état observé du dépôt à la version **0.7.2**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
+Ce document décrit l’état observé du dépôt à la version **0.7.3**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
 
 ## 1. Résumé du projet
 
 **Kingshot Vikings Planner** est une application web auto-hébergée destinée à la coordination de l’événement **Viking Vengeance** de Kingshot et, progressivement, à d’autres outils d’alliance.
 
 - URL de production publiquement documentée : `https://vikings.dannytech.fr`.
-- Version détectée : `0.7.2` dans `frontend/package.json` et `backend/package.json`.
+- Version détectée : `0.7.3` dans `frontend/package.json` et `backend/package.json`.
 - État : application fonctionnelle, déployée nativement sur Debian 12, avec CI/CD SSH opérationnelle et plusieurs espaces fonctionnels.
 - Langue de l’interface : anglais.
 - Dépôt public : `https://github.com/Daneisra/Kingshot-Vikings-Planner`.
@@ -128,7 +128,7 @@ Navigateur
 - `frontend/src/main.tsx` : monte `<App />` dans le DOM.
 - `frontend/src/App.tsx` : shell, navigation hash, orchestration des données, session admin et composition des pages.
 - `frontend/src/lib/api.ts` : client REST, headers admin, erreurs structurées et téléchargements CSV.
-- `backend/src/index.ts` : teste PostgreSQL, exécute les contrôles de schéma puis démarre le serveur.
+- `backend/src/index.ts` : teste PostgreSQL, exécute les contrôles de schéma puis démarre le serveur sur `HOST:PORT`.
 - `backend/src/server.ts` : configure Express, middleware et routeurs.
 - `backend/src/db/pool.ts` : pool PostgreSQL construit depuis `DATABASE_URL`.
 - `ecosystem.config.js` : processus PM2 `kingshot-vikings-planner-api`.
@@ -539,6 +539,7 @@ Ne jamais documenter ni copier une valeur réelle de production.
 | Variable | Obligatoire | Défaut | Rôle |
 | --- | --- | --- | --- |
 | `NODE_ENV` | Non | `development` | `development`, `test` ou `production` ; sélectionne aussi le format de logs |
+| `HOST` | Non | `127.0.0.1` | Adresse d’écoute Express ; conserver loopback en production derrière Nginx |
 | `PORT` | Non | `4000` | Port HTTP Express |
 | `DATABASE_URL` | Oui | Aucun | Chaîne PostgreSQL |
 | `CORS_ORIGIN` | Non | `*` | Origine unique ou liste séparée par virgules |
@@ -582,6 +583,7 @@ Secrets GitHub Actions requis : `VPS_HOST`, `VPS_USER`, `VPS_PORT`, `VPS_SSH_PRI
 - Frontend env : `/etc/kingshot-vikings-planner/frontend.env`.
 - Nginx actif : `/etc/nginx/sites-available/kingshot-vikings-planner`.
 - PM2 : application `kingshot-vikings-planner-api`.
+- Backend Express lié à `127.0.0.1:4000` par défaut via `HOST` et `PORT`.
 - PostgreSQL natif.
 - Production publique en HTTPS ; la configuration TLS active reste hors repo.
 
@@ -728,30 +730,29 @@ Il n’existe pas de fichier de licence. Le README précise que le code n’est 
 
 ## 17. Pièges connus et divergences observées
 
-1. **Bind backend** : `docs/OPERATIONS.md` décrit un backend lié à `127.0.0.1:4000`, mais `backend/src/index.ts` appelle `app.listen(config.port)` sans host. Le processus peut donc écouter toutes les interfaces selon Node/OS. Nginx utilise bien `127.0.0.1`, mais le confinement doit être assuré par le code ou le firewall.
-2. **Timeout admin** : le TTL backend vaut 120 minutes par défaut, tandis que le frontend limite la session à 20 minutes. Le code d’activité ne prolonge pas au-delà de l’expiration frontend déjà calculée ; le texte “inactivity” est donc plus ambitieux que le comportement effectif.
-3. **Clé admin trompeuse** : `kingshot-vikings-admin-password` stocke un token, jamais le password. Toute migration doit préserver la session ou supprimer explicitement l’ancienne clé.
-4. **Compatibilité password** : `x-admin-password` reste accepté par `requireAdmin` sur toutes les routes protégées. Ne pas le réintroduire comme flux frontend normal.
-5. **Initialisation DB** : le bootstrap runtime n’initialise pas intégralement `registrations`. Une base vierge exige `db/init.sql`.
-6. **Migrations** : `deploy.sh` ne lance aucun fichier SQL. Les migrations doivent être appliquées manuellement ou couvertes explicitement par le bootstrap idempotent.
-7. **Presets dupliqués** : les presets formations existent dans le service backend, l’init SQL et la migration. Une modification partielle crée une divergence reset/install.
-8. **Presets partagés** : les brouillons joueurs doivent rester locaux. Écrire chaque frappe dans `troop_formation_presets` ferait s’écraser les utilisateurs.
-9. **DATABASE_URL** : percent-encoder les caractères réservés du mot de passe.
-10. **SSH non interactif** : `npm` et `pm2` peuvent manquer du PATH. `deploy.sh` et le preflight chargent profils et NVM ; conserver cette logique.
-11. **Deux clés SSH** : GitHub Actions -> VPS n’est pas VPS -> GitHub. Diagnostiquer séparément.
-12. **Git destructif en production** : `git reset --hard origin/main` et `git clean -fd` suppriment tout changement suivi/non suivi non ignoré sur le VPS.
-13. **Identité PM2** : le deploy user doit être le même que le propriétaire du daemon PM2.
-14. **Démarrage PM2** : le health check possède un retry 15 x 2 secondes ; ne pas le remplacer par un curl unique après restart.
-15. **Request ID** : le middleware accepte un `x-request-id` externe non validé, alors que `audit_logs.request_id` est de type UUID. Une valeur non UUID sur une action auditée peut faire échouer l’écriture SQL.
-16. **Troop level SQL** : la DB accepte jusqu’à 100 pour héritage, mais l’API/UI actuelle accepte T16 maximum. L’API est la règle métier courante.
-17. **Édition publique** : toute personne connaissant un UUID d’inscription peut actuellement appeler le `PUT` public. Ne pas décrire l’édition comme protégée.
-18. **Données JSONB** : les formes de `partner_names`, `troop_loadout`, `registrations`, `manual_stats` et presets sont protégées principalement par l’application, pas par PostgreSQL.
-19. **iPhone Chrome** : un crash/reload écran noir lors de la saisie des troupes a été corrigé mais reste à confirmer avec la joueuse concernée en production selon `ROADMAP.md`.
-20. **Overflow responsive** : Score, header et navigation ont déjà subi des correctifs. Toute nouvelle table, nombre long ou rangée d’actions doit être testée sur mobile réel.
-21. **Build TypeScript suivi** : `frontend/tsconfig.app.tsbuildinfo`, `frontend/vite.config.js` et `frontend/vite.config.d.ts` sont suivis par Git. Un build peut créer des diffs d’artefacts ; vérifier qu’ils sont intentionnels avant commit.
-22. **HTTPS hors template** : la production publique est HTTPS, mais le certificat et les blocs TLS actifs ne sont pas dans le template Nginx du repo.
-23. **Pas de service worker** : ne pas attribuer un problème de cache à un service worker sans nouvelle preuve ; aucun PWA/service worker n’est implémenté.
-24. **Pas de rollback automatique** : sauvegarder la DB avant une migration et préparer la restauration manuelle.
+1. **Timeout admin** : le TTL backend vaut 120 minutes par défaut, tandis que le frontend limite la session à 20 minutes. Le code d’activité ne prolonge pas au-delà de l’expiration frontend déjà calculée ; le texte “inactivity” est donc plus ambitieux que le comportement effectif.
+2. **Clé admin trompeuse** : `kingshot-vikings-admin-password` stocke un token, jamais le password. Toute migration doit préserver la session ou supprimer explicitement l’ancienne clé.
+3. **Compatibilité password** : `x-admin-password` reste accepté par `requireAdmin` sur toutes les routes protégées. Ne pas le réintroduire comme flux frontend normal.
+4. **Initialisation DB** : le bootstrap runtime n’initialise pas intégralement `registrations`. Une base vierge exige `db/init.sql`.
+5. **Migrations** : `deploy.sh` ne lance aucun fichier SQL. Les migrations doivent être appliquées manuellement ou couvertes explicitement par le bootstrap idempotent.
+6. **Presets dupliqués** : les presets formations existent dans le service backend, l’init SQL et la migration. Une modification partielle crée une divergence reset/install.
+7. **Presets partagés** : les brouillons joueurs doivent rester locaux. Écrire chaque frappe dans `troop_formation_presets` ferait s’écraser les utilisateurs.
+8. **DATABASE_URL** : percent-encoder les caractères réservés du mot de passe.
+9. **SSH non interactif** : `npm` et `pm2` peuvent manquer du PATH. `deploy.sh` et le preflight chargent profils et NVM ; conserver cette logique.
+10. **Deux clés SSH** : GitHub Actions -> VPS n’est pas VPS -> GitHub. Diagnostiquer séparément.
+11. **Git destructif en production** : `git reset --hard origin/main` et `git clean -fd` suppriment tout changement suivi/non suivi non ignoré sur le VPS.
+12. **Identité PM2** : le deploy user doit être le même que le propriétaire du daemon PM2.
+13. **Démarrage PM2** : le health check possède un retry 15 x 2 secondes ; ne pas le remplacer par un curl unique après restart.
+14. **Request ID** : le middleware accepte un `x-request-id` externe non validé, alors que `audit_logs.request_id` est de type UUID. Une valeur non UUID sur une action auditée peut faire échouer l’écriture SQL.
+15. **Troop level SQL** : la DB accepte jusqu’à 100 pour héritage, mais l’API/UI actuelle accepte T16 maximum. L’API est la règle métier courante.
+16. **Édition publique** : toute personne connaissant un UUID d’inscription peut actuellement appeler le `PUT` public. Ne pas décrire l’édition comme protégée.
+17. **Données JSONB** : les formes de `partner_names`, `troop_loadout`, `registrations`, `manual_stats` et presets sont protégées principalement par l’application, pas par PostgreSQL.
+18. **iPhone Chrome** : un crash/reload écran noir lors de la saisie des troupes a été corrigé mais reste à confirmer avec la joueuse concernée en production selon `ROADMAP.md`.
+19. **Overflow responsive** : Score, header et navigation ont déjà subi des correctifs. Toute nouvelle table, nombre long ou rangée d’actions doit être testée sur mobile réel.
+20. **Build TypeScript suivi** : `frontend/tsconfig.app.tsbuildinfo`, `frontend/vite.config.js` et `frontend/vite.config.d.ts` sont suivis par Git. Un build peut créer des diffs d’artefacts ; vérifier qu’ils sont intentionnels avant commit.
+21. **HTTPS hors template** : la production publique est HTTPS, mais le certificat et les blocs TLS actifs ne sont pas dans le template Nginx du repo.
+22. **Pas de service worker** : ne pas attribuer un problème de cache à un service worker sans nouvelle preuve ; aucun PWA/service worker n’est implémenté.
+23. **Pas de rollback automatique** : sauvegarder la DB avant une migration et préparer la restauration manuelle.
 
 ## 18. Roadmap actuelle
 

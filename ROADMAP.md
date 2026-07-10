@@ -137,6 +137,7 @@ Focus: strengthen admin tools, history, and reporting around Viking Vengeance.
 - [x] Add linting to CI before deploy
 - [x] Add a lightweight admin health panel:
   app version, API status, database status, latest deploy timestamp
+- [x] Bind the production API explicitly to loopback with a configurable `HOST`
 
 ## Later
 

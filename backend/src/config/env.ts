@@ -5,6 +5,7 @@ dotenv.config();
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  HOST: z.string().trim().min(1, "HOST must not be empty").default("127.0.0.1"),
   PORT: z.coerce.number().int().positive().default(4000),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   CORS_ORIGIN: z.string().default("*"),
@@ -18,6 +19,7 @@ const parsedEnv = envSchema.parse(process.env);
 
 export const config = {
   nodeEnv: parsedEnv.NODE_ENV,
+  host: parsedEnv.HOST,
   port: parsedEnv.PORT,
   databaseUrl: parsedEnv.DATABASE_URL,
   corsOrigin: parsedEnv.CORS_ORIGIN,
