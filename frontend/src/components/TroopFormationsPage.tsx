@@ -17,7 +17,7 @@ interface TroopFormationsPageProps {
 
 type TroopType = keyof FormationTroopCounts;
 type TroopTier = 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
-type TierInventory = Record<TroopTier, number>;
+type TierInventory = Partial<Record<TroopTier, number>>;
 type FormationTierInventory = Record<TroopType, TierInventory>;
 
 interface TroopAllocationEntry {
@@ -433,11 +433,6 @@ function AvailableTroopsPanel({
   onChange: (inventory: FormationTierInventory) => void;
 }) {
   const totals = sumTierInventory(inventory);
-  const [expandedTroopTypes, setExpandedTroopTypes] = useState<Record<TroopType, boolean>>({
-    infantry: false,
-    lancer: false,
-    marksman: false
-  });
 
   function updateTierCount(troopType: TroopType, tier: TroopTier, count: number) {
     onChange({
@@ -446,6 +441,41 @@ function AvailableTroopsPanel({
         ...inventory[troopType],
         [tier]: count
       }
+    });
+  }
+
+  function addTier(troopType: TroopType) {
+    const nextTier = getAvailableTierOptions(inventory[troopType])[0];
+
+    if (nextTier === undefined) {
+      return;
+    }
+
+    updateTierCount(troopType, nextTier, 0);
+  }
+
+  function changeTier(troopType: TroopType, currentTier: TroopTier, nextTier: TroopTier) {
+    if (currentTier === nextTier || inventory[troopType][nextTier] !== undefined) {
+      return;
+    }
+
+    const nextTroopInventory = { ...inventory[troopType] };
+    nextTroopInventory[nextTier] = normalizeCount(nextTroopInventory[currentTier] ?? 0);
+    delete nextTroopInventory[currentTier];
+
+    onChange({
+      ...inventory,
+      [troopType]: nextTroopInventory
+    });
+  }
+
+  function removeTier(troopType: TroopType, tier: TroopTier) {
+    const nextTroopInventory = { ...inventory[troopType] };
+    delete nextTroopInventory[tier];
+
+    onChange({
+      ...inventory,
+      [troopType]: nextTroopInventory
     });
   }
 
@@ -466,33 +496,33 @@ function AvailableTroopsPanel({
               <button
                 type="button"
                 className="secondary-button px-3 py-2 text-xs"
-                onClick={() =>
-                  setExpandedTroopTypes((current) => ({
-                    ...current,
-                    [key]: !current[key]
-                  }))
-                }
+                onClick={() => addTier(key)}
+                disabled={disabled || getAvailableTierOptions(inventory[key]).length === 0}
               >
-                {expandedTroopTypes[key] ? "Hide tiers" : "Edit tiers"}
+                <Plus className="h-4 w-4" />
+                Add tier
               </button>
             </div>
-            <p className="mt-3 min-h-10 text-sm leading-5 text-slate-400">{formatTierSummary(inventory[key])}</p>
-            {expandedTroopTypes[key] ? (
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5 lg:grid-cols-2 xl:grid-cols-5">
-                {troopTiers.map((tier) => (
-                  <label key={tier} className="min-w-0">
-                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                      T{tier}
-                    </span>
-                    <NumericInput
-                      value={inventory[key][tier]}
-                      disabled={disabled}
-                      onChange={(value) => updateTierCount(key, tier, value)}
-                    />
-                  </label>
-                ))}
-              </div>
-            ) : null}
+            <div className="mt-4 space-y-3">
+              {getConfiguredTiers(inventory[key]).length > 0 ? (
+                getConfiguredTiers(inventory[key]).map((tier) => (
+                  <TierInventoryRow
+                    key={tier}
+                    tier={tier}
+                    count={normalizeCount(inventory[key][tier] ?? 0)}
+                    configuredTiers={getConfiguredTiers(inventory[key])}
+                    disabled={disabled}
+                    onTierChange={(nextTier) => changeTier(key, tier, nextTier)}
+                    onCountChange={(count) => updateTierCount(key, tier, count)}
+                    onRemove={() => removeTier(key, tier)}
+                  />
+                ))
+              ) : (
+                <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-500">
+                  No tiers added yet.
+                </p>
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -501,6 +531,59 @@ function AvailableTroopsPanel({
         <p className="text-xs uppercase tracking-[0.16em] text-emerald-200">Auto-saved locally</p>
       </div>
     </section>
+  );
+}
+
+function TierInventoryRow({
+  tier,
+  count,
+  configuredTiers,
+  disabled,
+  onTierChange,
+  onCountChange,
+  onRemove
+}: {
+  tier: TroopTier;
+  count: number;
+  configuredTiers: TroopTier[];
+  disabled: boolean;
+  onTierChange: (tier: TroopTier) => void;
+  onCountChange: (count: number) => void;
+  onRemove: () => void;
+}) {
+  const tierOptions = troopTiers.filter((option) => option === tier || !configuredTiers.includes(option));
+
+  return (
+    <div className="grid grid-cols-[minmax(5.5rem,0.8fr)_minmax(0,1.4fr)_2.75rem] items-center gap-2">
+      <select
+        value={tier}
+        disabled={disabled}
+        aria-label="Troop tier"
+        onChange={(event) => onTierChange(Number(event.target.value) as TroopTier)}
+      >
+        {tierOptions.map((option) => (
+          <option key={option} value={option}>
+            T{option}
+          </option>
+        ))}
+      </select>
+      <NumericInput
+        value={count}
+        disabled={disabled}
+        ariaLabel={`T${tier} troop count`}
+        onChange={onCountChange}
+      />
+      <button
+        type="button"
+        className="danger-button h-11 px-0"
+        disabled={disabled}
+        onClick={onRemove}
+        aria-label={`Remove T${tier}`}
+        title={`Remove T${tier}`}
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
+    </div>
   );
 }
 
@@ -732,7 +815,17 @@ function RemainderCard({
   );
 }
 
-function NumericInput({ value, disabled, onChange }: { value: number; disabled: boolean; onChange: (value: number) => void }) {
+function NumericInput({
+  value,
+  disabled,
+  ariaLabel,
+  onChange
+}: {
+  value: number;
+  disabled: boolean;
+  ariaLabel?: string;
+  onChange: (value: number) => void;
+}) {
   return (
     <input
       type="text"
@@ -740,6 +833,7 @@ function NumericInput({ value, disabled, onChange }: { value: number; disabled: 
       pattern="[0-9]*"
       value={String(value)}
       disabled={disabled}
+      aria-label={ariaLabel}
       onChange={(event) => onChange(parseIntegerInput(event.target.value))}
     />
   );
@@ -795,20 +889,22 @@ function sumSlots(slots: FormationSlot[]): FormationTroopCounts {
 }
 
 function createEmptyTierInventory(): FormationTierInventory {
-  return troopTypes.reduce((inventory, { key }) => {
-    inventory[key] = troopTiers.reduce((tiers, tier) => {
-      tiers[tier] = 0;
-      return tiers;
-    }, {} as TierInventory);
-    return inventory;
-  }, {} as FormationTierInventory);
+  return {
+    infantry: {},
+    lancer: {},
+    marksman: {}
+  };
 }
 
 function convertTotalsToTierInventory(totals: FormationTroopCounts): FormationTierInventory {
   const inventory = createEmptyTierInventory();
 
   for (const { key } of troopTypes) {
-    inventory[key][7] = normalizeCount(totals[key]);
+    const count = normalizeCount(totals[key]);
+
+    if (count > 0) {
+      inventory[key][7] = count;
+    }
   }
 
   return inventory;
@@ -816,10 +912,16 @@ function convertTotalsToTierInventory(totals: FormationTroopCounts): FormationTi
 
 function cloneTierInventory(inventory: FormationTierInventory): FormationTierInventory {
   return troopTypes.reduce((nextInventory, { key }) => {
-    nextInventory[key] = troopTiers.reduce((tiers, tier) => {
-      tiers[tier] = normalizeCount(inventory[key]?.[tier] ?? 0);
-      return tiers;
-    }, {} as TierInventory);
+    nextInventory[key] = {};
+
+    for (const tier of troopTiers) {
+      const count = normalizeCount(inventory[key]?.[tier] ?? 0);
+
+      if (count > 0) {
+        nextInventory[key][tier] = count;
+      }
+    }
+
     return nextInventory;
   }, {} as FormationTierInventory);
 }
@@ -864,12 +966,19 @@ function allocateSlotsByTier(availableByTier: FormationTierInventory, slots: For
           break;
         }
 
-        const availableCount = remainingByTier[key][tier];
+        const availableCount = normalizeCount(remainingByTier[key][tier] ?? 0);
         const allocatedCount = Math.min(availableCount, requestedCount);
 
         if (allocatedCount > 0) {
           allocation[key].push({ tier, count: allocatedCount });
-          remainingByTier[key][tier] -= allocatedCount;
+          const nextCount = availableCount - allocatedCount;
+
+          if (nextCount > 0) {
+            remainingByTier[key][tier] = nextCount;
+          } else {
+            delete remainingByTier[key][tier];
+          }
+
           requestedCount -= allocatedCount;
         }
       }
@@ -924,12 +1033,12 @@ function formatAllocationEntries(entries: TroopAllocationEntry[]) {
   return entries.map((entry) => `T${entry.tier} ${formatNumber(entry.count)}`).join(", ");
 }
 
-function formatTierSummary(inventory: TierInventory) {
-  const nonEmptyTiers = troopTiers
-    .filter((tier) => inventory[tier] > 0)
-    .map((tier) => `T${tier} ${formatNumber(inventory[tier])}`);
+function getConfiguredTiers(inventory: TierInventory) {
+  return troopTiers.filter((tier) => inventory[tier] !== undefined);
+}
 
-  return nonEmptyTiers.length > 0 ? nonEmptyTiers.join(" · ") : "No troops entered yet.";
+function getAvailableTierOptions(inventory: TierInventory) {
+  return troopTiers.filter((tier) => inventory[tier] === undefined);
 }
 
 function formatSlotAllocation(allocation: SlotTroopAllocation, shortage: SlotShortage) {
@@ -946,8 +1055,8 @@ function formatRemainingByTier(inventory: FormationTierInventory) {
   const details = troopTypes
     .map(({ key, label }) => {
       const tierDetails = troopTiers
-        .filter((tier) => inventory[key][tier] > 0)
-        .map((tier) => `T${tier} ${formatNumber(inventory[key][tier])}`)
+        .filter((tier) => normalizeCount(inventory[key][tier] ?? 0) > 0)
+        .map((tier) => `T${tier} ${formatNumber(normalizeCount(inventory[key][tier] ?? 0))}`)
         .join(", ");
 
       return tierDetails ? `${label}: ${tierDetails}` : "";
@@ -1052,7 +1161,7 @@ function isValidTierInventory(value: unknown): value is FormationTierInventory {
     return false;
   }
 
-  const inventory = value as FormationTierInventory;
+  const inventory = value as Record<TroopType, unknown>;
   return troopTypes.every(({ key }) => {
     const tierInventory = inventory[key];
 
@@ -1060,7 +1169,9 @@ function isValidTierInventory(value: unknown): value is FormationTierInventory {
       return false;
     }
 
-    return troopTiers.every((tier) => Number.isFinite(tierInventory[tier]));
+    return Object.entries(tierInventory).every(([tier, count]) => {
+      return troopTiers.includes(Number(tier) as TroopTier) && Number.isFinite(count);
+    });
   });
 }
 
@@ -1107,7 +1218,7 @@ function buildLocalFormationCsv({
     ["Troop Type", ...troopTiers.map((tier) => `T${tier}`), "Total"],
     ...troopTypes.map(({ key, label }) => [
       label,
-      ...troopTiers.map((tier) => availableTroopsByTier[key][tier]),
+      ...troopTiers.map((tier) => availableTroopsByTier[key][tier] ?? 0),
       availableTroops[key]
     ]),
     [""],
