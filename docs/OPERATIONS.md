@@ -71,6 +71,9 @@ Each request log includes:
 - `remoteAddress`
 - `userAgent`
 
+An incoming `x-request-id` is preserved only when it is a valid UUID.
+Missing or invalid values are replaced with a generated UUID so the same identifier remains safe for PostgreSQL audit records.
+
 Example:
 
 ```json

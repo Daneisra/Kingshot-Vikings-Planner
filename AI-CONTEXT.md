@@ -4,14 +4,14 @@
 
 Dernière vérification complète du dépôt : **2026-07-10**.
 
-Ce document décrit l’état observé du dépôt à la version **0.7.3**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
+Ce document décrit l’état observé du dépôt à la version **0.7.4**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
 
 ## 1. Résumé du projet
 
 **Kingshot Vikings Planner** est une application web auto-hébergée destinée à la coordination de l’événement **Viking Vengeance** de Kingshot et, progressivement, à d’autres outils d’alliance.
 
 - URL de production publiquement documentée : `https://vikings.dannytech.fr`.
-- Version détectée : `0.7.3` dans `frontend/package.json` et `backend/package.json`.
+- Version détectée : `0.7.4` dans `frontend/package.json` et `backend/package.json`.
 - État : application fonctionnelle, déployée nativement sur Debian 12, avec CI/CD SSH opérationnelle et plusieurs espaces fonctionnels.
 - Langue de l’interface : anglais.
 - Dépôt public : `https://github.com/Daneisra/Kingshot-Vikings-Planner`.
@@ -222,7 +222,7 @@ Les erreurs `5xx` affichent la référence `requestId` lorsqu’elle est fournie
 
 En production, Morgan écrit des lignes JSON contenant `timestamp`, `requestId`, méthode, URL, status, temps de réponse, taille, adresse distante et user-agent. En développement, le format Morgan `dev` est utilisé.
 
-`backend/src/middleware/request-id.ts` accepte `x-request-id` entrant ou génère un UUID. Le header `x-request-id` est toujours renvoyé. `backend/src/middleware/error-handler.ts` traite séparément `ZodError`, `HttpError` et erreur interne.
+`backend/src/middleware/request-id.ts` conserve un `x-request-id` entrant uniquement s’il respecte le format UUID accepté par PostgreSQL ; toute autre valeur est remplacée par `randomUUID()`. Le header `x-request-id` effectivement utilisé est toujours renvoyé. `backend/src/middleware/error-handler.ts` traite séparément `ZodError`, `HttpError` et erreur interne.
 
 ### 6.2 Services métier
 
@@ -743,16 +743,15 @@ Il n’existe pas de fichier de licence. Le README précise que le code n’est 
 11. **Git destructif en production** : `git reset --hard origin/main` et `git clean -fd` suppriment tout changement suivi/non suivi non ignoré sur le VPS.
 12. **Identité PM2** : le deploy user doit être le même que le propriétaire du daemon PM2.
 13. **Démarrage PM2** : le health check possède un retry 15 x 2 secondes ; ne pas le remplacer par un curl unique après restart.
-14. **Request ID** : le middleware accepte un `x-request-id` externe non validé, alors que `audit_logs.request_id` est de type UUID. Une valeur non UUID sur une action auditée peut faire échouer l’écriture SQL.
-15. **Troop level SQL** : la DB accepte jusqu’à 100 pour héritage, mais l’API/UI actuelle accepte T16 maximum. L’API est la règle métier courante.
-16. **Édition publique** : toute personne connaissant un UUID d’inscription peut actuellement appeler le `PUT` public. Ne pas décrire l’édition comme protégée.
-17. **Données JSONB** : les formes de `partner_names`, `troop_loadout`, `registrations`, `manual_stats` et presets sont protégées principalement par l’application, pas par PostgreSQL.
-18. **iPhone Chrome** : un crash/reload écran noir lors de la saisie des troupes a été corrigé mais reste à confirmer avec la joueuse concernée en production selon `ROADMAP.md`.
-19. **Overflow responsive** : Score, header et navigation ont déjà subi des correctifs. Toute nouvelle table, nombre long ou rangée d’actions doit être testée sur mobile réel.
-20. **Build TypeScript suivi** : `frontend/tsconfig.app.tsbuildinfo`, `frontend/vite.config.js` et `frontend/vite.config.d.ts` sont suivis par Git. Un build peut créer des diffs d’artefacts ; vérifier qu’ils sont intentionnels avant commit.
-21. **HTTPS hors template** : la production publique est HTTPS, mais le certificat et les blocs TLS actifs ne sont pas dans le template Nginx du repo.
-22. **Pas de service worker** : ne pas attribuer un problème de cache à un service worker sans nouvelle preuve ; aucun PWA/service worker n’est implémenté.
-23. **Pas de rollback automatique** : sauvegarder la DB avant une migration et préparer la restauration manuelle.
+14. **Troop level SQL** : la DB accepte jusqu’à 100 pour héritage, mais l’API/UI actuelle accepte T16 maximum. L’API est la règle métier courante.
+15. **Édition publique** : toute personne connaissant un UUID d’inscription peut actuellement appeler le `PUT` public. Ne pas décrire l’édition comme protégée.
+16. **Données JSONB** : les formes de `partner_names`, `troop_loadout`, `registrations`, `manual_stats` et presets sont protégées principalement par l’application, pas par PostgreSQL.
+17. **iPhone Chrome** : un crash/reload écran noir lors de la saisie des troupes a été corrigé mais reste à confirmer avec la joueuse concernée en production selon `ROADMAP.md`.
+18. **Overflow responsive** : Score, header et navigation ont déjà subi des correctifs. Toute nouvelle table, nombre long ou rangée d’actions doit être testée sur mobile réel.
+19. **Build TypeScript suivi** : `frontend/tsconfig.app.tsbuildinfo`, `frontend/vite.config.js` et `frontend/vite.config.d.ts` sont suivis par Git. Un build peut créer des diffs d’artefacts ; vérifier qu’ils sont intentionnels avant commit.
+20. **HTTPS hors template** : la production publique est HTTPS, mais le certificat et les blocs TLS actifs ne sont pas dans le template Nginx du repo.
+21. **Pas de service worker** : ne pas attribuer un problème de cache à un service worker sans nouvelle preuve ; aucun PWA/service worker n’est implémenté.
+22. **Pas de rollback automatique** : sauvegarder la DB avant une migration et préparer la restauration manuelle.
 
 ## 18. Roadmap actuelle
 

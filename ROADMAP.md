@@ -24,6 +24,7 @@ Focus: finish the Viking Vengeance planner without overloading the casual player
 - [x] Fix the partner list query regression
 - [ ] Verify production behavior after the partner list fix
 - [x] Improve API error diagnostics for failed frontend requests
+- [x] Normalize invalid incoming request IDs before logging and audit writes
 - [x] Make partial API failures clearer in the UI
 - [x] Review weekly reset behavior and empty-state safety
 - [x] Mitigate iPhone Chrome reload/black-screen crashes while entering troop counts
