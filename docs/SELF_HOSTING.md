@@ -169,6 +169,9 @@ ADMIN_TOKEN_SECRET=change-this-token-secret-with-at-least-16-chars
 ADMIN_TOKEN_TTL_MINUTES=120
 ```
 
+The frontend auto-locks an admin session after 20 minutes without pointer or keyboard activity.
+`ADMIN_TOKEN_TTL_MINUTES` remains the absolute lifetime of the signed backend token.
+
 Example frontend values:
 
 ```env

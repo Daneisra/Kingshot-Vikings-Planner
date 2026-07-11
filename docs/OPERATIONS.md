@@ -163,6 +163,9 @@ ADMIN_TOKEN_SECRET=change-this-token-secret-with-at-least-16-chars
 ADMIN_TOKEN_TTL_MINUTES=120
 ```
 
+The browser applies a separate 20-minute inactivity timeout and extends that local deadline on pointer or keyboard activity.
+The signed backend token expiry remains the hard session limit and is controlled by `ADMIN_TOKEN_TTL_MINUTES`.
+
 Frontend:
 
 ```env

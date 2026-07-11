@@ -2,16 +2,16 @@
 
 > Référence destinée aux agents IA intervenant sur ce dépôt. Lire ce fichier avant toute modification. En cas de divergence, la version déclarée dans le code, les fichiers de configuration, le schéma PostgreSQL et l’implémentation actuelle priment sur ce document.
 
-Dernière vérification complète du dépôt : **2026-07-10**.
+Dernière vérification complète du dépôt : **2026-07-11**.
 
-Ce document décrit l’état observé du dépôt à la version **0.7.4**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
+Ce document décrit l’état observé du dépôt à la version **0.7.5**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
 
 ## 1. Résumé du projet
 
 **Kingshot Vikings Planner** est une application web auto-hébergée destinée à la coordination de l’événement **Viking Vengeance** de Kingshot et, progressivement, à d’autres outils d’alliance.
 
 - URL de production publiquement documentée : `https://vikings.dannytech.fr`.
-- Version détectée : `0.7.4` dans `frontend/package.json` et `backend/package.json`.
+- Version détectée : `0.7.5` dans `frontend/package.json` et `backend/package.json`.
 - État : application fonctionnelle, déployée nativement sur Debian 12, avec CI/CD SSH opérationnelle et plusieurs espaces fonctionnels.
 - Langue de l’interface : anglais.
 - Dépôt public : `https://github.com/Daneisra/Kingshot-Vikings-Planner`.
@@ -311,8 +311,8 @@ Dans l’interface actuelle, seule la réinitialisation du preset global Troop F
 - `ADMIN_PASSWORD` : obligatoire, 8 caractères minimum.
 - `ADMIN_SECONDARY_PASSWORD` : optionnel, 8 caractères minimum.
 - `ADMIN_TOKEN_SECRET` : optionnel dans le code, 16 caractères minimum s’il est présent ; fallback technique sur `ADMIN_PASSWORD`.
-- `ADMIN_TOKEN_TTL_MINUTES` : durée serveur, 120 minutes par défaut.
-- Le frontend impose séparément `ADMIN_SESSION_TIMEOUT_MINUTES = 20` dans `App.tsx`.
+- `ADMIN_TOKEN_TTL_MINUTES` : expiration absolue du token serveur, 120 minutes par défaut.
+- Le frontend impose séparément `ADMIN_SESSION_TIMEOUT_MINUTES = 20` comme délai d’inactivité glissant dans `App.tsx`.
 
 Le middleware accepte encore `x-admin-password` sur toutes les routes protégées pour compatibilité, mais le flux frontend normal échange le mot de passe une seule fois puis utilise `x-admin-token`.
 
@@ -322,14 +322,18 @@ Le token est stocké dans `localStorage` sous la clé historique et trompeuse `k
 
 ```json
 {
+  "schemaVersion": 2,
   "token": "<token signe>",
-  "expiresAt": 0
+  "tokenExpiresAt": 0,
+  "idleExpiresAt": 0
 }
 ```
 
-- `expiresAt` est un timestamp en millisecondes.
-- Une valeur invalide ou expirée est supprimée.
-- Le frontend verrouille normalement la session avant l’expiration serveur, après 20 minutes maximum.
+- `tokenExpiresAt` et `idleExpiresAt` sont des timestamps en millisecondes.
+- `idleExpiresAt` est repoussé sur `pointerdown` ou `keydown`, sans dépasser `tokenExpiresAt`.
+- L’ancien format `{ token, expiresAt }` est accepté une dernière fois, puis remplacé après revérification serveur.
+- Une valeur invalide, inactive ou expirée est supprimée.
+- Le frontend verrouille après 20 minutes d’inactivité ou à l’expiration absolue du token, selon la première échéance.
 - Une expiration serveur pendant une action produit une erreur `401`; il n’existe pas de verrouillage global automatique sur chaque `401`.
 
 Ne jamais placer `ADMIN_PASSWORD`, `ADMIN_SECONDARY_PASSWORD` ou `ADMIN_TOKEN_SECRET` dans le frontend, un log, une capture ou un fichier versionné.
@@ -487,7 +491,7 @@ PostgreSQL contient les données globales et partagées :
 
 | Clé exacte | Contenu | Migration/fallback |
 | --- | --- | --- |
-| `kingshot-vikings-admin-password` | `{ token, expiresAt }` ; aucun mot de passe | JSON invalide ou expiré supprimé |
+| `kingshot-vikings-admin-password` | Session admin v2 : token, expiration absolue et expiration d’inactivité ; aucun mot de passe | Ancien `{ token, expiresAt }` migré après vérification serveur |
 | `kingshot-vikings-pre-event-checklist` | Tableau d’identifiants cochés | Valeur invalide supprimée ; IDs inconnus non filtrés à la lecture |
 | `troop-formations:battle` | Brouillon local Battle | Normalisation sparse et fallback preset |
 | `troop-formations:bear-trap` | Brouillon local Bear Trap | Normalisation sparse et fallback preset |
@@ -507,7 +511,7 @@ Schéma courant d’un brouillon de formation :
 }
 ```
 
-Il n’existe pas de numéro de version de schéma localStorage. Toute évolution doit donc reconnaître les anciens champs. Renommer une clé sans migration fait perdre l’accès apparent aux données locales. Les brouillons Troop Formations ne doivent jamais être envoyés comme document partagé global tant qu’il n’existe pas d’authentification par joueur.
+Seule la session admin possède actuellement un `schemaVersion` explicite (`2`). La checklist et Troop Formations doivent toujours reconnaître leurs anciens champs sans numéro de version. Renommer une clé sans migration fait perdre l’accès apparent aux données locales. Les brouillons Troop Formations ne doivent jamais être envoyés comme document partagé global tant qu’il n’existe pas d’authentification par joueur.
 
 ### 10.3 Fichiers et ordre de priorité
 
@@ -730,28 +734,27 @@ Il n’existe pas de fichier de licence. Le README précise que le code n’est 
 
 ## 17. Pièges connus et divergences observées
 
-1. **Timeout admin** : le TTL backend vaut 120 minutes par défaut, tandis que le frontend limite la session à 20 minutes. Le code d’activité ne prolonge pas au-delà de l’expiration frontend déjà calculée ; le texte “inactivity” est donc plus ambitieux que le comportement effectif.
-2. **Clé admin trompeuse** : `kingshot-vikings-admin-password` stocke un token, jamais le password. Toute migration doit préserver la session ou supprimer explicitement l’ancienne clé.
-3. **Compatibilité password** : `x-admin-password` reste accepté par `requireAdmin` sur toutes les routes protégées. Ne pas le réintroduire comme flux frontend normal.
-4. **Initialisation DB** : le bootstrap runtime n’initialise pas intégralement `registrations`. Une base vierge exige `db/init.sql`.
-5. **Migrations** : `deploy.sh` ne lance aucun fichier SQL. Les migrations doivent être appliquées manuellement ou couvertes explicitement par le bootstrap idempotent.
-6. **Presets dupliqués** : les presets formations existent dans le service backend, l’init SQL et la migration. Une modification partielle crée une divergence reset/install.
-7. **Presets partagés** : les brouillons joueurs doivent rester locaux. Écrire chaque frappe dans `troop_formation_presets` ferait s’écraser les utilisateurs.
-8. **DATABASE_URL** : percent-encoder les caractères réservés du mot de passe.
-9. **SSH non interactif** : `npm` et `pm2` peuvent manquer du PATH. `deploy.sh` et le preflight chargent profils et NVM ; conserver cette logique.
-10. **Deux clés SSH** : GitHub Actions -> VPS n’est pas VPS -> GitHub. Diagnostiquer séparément.
-11. **Git destructif en production** : `git reset --hard origin/main` et `git clean -fd` suppriment tout changement suivi/non suivi non ignoré sur le VPS.
-12. **Identité PM2** : le deploy user doit être le même que le propriétaire du daemon PM2.
-13. **Démarrage PM2** : le health check possède un retry 15 x 2 secondes ; ne pas le remplacer par un curl unique après restart.
-14. **Troop level SQL** : la DB accepte jusqu’à 100 pour héritage, mais l’API/UI actuelle accepte T16 maximum. L’API est la règle métier courante.
-15. **Édition publique** : toute personne connaissant un UUID d’inscription peut actuellement appeler le `PUT` public. Ne pas décrire l’édition comme protégée.
-16. **Données JSONB** : les formes de `partner_names`, `troop_loadout`, `registrations`, `manual_stats` et presets sont protégées principalement par l’application, pas par PostgreSQL.
-17. **iPhone Chrome** : un crash/reload écran noir lors de la saisie des troupes a été corrigé mais reste à confirmer avec la joueuse concernée en production selon `ROADMAP.md`.
-18. **Overflow responsive** : Score, header et navigation ont déjà subi des correctifs. Toute nouvelle table, nombre long ou rangée d’actions doit être testée sur mobile réel.
-19. **Build TypeScript suivi** : `frontend/tsconfig.app.tsbuildinfo`, `frontend/vite.config.js` et `frontend/vite.config.d.ts` sont suivis par Git. Un build peut créer des diffs d’artefacts ; vérifier qu’ils sont intentionnels avant commit.
-20. **HTTPS hors template** : la production publique est HTTPS, mais le certificat et les blocs TLS actifs ne sont pas dans le template Nginx du repo.
-21. **Pas de service worker** : ne pas attribuer un problème de cache à un service worker sans nouvelle preuve ; aucun PWA/service worker n’est implémenté.
-22. **Pas de rollback automatique** : sauvegarder la DB avant une migration et préparer la restauration manuelle.
+1. **Clé admin trompeuse** : `kingshot-vikings-admin-password` stocke un token, jamais le password. Toute migration doit préserver la session ou supprimer explicitement l’ancienne clé.
+2. **Compatibilité password** : `x-admin-password` reste accepté par `requireAdmin` sur toutes les routes protégées. Ne pas le réintroduire comme flux frontend normal.
+3. **Initialisation DB** : le bootstrap runtime n’initialise pas intégralement `registrations`. Une base vierge exige `db/init.sql`.
+4. **Migrations** : `deploy.sh` ne lance aucun fichier SQL. Les migrations doivent être appliquées manuellement ou couvertes explicitement par le bootstrap idempotent.
+5. **Presets dupliqués** : les presets formations existent dans le service backend, l’init SQL et la migration. Une modification partielle crée une divergence reset/install.
+6. **Presets partagés** : les brouillons joueurs doivent rester locaux. Écrire chaque frappe dans `troop_formation_presets` ferait s’écraser les utilisateurs.
+7. **DATABASE_URL** : percent-encoder les caractères réservés du mot de passe.
+8. **SSH non interactif** : `npm` et `pm2` peuvent manquer du PATH. `deploy.sh` et le preflight chargent profils et NVM ; conserver cette logique.
+9. **Deux clés SSH** : GitHub Actions -> VPS n’est pas VPS -> GitHub. Diagnostiquer séparément.
+10. **Git destructif en production** : `git reset --hard origin/main` et `git clean -fd` suppriment tout changement suivi/non suivi non ignoré sur le VPS.
+11. **Identité PM2** : le deploy user doit être le même que le propriétaire du daemon PM2.
+12. **Démarrage PM2** : le health check possède un retry 15 x 2 secondes ; ne pas le remplacer par un curl unique après restart.
+13. **Troop level SQL** : la DB accepte jusqu’à 100 pour héritage, mais l’API/UI actuelle accepte T16 maximum. L’API est la règle métier courante.
+14. **Édition publique** : toute personne connaissant un UUID d’inscription peut actuellement appeler le `PUT` public. Ne pas décrire l’édition comme protégée.
+15. **Données JSONB** : les formes de `partner_names`, `troop_loadout`, `registrations`, `manual_stats` et presets sont protégées principalement par l’application, pas par PostgreSQL.
+16. **iPhone Chrome** : un crash/reload écran noir lors de la saisie des troupes a été corrigé mais reste à confirmer avec la joueuse concernée en production selon `ROADMAP.md`.
+17. **Overflow responsive** : Score, header et navigation ont déjà subi des correctifs. Toute nouvelle table, nombre long ou rangée d’actions doit être testée sur mobile réel.
+18. **Build TypeScript suivi** : `frontend/tsconfig.app.tsbuildinfo`, `frontend/vite.config.js` et `frontend/vite.config.d.ts` sont suivis par Git. Un build peut créer des diffs d’artefacts ; vérifier qu’ils sont intentionnels avant commit.
+19. **HTTPS hors template** : la production publique est HTTPS, mais le certificat et les blocs TLS actifs ne sont pas dans le template Nginx du repo.
+20. **Pas de service worker** : ne pas attribuer un problème de cache à un service worker sans nouvelle preuve ; aucun PWA/service worker n’est implémenté.
+21. **Pas de rollback automatique** : sauvegarder la DB avant une migration et préparer la restauration manuelle.
 
 ## 18. Roadmap actuelle
 

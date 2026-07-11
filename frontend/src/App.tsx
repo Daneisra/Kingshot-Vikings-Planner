@@ -78,6 +78,7 @@ const defaultEventConfigurationSettings: EventConfigurationSettings = {
 };
 
 const adminStorageKey = "kingshot-vikings-admin-password";
+const ADMIN_SESSION_STORAGE_VERSION = 2;
 const ADMIN_SESSION_TIMEOUT_MINUTES = 20;
 const ADMIN_SESSION_TIMEOUT_MS = ADMIN_SESSION_TIMEOUT_MINUTES * 60 * 1000;
 const githubIssuesUrl = "https://github.com/Daneisra/Kingshot-Vikings-Planner/issues";
@@ -173,8 +174,17 @@ function EventConfigurationSummary({ settings }: { settings: EventConfigurationS
 }
 
 interface StoredAdminSession {
+  schemaVersion: typeof ADMIN_SESSION_STORAGE_VERSION;
   token: string;
-  expiresAt: number;
+  tokenExpiresAt: number;
+  idleExpiresAt: number;
+}
+
+interface LegacyStoredAdminSession {
+  token?: unknown;
+  expiresAt?: unknown;
+  tokenExpiresAt?: unknown;
+  idleExpiresAt?: unknown;
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -196,30 +206,50 @@ function readStoredAdminSession(): StoredAdminSession | null {
   }
 
   try {
-    const parsedValue = JSON.parse(rawValue) as StoredAdminSession;
+    const parsedValue = JSON.parse(rawValue) as LegacyStoredAdminSession;
+    const tokenExpiresAt =
+      typeof parsedValue.tokenExpiresAt === "number"
+        ? parsedValue.tokenExpiresAt
+        : parsedValue.expiresAt;
+    const idleExpiresAt =
+      typeof parsedValue.idleExpiresAt === "number"
+        ? parsedValue.idleExpiresAt
+        : parsedValue.expiresAt;
+    const now = Date.now();
 
     if (
       typeof parsedValue.token !== "string" ||
-      typeof parsedValue.expiresAt !== "number" ||
-      parsedValue.expiresAt <= Date.now()
+      typeof tokenExpiresAt !== "number" ||
+      !Number.isFinite(tokenExpiresAt) ||
+      typeof idleExpiresAt !== "number" ||
+      !Number.isFinite(idleExpiresAt) ||
+      tokenExpiresAt <= now ||
+      idleExpiresAt <= now
     ) {
       localStorage.removeItem(adminStorageKey);
       return null;
     }
 
-    return parsedValue;
+    return {
+      schemaVersion: ADMIN_SESSION_STORAGE_VERSION,
+      token: parsedValue.token,
+      tokenExpiresAt,
+      idleExpiresAt
+    };
   } catch {
     localStorage.removeItem(adminStorageKey);
     return null;
   }
 }
 
-function writeStoredAdminSession(token: string, expiresAt: number) {
+function writeStoredAdminSession(token: string, tokenExpiresAt: number, idleExpiresAt: number) {
   localStorage.setItem(
     adminStorageKey,
     JSON.stringify({
+      schemaVersion: ADMIN_SESSION_STORAGE_VERSION,
       token,
-      expiresAt
+      tokenExpiresAt,
+      idleExpiresAt
     } satisfies StoredAdminSession)
   );
 }
@@ -230,7 +260,7 @@ function clearStoredAdminSession() {
 
 function formatSessionHint(isAdminUnlocked: boolean, remainingMs: number | null) {
   if (!isAdminUnlocked || remainingMs === null) {
-    return `Admin access creates a temporary token and auto-locks after ${ADMIN_SESSION_TIMEOUT_MINUTES} minutes.`;
+    return `Admin access uses a temporary token and auto-locks after ${ADMIN_SESSION_TIMEOUT_MINUTES} minutes of inactivity.`;
   }
 
   const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
@@ -319,9 +349,12 @@ export default function App() {
   const [isSavingGuideNotes, setIsSavingGuideNotes] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [adminToken, setAdminToken] = useState(() => initialAdminSessionRef.current?.token ?? "");
-  const [isAdminUnlocked, setIsAdminUnlocked] = useState(() => Boolean(initialAdminSessionRef.current));
-  const [adminSessionExpiresAt, setAdminSessionExpiresAt] = useState<number | null>(
-    () => initialAdminSessionRef.current?.expiresAt ?? null
+  const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
+  const [adminTokenExpiresAt, setAdminTokenExpiresAt] = useState<number | null>(
+    () => initialAdminSessionRef.current?.tokenExpiresAt ?? null
+  );
+  const [adminIdleExpiresAt, setAdminIdleExpiresAt] = useState<number | null>(
+    () => initialAdminSessionRef.current?.idleExpiresAt ?? null
   );
   const [partnersErrorMessage, setPartnersErrorMessage] = useState("");
   const [registrationsErrorMessage, setRegistrationsErrorMessage] = useState("");
@@ -348,7 +381,13 @@ export default function App() {
   const [adminSessionRemainingMs, setAdminSessionRemainingMs] = useState<number | null>(
     () =>
       initialAdminSessionRef.current
-        ? Math.max(0, initialAdminSessionRef.current.expiresAt - Date.now())
+        ? Math.max(
+            0,
+            Math.min(
+              initialAdminSessionRef.current.tokenExpiresAt,
+              initialAdminSessionRef.current.idleExpiresAt
+            ) - Date.now()
+          )
         : null
   );
 
@@ -436,18 +475,26 @@ export default function App() {
         : "A shared sign-up board built for mobile, with troop tracking, availability filters, and protected admin actions.";
 
   const refreshAdminSession = useCallback((session: AdminSessionResponse) => {
-    const serverExpiresAt = Date.parse(session.expiresAt);
-    const nextExpiresAt = Math.min(Date.now() + ADMIN_SESSION_TIMEOUT_MS, serverExpiresAt);
+    const tokenExpiresAt = Date.parse(session.expiresAt);
+    const now = Date.now();
+
+    if (!Number.isFinite(tokenExpiresAt) || tokenExpiresAt <= now) {
+      throw new Error("The API returned an invalid admin session expiration.");
+    }
+
+    const idleExpiresAt = Math.min(now + ADMIN_SESSION_TIMEOUT_MS, tokenExpiresAt);
     setAdminToken(session.token);
-    setAdminSessionExpiresAt(nextExpiresAt);
-    setAdminSessionRemainingMs(Math.max(0, nextExpiresAt - Date.now()));
-    writeStoredAdminSession(session.token, nextExpiresAt);
+    setAdminTokenExpiresAt(tokenExpiresAt);
+    setAdminIdleExpiresAt(idleExpiresAt);
+    setAdminSessionRemainingMs(Math.max(0, idleExpiresAt - now));
+    writeStoredAdminSession(session.token, tokenExpiresAt, idleExpiresAt);
   }, []);
 
   const lockAdminSession = useCallback(
     (message?: string, tone: ToastItem["tone"] = "success") => {
       setIsAdminUnlocked(false);
-      setAdminSessionExpiresAt(null);
+      setAdminTokenExpiresAt(null);
+      setAdminIdleExpiresAt(null);
       setAdminSessionRemainingMs(null);
       setAdminToken("");
       setConfirmDialog(null);
@@ -626,8 +673,13 @@ export default function App() {
 
     api.verifyAdminToken(storedSession.token)
       .then((session) => {
-        setIsAdminUnlocked(true);
+        if (Math.min(storedSession.tokenExpiresAt, storedSession.idleExpiresAt) <= Date.now()) {
+          lockAdminSession();
+          return;
+        }
+
         refreshAdminSession(session);
+        setIsAdminUnlocked(true);
       })
       .catch(() => {
         setAdminPassword("");
@@ -673,18 +725,20 @@ export default function App() {
   }, [appView, editingRegistration]);
 
   useEffect(() => {
-    if (!isAdminUnlocked || !adminSessionExpiresAt) {
+    if (!isAdminUnlocked || !adminTokenExpiresAt || !adminIdleExpiresAt) {
       return;
     }
 
     const syncSessionTimer = () => {
-      const remaining = adminSessionExpiresAt - Date.now();
+      const now = Date.now();
+      const remaining = Math.min(adminTokenExpiresAt, adminIdleExpiresAt) - now;
 
       if (remaining <= 0) {
-        lockAdminSession(
-          `Admin session timed out after ${ADMIN_SESSION_TIMEOUT_MINUTES} minutes of inactivity.`,
-          "error"
-        );
+        const message =
+          adminTokenExpiresAt <= now
+            ? "Admin token expired. Unlock the admin panel again."
+            : `Admin session timed out after ${ADMIN_SESSION_TIMEOUT_MINUTES} minutes of inactivity.`;
+        lockAdminSession(message, "error");
         return;
       }
 
@@ -695,19 +749,24 @@ export default function App() {
     const intervalId = window.setInterval(syncSessionTimer, 1000);
 
     return () => window.clearInterval(intervalId);
-  }, [adminSessionExpiresAt, isAdminUnlocked, lockAdminSession]);
+  }, [adminIdleExpiresAt, adminTokenExpiresAt, isAdminUnlocked, lockAdminSession]);
 
   useEffect(() => {
-    if (!isAdminUnlocked || !adminToken.trim()) {
+    if (!isAdminUnlocked || !adminToken.trim() || !adminTokenExpiresAt) {
       return;
     }
 
     const extendSession = () => {
-      const expiresAt = adminSessionExpiresAt ?? Date.now();
-      const nextExpiresAt = Math.min(Date.now() + ADMIN_SESSION_TIMEOUT_MS, expiresAt);
-      setAdminSessionExpiresAt(nextExpiresAt);
-      setAdminSessionRemainingMs(Math.max(0, nextExpiresAt - Date.now()));
-      writeStoredAdminSession(adminToken, nextExpiresAt);
+      const now = Date.now();
+
+      if (adminTokenExpiresAt <= now) {
+        return;
+      }
+
+      const nextIdleExpiresAt = Math.min(now + ADMIN_SESSION_TIMEOUT_MS, adminTokenExpiresAt);
+      setAdminIdleExpiresAt(nextIdleExpiresAt);
+      setAdminSessionRemainingMs(Math.max(0, nextIdleExpiresAt - now));
+      writeStoredAdminSession(adminToken, adminTokenExpiresAt, nextIdleExpiresAt);
     };
 
     window.addEventListener("pointerdown", extendSession);
@@ -717,7 +776,7 @@ export default function App() {
       window.removeEventListener("pointerdown", extendSession);
       window.removeEventListener("keydown", extendSession);
     };
-  }, [adminSessionExpiresAt, adminToken, isAdminUnlocked]);
+  }, [adminToken, adminTokenExpiresAt, isAdminUnlocked]);
 
   async function refreshAll(nextFilters?: RegistrationFilters) {
     const activeFilters = nextFilters ?? { ...filters, search: debouncedSearch };
@@ -839,9 +898,9 @@ export default function App() {
 
     try {
       const session = await api.verifyAdminPassword(adminPassword);
-      setIsAdminUnlocked(true);
       setAdminPassword("");
       refreshAdminSession(session);
+      setIsAdminUnlocked(true);
       pushToast("success", "Admin panel unlocked with a temporary token.");
     } catch (error) {
       lockAdminSession();
