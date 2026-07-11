@@ -180,11 +180,21 @@ Initialize schema:
 psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings" -f /opt/kingshot-vikings-planner/db/init.sql
 ```
 
-Apply the Troop Formations migration manually if you want to verify the database before restarting PM2:
+Build the backend and apply all pending tracked migrations manually:
+
+```bash
+cd /opt/kingshot-vikings-planner/backend
+npm run build
+npm run migrate
+```
+
+Production deployment runs this migration command automatically before restarting PM2. The runner records each filename and SHA-256 checksum in `schema_migrations`, uses a PostgreSQL advisory lock, and wraps each pending file in a transaction. Never modify an applied migration file; create a new file in `db/migrations/`.
+
+Check migration state:
 
 ```bash
 psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings" \
-  -f /opt/kingshot-vikings-planner/db/migrations/2026-07-09_troop_formations.sql
+  -c "SELECT name, checksum, applied_at FROM schema_migrations ORDER BY name;"
 ```
 
 The production backend also creates the `troop_formation_presets` table idempotently on startup and seeds the default Bear Trap, Vikings, and Battle presets when missing.

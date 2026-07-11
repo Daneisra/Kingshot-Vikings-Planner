@@ -28,6 +28,12 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  name TEXT PRIMARY KEY,
+  checksum VARCHAR(64) NOT NULL,
+  applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS weekly_archives (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   archived_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

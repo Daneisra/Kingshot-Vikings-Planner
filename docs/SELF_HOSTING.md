@@ -52,12 +52,15 @@ The backend also runs an idempotent schema check on startup. It can initialize t
 Player edits on the Troop Formations page are saved in each browser with `localStorage` keys such as `troop-formations:vikings`.
 PostgreSQL stores only the shared default templates used when a player opens or resets a local draft.
 
-Optional manual migration command:
+Optional manual migration command after building the backend:
 
 ```bash
-psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings" \
-  -f db/migrations/2026-07-09_troop_formations.sql
+cd backend
+npm run build
+npm run migrate
 ```
+
+The migration runner applies pending `.sql` files in filename order and records their checksums in `schema_migrations`. Do not edit a migration after it has been applied.
 
 ### Configure environment files
 
@@ -128,12 +131,13 @@ CREATE DATABASE kingshot_vikings OWNER kingshot;
 psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings" -f /opt/kingshot-vikings-planner/db/init.sql
 ```
 
-For upgrades from an existing deployment, the backend performs idempotent schema checks at startup. These checks also create the complete schema if the configured database is empty.
-If you prefer to apply the Troop Formations migration manually before restarting PM2:
+For upgrades from an existing deployment, the backend performs idempotent schema checks at startup. These checks also create the complete schema if the configured database is empty. Production deployment additionally applies all pending tracked migrations before restarting PM2.
+To run the same migration step manually:
 
 ```bash
-psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings" \
-  -f /opt/kingshot-vikings-planner/db/migrations/2026-07-09_troop_formations.sql
+cd /opt/kingshot-vikings-planner/backend
+npm run build
+npm run migrate
 ```
 
 The shared templates are not used as live collaborative documents.

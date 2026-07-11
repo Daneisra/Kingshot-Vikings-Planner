@@ -232,6 +232,12 @@ main() {
     npm run build
   )
 
+  log "Running PostgreSQL migrations"
+  (
+    cd "$APP_DIR/backend"
+    npm run migrate
+  )
+
   log "Writing deploy metadata"
   write_deploy_metadata
 

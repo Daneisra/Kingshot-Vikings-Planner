@@ -4,14 +4,14 @@
 
 Dernière vérification complète du dépôt : **2026-07-11**.
 
-Ce document décrit l’état observé du dépôt à la version **0.7.8**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
+Ce document décrit l’état observé du dépôt à la version **0.7.9**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
 
 ## 1. Résumé du projet
 
 **Kingshot Vikings Planner** est une application web auto-hébergée destinée à la coordination de l’événement **Viking Vengeance** de Kingshot et, progressivement, à d’autres outils d’alliance.
 
 - URL de production publiquement documentée : `https://vikings.dannytech.fr`.
-- Version détectée : `0.7.8` dans `frontend/package.json` et `backend/package.json`.
+- Version détectée : `0.7.9` dans `frontend/package.json` et `backend/package.json`.
 - État : application fonctionnelle, déployée nativement sur Debian 12, avec CI/CD SSH opérationnelle et plusieurs espaces fonctionnels.
 - Langue de l’interface : anglais.
 - Dépôt public : `https://github.com/Daneisra/Kingshot-Vikings-Planner`.
@@ -93,6 +93,7 @@ Il n’existe **aucun `package.json` à la racine**.
 | `lint` | `eslint src` | Lint backend |
 | `typecheck` | `tsc --noEmit -p tsconfig.json` | Vérification TypeScript |
 | `build` | `tsc -p tsconfig.json` | Compilation dans `backend/dist/` |
+| `migrate` | `node dist/scripts/migrate.js` | Applique les migrations PostgreSQL en attente |
 | `start` | `node dist/index.js` | Lancement du build |
 | `pm2:start` | `pm2 start ../ecosystem.config.js --env production` | Démarrage PM2 depuis `backend/` |
 | `pm2:restart` | `pm2 restart kingshot-vikings-planner-api` | Redémarrage PM2 |
@@ -129,6 +130,7 @@ Navigateur
 - `frontend/src/App.tsx` : shell, navigation hash, orchestration des données, session admin et composition des pages.
 - `frontend/src/lib/api.ts` : client REST, headers admin, erreurs structurées et téléchargements CSV.
 - `backend/src/index.ts` : teste PostgreSQL, exécute les contrôles de schéma puis démarre le serveur sur `HOST:PORT`.
+- `backend/src/scripts/migrate.ts` : applique les migrations SQL sous verrou, avec transactions et checksums.
 - `backend/src/server.ts` : configure Express, middleware et routeurs.
 - `backend/src/db/pool.ts` : pool PostgreSQL construit depuis `DATABASE_URL`.
 - `ecosystem.config.js` : processus PM2 `kingshot-vikings-planner-api`.
@@ -351,6 +353,7 @@ Ne jamais placer `ADMIN_PASSWORD`, `ADMIN_SECONDARY_PASSWORD` ou `ADMIN_TOKEN_SE
 | `app_settings` | Documents JSONB pour `event_warning`, `guide_notes`, `event_configuration` |
 | `troop_formation_presets` | Modèles globaux Bear Trap, Vikings et Battle |
 | `audit_logs` | Traces de suppressions, imports, reset et modifications de settings |
+| `schema_migrations` | Historique des migrations appliquées et checksum SHA-256 |
 
 Il n’existe pas de table `scores`. Le score personnel est une colonne de `registrations` puis une propriété des snapshots JSONB. Le score alliance est une colonne de `weekly_archives`.
 
@@ -359,7 +362,7 @@ Il n’existe pas de table `scores`. Le score personnel est une colonne de `regi
 `db/init.sql` :
 
 - active `pgcrypto` pour `gen_random_uuid()` ;
-- crée les cinq tables ;
+- crée les six tables ;
 - crée la fonction et les triggers `set_updated_at` pour `registrations`, `app_settings` et `troop_formation_presets` ;
 - crée les index de pseudo, partenaire principal, disponibilité, audit, date d’archive, settings et formations ;
 - insère les trois presets de formations avec `ON CONFLICT DO NOTHING`.
@@ -376,12 +379,14 @@ Contraintes importantes :
 
 - Nouvelle installation : appliquer de préférence `db/init.sql` pour une initialisation explicite et reproductible.
 - Migration existante : `db/migrations/2026-07-09_troop_formations.sql` crée et seed `troop_formation_presets` de manière idempotente.
+- `backend/src/scripts/migrate.ts` applique les fichiers `.sql` par ordre de nom, sous verrou PostgreSQL, avec une transaction par fichier.
+- `schema_migrations` enregistre le nom, le checksum SHA-256 et la date d’application. Un checksum différent pour un fichier déjà appliqué bloque le déploiement.
 - Au démarrage, `backend/src/services/schema-service.ts` peut créer le schéma applicatif complet sur une base vide, assure les index et triggers principaux, ajoute plusieurs colonnes manquantes et seed les presets.
 - `backend/src/services/audit-service.ts` crée `audit_logs` et ses index.
 
 Le contrôle de démarrage est idempotent et autonome sur une base vide. `db/init.sql` reste néanmoins la source SQL canonique et la procédure recommandée pour rendre l’initialisation visible lors d’une nouvelle installation.
 
-Le script de déploiement ne lance pas automatiquement les fichiers de `db/migrations/`. Pour tout nouveau changement de schéma, fournir une migration idempotente, mettre à jour `db/init.sql`, décider explicitement si le bootstrap backend doit aussi l’appliquer, et documenter l’action VPS.
+Le script de déploiement exécute `npm run migrate` après le build backend et avant le redémarrage PM2. Pour tout nouveau changement de schéma, ajouter un nouveau fichier de migration, mettre à jour `db/init.sql`, décider explicitement si le bootstrap backend doit aussi l’appliquer, et ne jamais modifier une migration déjà enregistrée.
 
 ### 8.4 Seeds Troop Formations
 
@@ -534,7 +539,7 @@ Sources canoniques particulières :
 - Schéma neuf : `db/init.sql`.
 - Détail des projets futurs : `ROADMAP.md`.
 
-Il n’existe actuellement ni `CHANGELOG.md`, ni système de migrations versionné par table, ni `package.json` racine.
+Il n’existe actuellement ni `CHANGELOG.md`, ni `package.json` racine. Les migrations sont suivies dans `schema_migrations` par nom de fichier et checksum, sans outil ORM externe.
 
 ## 11. Variables d’environnement
 
@@ -606,12 +611,13 @@ Le template `deploy/nginx/kingshot-vikings-planner.conf` écoute seulement en HT
 5. `git clean -fd` ;
 6. relie `backend/.env` au fichier serveur ;
 7. installe les dépendances seulement si le hash des manifests change ;
-8. build backend puis écrit `backend/dist/deploy-info.json` ;
-9. charge l’environnement frontend et build Vite ;
-10. `rsync -a --delete` vers la racine Nginx ;
-11. redémarre ou crée le processus PM2 et exécute `pm2 save` ;
-12. retente le health check jusqu’à 15 fois avec 2 secondes d’intervalle ;
-13. exécute les smoke tests de production.
+8. build backend ;
+9. exécute `npm run migrate`, puis écrit `backend/dist/deploy-info.json` ;
+10. charge l’environnement frontend et build Vite ;
+11. `rsync -a --delete` vers la racine Nginx ;
+12. redémarre ou crée le processus PM2 et exécute `pm2 save` ;
+13. retente le health check jusqu’à 15 fois avec 2 secondes d’intervalle ;
+14. exécute les smoke tests de production.
 
 Les fichiers suivis modifiés directement sur le VPS seront supprimés au prochain déploiement. Les fichiers persistants doivent rester hors repo. `backend/.env` est ignoré et relié au fichier `/etc`.
 
@@ -736,24 +742,23 @@ Il n’existe pas de fichier de licence. Le README précise que le code n’est 
 
 ## 17. Pièges connus et divergences observées
 
-1. **Migrations** : `deploy.sh` ne lance aucun fichier SQL. Les migrations doivent être appliquées manuellement ou couvertes explicitement par le bootstrap idempotent.
-2. **Presets dupliqués** : les presets formations existent dans le service backend, l’init SQL et la migration. Une modification partielle crée une divergence reset/install.
-3. **Presets partagés** : les brouillons joueurs doivent rester locaux. Écrire chaque frappe dans `troop_formation_presets` ferait s’écraser les utilisateurs.
-4. **DATABASE_URL** : percent-encoder les caractères réservés du mot de passe.
-5. **SSH non interactif** : `npm` et `pm2` peuvent manquer du PATH. `deploy.sh` et le preflight chargent profils et NVM ; conserver cette logique.
-6. **Deux clés SSH** : GitHub Actions -> VPS n’est pas VPS -> GitHub. Diagnostiquer séparément.
-7. **Git destructif en production** : `git reset --hard origin/main` et `git clean -fd` suppriment tout changement suivi/non suivi non ignoré sur le VPS.
-8. **Identité PM2** : le deploy user doit être le même que le propriétaire du daemon PM2.
-9. **Démarrage PM2** : le health check possède un retry 15 x 2 secondes ; ne pas le remplacer par un curl unique après restart.
-10. **Troop level SQL** : la DB accepte jusqu’à 100 pour héritage, mais l’API/UI actuelle accepte T16 maximum. L’API est la règle métier courante.
-11. **Édition publique** : toute personne connaissant un UUID d’inscription peut actuellement appeler le `PUT` public. Ne pas décrire l’édition comme protégée.
-12. **Données JSONB** : les formes de `partner_names`, `troop_loadout`, `registrations`, `manual_stats` et presets sont protégées principalement par l’application, pas par PostgreSQL.
-13. **iPhone Chrome** : un crash/reload écran noir lors de la saisie des troupes a été corrigé mais reste à confirmer avec la joueuse concernée en production selon `ROADMAP.md`.
-14. **Overflow responsive** : Score, header et navigation ont déjà subi des correctifs. Toute nouvelle table, nombre long ou rangée d’actions doit être testée sur mobile réel.
-15. **Build TypeScript suivi** : `frontend/tsconfig.app.tsbuildinfo`, `frontend/vite.config.js` et `frontend/vite.config.d.ts` sont suivis par Git. Un build peut créer des diffs d’artefacts ; vérifier qu’ils sont intentionnels avant commit.
-16. **HTTPS hors template** : la production publique est HTTPS, mais le certificat et les blocs TLS actifs ne sont pas dans le template Nginx du repo.
-17. **Pas de service worker** : ne pas attribuer un problème de cache à un service worker sans nouvelle preuve ; aucun PWA/service worker n’est implémenté.
-18. **Pas de rollback automatique** : sauvegarder la DB avant une migration et préparer la restauration manuelle.
+1. **Presets dupliqués** : les presets formations existent dans le service backend, l’init SQL et la migration. Une modification partielle crée une divergence reset/install.
+2. **Presets partagés** : les brouillons joueurs doivent rester locaux. Écrire chaque frappe dans `troop_formation_presets` ferait s’écraser les utilisateurs.
+3. **DATABASE_URL** : percent-encoder les caractères réservés du mot de passe.
+4. **SSH non interactif** : `npm` et `pm2` peuvent manquer du PATH. `deploy.sh` et le preflight chargent profils et NVM ; conserver cette logique.
+5. **Deux clés SSH** : GitHub Actions -> VPS n’est pas VPS -> GitHub. Diagnostiquer séparément.
+6. **Git destructif en production** : `git reset --hard origin/main` et `git clean -fd` suppriment tout changement suivi/non suivi non ignoré sur le VPS.
+7. **Identité PM2** : le deploy user doit être le même que le propriétaire du daemon PM2.
+8. **Démarrage PM2** : le health check possède un retry 15 x 2 secondes ; ne pas le remplacer par un curl unique après restart.
+9. **Troop level SQL** : la DB accepte jusqu’à 100 pour héritage, mais l’API/UI actuelle accepte T16 maximum. L’API est la règle métier courante.
+10. **Édition publique** : toute personne connaissant un UUID d’inscription peut actuellement appeler le `PUT` public. Ne pas décrire l’édition comme protégée.
+11. **Données JSONB** : les formes de `partner_names`, `troop_loadout`, `registrations`, `manual_stats` et presets sont protégées principalement par l’application, pas par PostgreSQL.
+12. **iPhone Chrome** : un crash/reload écran noir lors de la saisie des troupes a été corrigé mais reste à confirmer avec la joueuse concernée en production selon `ROADMAP.md`.
+13. **Overflow responsive** : Score, header et navigation ont déjà subi des correctifs. Toute nouvelle table, nombre long ou rangée d’actions doit être testée sur mobile réel.
+14. **Build TypeScript suivi** : `frontend/tsconfig.app.tsbuildinfo`, `frontend/vite.config.js` et `frontend/vite.config.d.ts` sont suivis par Git. Un build peut créer des diffs d’artefacts ; vérifier qu’ils sont intentionnels avant commit.
+15. **HTTPS hors template** : la production publique est HTTPS, mais le certificat et les blocs TLS actifs ne sont pas dans le template Nginx du repo.
+16. **Pas de service worker** : ne pas attribuer un problème de cache à un service worker sans nouvelle preuve ; aucun PWA/service worker n’est implémenté.
+17. **Pas de rollback automatique** : sauvegarder la DB avant une migration et préparer la restauration manuelle.
 
 ## 18. Roadmap actuelle
 

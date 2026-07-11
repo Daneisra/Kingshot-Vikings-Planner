@@ -26,6 +26,12 @@ export async function ensureRegistrationSchema() {
 
     CREATE INDEX IF NOT EXISTS idx_registrations_is_available
       ON registrations (is_available);
+
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      name TEXT PRIMARY KEY,
+      checksum VARCHAR(64) NOT NULL,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
   `);
 
   await pool.query(`

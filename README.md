@@ -176,7 +176,7 @@ The repository includes an SSH-based GitHub Actions production deployment flow t
 
 - runs CI linting, typechecks, and builds before deployment
 - updates the server checkout to `origin/main`
-- rebuilds backend and frontend
+- rebuilds the backend, applies pending PostgreSQL migrations, and rebuilds the frontend
 - syncs `frontend/dist` to the Nginx web root
 - restarts PM2
 - runs an API health check and production smoke tests

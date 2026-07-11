@@ -31,6 +31,7 @@ git pull
 cd backend
 npm install
 npm run build
+npm run migrate
 
 cd ../frontend
 npm install
@@ -70,14 +71,18 @@ At deploy time the workflow:
 2. runs `git fetch origin main`
 3. runs `git reset --hard origin/main`
 4. runs `git clean -fd`
-5. rebuilds backend and frontend
-6. syncs frontend assets to Nginx web root
-7. restarts PM2
-8. checks `http://127.0.0.1:4000/api/health`
-9. runs production smoke tests on core API endpoints
+5. rebuilds the backend
+6. applies pending PostgreSQL migrations transactionally
+7. rebuilds the frontend
+8. syncs frontend assets to Nginx web root
+9. restarts PM2
+10. checks `http://127.0.0.1:4000/api/health`
+11. runs production smoke tests on core API endpoints
 
 This avoids drift in tracked files while keeping server-only files outside the repository.
 It also prevents obviously broken TypeScript or build regressions from reaching the VPS.
+
+Migration files in `db/migrations/` are applied in filename order by `npm run migrate`. Applied filenames and SHA-256 checksums are stored in `schema_migrations`. Never edit an applied migration; add a new migration file instead. A migration failure stops the deployment before PM2 is restarted.
 
 ## Server-Only Files
 
@@ -172,7 +177,7 @@ The deploy user must be able to:
 - validates required binaries
 - links the backend env file
 - installs dependencies only when package metadata changes
-- builds backend and frontend
+- builds the backend, applies pending PostgreSQL migrations, then builds the frontend
 - syncs frontend build output with `rsync --delete`
 - restarts PM2
 - retries the API health check until the app is ready
