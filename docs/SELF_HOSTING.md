@@ -48,7 +48,7 @@ psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingsho
 ```
 
 For existing deployments, feature migrations live in `db/migrations/`.
-The backend also runs an idempotent schema check on startup, so the Troop Formations table is created automatically after a backend restart.
+The backend also runs an idempotent schema check on startup. It can initialize the complete application schema on an empty database and apply the compatibility checks required by existing deployments. Running `db/init.sql` explicitly remains recommended for a new installation because it makes the initialization step visible and reproducible.
 Player edits on the Troop Formations page are saved in each browser with `localStorage` keys such as `troop-formations:vikings`.
 PostgreSQL stores only the shared default templates used when a player opens or resets a local draft.
 
@@ -128,7 +128,7 @@ CREATE DATABASE kingshot_vikings OWNER kingshot;
 psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings" -f /opt/kingshot-vikings-planner/db/init.sql
 ```
 
-For upgrades from an existing deployment, the backend performs idempotent schema checks at startup.
+For upgrades from an existing deployment, the backend performs idempotent schema checks at startup. These checks also create the complete schema if the configured database is empty.
 If you prefer to apply the Troop Formations migration manually before restarting PM2:
 
 ```bash

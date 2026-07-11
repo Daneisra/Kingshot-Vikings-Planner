@@ -141,6 +141,7 @@ Focus: strengthen admin tools, history, and reporting around Viking Vengeance.
 - [x] Add a lightweight admin health panel:
   app version, API status, database status, latest deploy timestamp
 - [x] Bind the production API explicitly to loopback with a configurable `HOST`
+- [x] Make the runtime database bootstrap initialize a complete empty application schema
 
 ## Later
 

@@ -3,6 +3,32 @@ import { seedDefaultFormationPresets } from "./formation-service";
 
 export async function ensureRegistrationSchema() {
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS registrations (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      nickname VARCHAR(40) NOT NULL,
+      partner_name VARCHAR(40) NOT NULL,
+      partner_names JSONB NOT NULL DEFAULT '[]'::jsonb,
+      troop_count INTEGER NOT NULL CHECK (troop_count >= 0),
+      troop_level INTEGER NOT NULL CHECK (troop_level >= 7 AND troop_level <= 100),
+      troop_loadout JSONB NOT NULL DEFAULT '[]'::jsonb,
+      personal_score INTEGER CHECK (personal_score IS NULL OR personal_score >= 0),
+      comment TEXT,
+      is_available BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_registrations_nickname_lower
+      ON registrations ((LOWER(nickname)));
+
+    CREATE INDEX IF NOT EXISTS idx_registrations_partner_name_lower
+      ON registrations ((LOWER(partner_name)));
+
+    CREATE INDEX IF NOT EXISTS idx_registrations_is_available
+      ON registrations (is_available);
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS weekly_archives (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       archived_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -108,6 +134,35 @@ export async function ensureRegistrationSchema() {
     SET partner_names = jsonb_build_array(partner_name)
     WHERE partner_names IS NULL
       OR partner_names = '[]'::jsonb
+  `);
+
+  await pool.query(`
+    CREATE OR REPLACE FUNCTION set_updated_at()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      NEW.updated_at = NOW();
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    DROP TRIGGER IF EXISTS registrations_set_updated_at ON registrations;
+    DROP TRIGGER IF EXISTS app_settings_set_updated_at ON app_settings;
+    DROP TRIGGER IF EXISTS troop_formation_presets_set_updated_at ON troop_formation_presets;
+
+    CREATE TRIGGER registrations_set_updated_at
+    BEFORE UPDATE ON registrations
+    FOR EACH ROW
+    EXECUTE FUNCTION set_updated_at();
+
+    CREATE TRIGGER app_settings_set_updated_at
+    BEFORE UPDATE ON app_settings
+    FOR EACH ROW
+    EXECUTE FUNCTION set_updated_at();
+
+    CREATE TRIGGER troop_formation_presets_set_updated_at
+    BEFORE UPDATE ON troop_formation_presets
+    FOR EACH ROW
+    EXECUTE FUNCTION set_updated_at();
   `);
 
   await seedDefaultFormationPresets();
