@@ -4,14 +4,14 @@
 
 Dernière vérification complète du dépôt : **2026-07-11**.
 
-Ce document décrit l’état observé du dépôt à la version **0.7.6**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
+Ce document décrit l’état observé du dépôt à la version **0.7.7**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
 
 ## 1. Résumé du projet
 
 **Kingshot Vikings Planner** est une application web auto-hébergée destinée à la coordination de l’événement **Viking Vengeance** de Kingshot et, progressivement, à d’autres outils d’alliance.
 
 - URL de production publiquement documentée : `https://vikings.dannytech.fr`.
-- Version détectée : `0.7.6` dans `frontend/package.json` et `backend/package.json`.
+- Version détectée : `0.7.7` dans `frontend/package.json` et `backend/package.json`.
 - État : application fonctionnelle, déployée nativement sur Debian 12, avec CI/CD SSH opérationnelle et plusieurs espaces fonctionnels.
 - Langue de l’interface : anglais.
 - Dépôt public : `https://github.com/Daneisra/Kingshot-Vikings-Planner`.
@@ -185,7 +185,7 @@ La recherche de pseudo utilise `frontend/src/hooks/useDebouncedValue.ts` avec un
 - `frontend/src/types/registration.ts` : inscriptions, statistiques, archives et scores.
 - `frontend/src/types/settings.ts` : warning, configuration événement et notes du guide.
 - `frontend/src/types/formations.ts` : modèles et slots de formation.
-- `frontend/src/lib/api.ts` : `API_BASE_URL`, sérialisation, `x-admin-token`, compatibilité `x-admin-password`, `ApiError` et `requestId`.
+- `frontend/src/lib/api.ts` : `API_BASE_URL`, sérialisation, `x-admin-token`, échange initial via `x-admin-password`, `ApiError` et `requestId`.
 
 Les erreurs `5xx` affichent la référence `requestId` lorsqu’elle est fournie. Les erreurs réseau utilisent un message spécifique. Les erreurs Zod `400` remontent au plus deux messages de validation dans le texte principal.
 
@@ -258,12 +258,13 @@ Il n’existe pas de route backend dédiée à Auto Groups ou HQ Defense : ces c
 
 ### 6.4 Routes protégées
 
-Toutes les routes suivantes passent par `requireAdmin` :
+`POST /api/admin/verify` passe par `requireAdminVerification`. Cette route accepte un mot de passe admin pour l’échange initial ou un token valide pour renouveler la session.
+
+Toutes les autres routes suivantes passent par `requireAdmin` et exigent `x-admin-token` :
 
 | Méthode | Route | Responsabilité |
 | --- | --- | --- |
 | DELETE | `/api/registrations/:id` | Suppression auditée |
-| POST | `/api/admin/verify` | Vérification password/token et émission d’un nouveau token |
 | GET | `/api/admin/export.csv` | Export des inscriptions filtrées |
 | GET | `/api/admin/stats` | Statistiques protégées, actuellement redondantes avec la route publique |
 | GET | `/api/admin/archives` | Résumés complets des archives |
@@ -301,7 +302,7 @@ Dans l’interface actuelle, seule la réinitialisation du preset global Troop F
 
 1. L’utilisateur saisit un mot de passe sur la page Admin.
 2. Le frontend appelle `POST /api/admin/verify` avec `x-admin-password`.
-3. `requireAdmin` compare ce mot de passe à `ADMIN_PASSWORD` ou `ADMIN_SECONDARY_PASSWORD`.
+3. `requireAdminVerification` compare ce mot de passe à `ADMIN_PASSWORD` ou `ADMIN_SECONDARY_PASSWORD`.
 4. Le backend émet un token temporaire : payload JSON base64url et signature HMAC-SHA256.
 5. Le frontend envoie ensuite `x-admin-token` sur les routes protégées.
 6. Au chargement suivant, le token local est revérifié via `/api/admin/verify`, qui émet un nouveau token.
@@ -314,7 +315,7 @@ Dans l’interface actuelle, seule la réinitialisation du preset global Troop F
 - `ADMIN_TOKEN_TTL_MINUTES` : expiration absolue du token serveur, 120 minutes par défaut.
 - Le frontend impose séparément `ADMIN_SESSION_TIMEOUT_MINUTES = 20` comme délai d’inactivité glissant dans `App.tsx`.
 
-Le middleware accepte encore `x-admin-password` sur toutes les routes protégées pour compatibilité, mais le flux frontend normal échange le mot de passe une seule fois puis utilise `x-admin-token`.
+Seul `requireAdminVerification`, utilisé par `/api/admin/verify`, accepte `x-admin-password`. Toutes les actions protégées utilisent `requireAdmin` et exigent ensuite un `x-admin-token` valide.
 
 ### 7.3 Stockage et expiration frontend
 
@@ -735,26 +736,25 @@ Il n’existe pas de fichier de licence. Le README précise que le code n’est 
 
 ## 17. Pièges connus et divergences observées
 
-1. **Compatibilité password** : `x-admin-password` reste accepté par `requireAdmin` sur toutes les routes protégées. Ne pas le réintroduire comme flux frontend normal.
-2. **Initialisation DB** : le bootstrap runtime n’initialise pas intégralement `registrations`. Une base vierge exige `db/init.sql`.
-3. **Migrations** : `deploy.sh` ne lance aucun fichier SQL. Les migrations doivent être appliquées manuellement ou couvertes explicitement par le bootstrap idempotent.
-4. **Presets dupliqués** : les presets formations existent dans le service backend, l’init SQL et la migration. Une modification partielle crée une divergence reset/install.
-5. **Presets partagés** : les brouillons joueurs doivent rester locaux. Écrire chaque frappe dans `troop_formation_presets` ferait s’écraser les utilisateurs.
-6. **DATABASE_URL** : percent-encoder les caractères réservés du mot de passe.
-7. **SSH non interactif** : `npm` et `pm2` peuvent manquer du PATH. `deploy.sh` et le preflight chargent profils et NVM ; conserver cette logique.
-8. **Deux clés SSH** : GitHub Actions -> VPS n’est pas VPS -> GitHub. Diagnostiquer séparément.
-9. **Git destructif en production** : `git reset --hard origin/main` et `git clean -fd` suppriment tout changement suivi/non suivi non ignoré sur le VPS.
-10. **Identité PM2** : le deploy user doit être le même que le propriétaire du daemon PM2.
-11. **Démarrage PM2** : le health check possède un retry 15 x 2 secondes ; ne pas le remplacer par un curl unique après restart.
-12. **Troop level SQL** : la DB accepte jusqu’à 100 pour héritage, mais l’API/UI actuelle accepte T16 maximum. L’API est la règle métier courante.
-13. **Édition publique** : toute personne connaissant un UUID d’inscription peut actuellement appeler le `PUT` public. Ne pas décrire l’édition comme protégée.
-14. **Données JSONB** : les formes de `partner_names`, `troop_loadout`, `registrations`, `manual_stats` et presets sont protégées principalement par l’application, pas par PostgreSQL.
-15. **iPhone Chrome** : un crash/reload écran noir lors de la saisie des troupes a été corrigé mais reste à confirmer avec la joueuse concernée en production selon `ROADMAP.md`.
-16. **Overflow responsive** : Score, header et navigation ont déjà subi des correctifs. Toute nouvelle table, nombre long ou rangée d’actions doit être testée sur mobile réel.
-17. **Build TypeScript suivi** : `frontend/tsconfig.app.tsbuildinfo`, `frontend/vite.config.js` et `frontend/vite.config.d.ts` sont suivis par Git. Un build peut créer des diffs d’artefacts ; vérifier qu’ils sont intentionnels avant commit.
-18. **HTTPS hors template** : la production publique est HTTPS, mais le certificat et les blocs TLS actifs ne sont pas dans le template Nginx du repo.
-19. **Pas de service worker** : ne pas attribuer un problème de cache à un service worker sans nouvelle preuve ; aucun PWA/service worker n’est implémenté.
-20. **Pas de rollback automatique** : sauvegarder la DB avant une migration et préparer la restauration manuelle.
+1. **Initialisation DB** : le bootstrap runtime n’initialise pas intégralement `registrations`. Une base vierge exige `db/init.sql`.
+2. **Migrations** : `deploy.sh` ne lance aucun fichier SQL. Les migrations doivent être appliquées manuellement ou couvertes explicitement par le bootstrap idempotent.
+3. **Presets dupliqués** : les presets formations existent dans le service backend, l’init SQL et la migration. Une modification partielle crée une divergence reset/install.
+4. **Presets partagés** : les brouillons joueurs doivent rester locaux. Écrire chaque frappe dans `troop_formation_presets` ferait s’écraser les utilisateurs.
+5. **DATABASE_URL** : percent-encoder les caractères réservés du mot de passe.
+6. **SSH non interactif** : `npm` et `pm2` peuvent manquer du PATH. `deploy.sh` et le preflight chargent profils et NVM ; conserver cette logique.
+7. **Deux clés SSH** : GitHub Actions -> VPS n’est pas VPS -> GitHub. Diagnostiquer séparément.
+8. **Git destructif en production** : `git reset --hard origin/main` et `git clean -fd` suppriment tout changement suivi/non suivi non ignoré sur le VPS.
+9. **Identité PM2** : le deploy user doit être le même que le propriétaire du daemon PM2.
+10. **Démarrage PM2** : le health check possède un retry 15 x 2 secondes ; ne pas le remplacer par un curl unique après restart.
+11. **Troop level SQL** : la DB accepte jusqu’à 100 pour héritage, mais l’API/UI actuelle accepte T16 maximum. L’API est la règle métier courante.
+12. **Édition publique** : toute personne connaissant un UUID d’inscription peut actuellement appeler le `PUT` public. Ne pas décrire l’édition comme protégée.
+13. **Données JSONB** : les formes de `partner_names`, `troop_loadout`, `registrations`, `manual_stats` et presets sont protégées principalement par l’application, pas par PostgreSQL.
+14. **iPhone Chrome** : un crash/reload écran noir lors de la saisie des troupes a été corrigé mais reste à confirmer avec la joueuse concernée en production selon `ROADMAP.md`.
+15. **Overflow responsive** : Score, header et navigation ont déjà subi des correctifs. Toute nouvelle table, nombre long ou rangée d’actions doit être testée sur mobile réel.
+16. **Build TypeScript suivi** : `frontend/tsconfig.app.tsbuildinfo`, `frontend/vite.config.js` et `frontend/vite.config.d.ts` sont suivis par Git. Un build peut créer des diffs d’artefacts ; vérifier qu’ils sont intentionnels avant commit.
+17. **HTTPS hors template** : la production publique est HTTPS, mais le certificat et les blocs TLS actifs ne sont pas dans le template Nginx du repo.
+18. **Pas de service worker** : ne pas attribuer un problème de cache à un service worker sans nouvelle preuve ; aucun PWA/service worker n’est implémenté.
+19. **Pas de rollback automatique** : sauvegarder la DB avant une migration et préparer la restauration manuelle.
 
 ## 18. Roadmap actuelle
 

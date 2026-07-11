@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAdmin } from "../middleware/admin-auth";
+import { requireAdmin, requireAdminVerification } from "../middleware/admin-auth";
 import { registrationSchema } from "../schemas/registration-schema";
 import { buildAuditContext } from "../services/audit-service";
 import { createAdminToken } from "../services/admin-token-service";
@@ -218,7 +218,7 @@ export const adminRouter = Router();
 
 adminRouter.post(
   "/verify",
-  requireAdmin,
+  requireAdminVerification,
   asyncHandler(async (_req, res) => {
     res.json({ ok: true, ...createAdminToken() });
   })
