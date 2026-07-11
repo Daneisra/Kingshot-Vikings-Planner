@@ -89,6 +89,7 @@ Focus: strengthen admin tools, history, and reporting around Viking Vengeance.
 
 - [x] Add audit metadata for destructive actions
 - [x] Enforce a 20-minute admin inactivity timeout with the backend token expiry as a hard limit
+- [x] Rename the legacy admin local-storage key with automatic session migration
 - [x] Improve confirmation flow around resets and deletions
 - [x] Replace the single password header with a stronger admin authentication flow
 - [x] Support an optional secondary admin password

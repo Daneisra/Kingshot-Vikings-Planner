@@ -77,7 +77,8 @@ const defaultEventConfigurationSettings: EventConfigurationSettings = {
   allianceNotes: ""
 };
 
-const adminStorageKey = "kingshot-vikings-admin-password";
+const adminStorageKey = "kingshot-vikings-admin-session";
+const legacyAdminStorageKey = "kingshot-vikings-admin-password";
 const ADMIN_SESSION_STORAGE_VERSION = 2;
 const ADMIN_SESSION_TIMEOUT_MINUTES = 20;
 const ADMIN_SESSION_TIMEOUT_MS = ADMIN_SESSION_TIMEOUT_MINUTES * 60 * 1000;
@@ -198,13 +199,7 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function readStoredAdminSession(): StoredAdminSession | null {
-  const rawValue = localStorage.getItem(adminStorageKey);
-
-  if (!rawValue) {
-    return null;
-  }
-
+function parseStoredAdminSession(rawValue: string): StoredAdminSession | null {
   try {
     const parsedValue = JSON.parse(rawValue) as LegacyStoredAdminSession;
     const tokenExpiresAt =
@@ -226,7 +221,6 @@ function readStoredAdminSession(): StoredAdminSession | null {
       tokenExpiresAt <= now ||
       idleExpiresAt <= now
     ) {
-      localStorage.removeItem(adminStorageKey);
       return null;
     }
 
@@ -237,9 +231,34 @@ function readStoredAdminSession(): StoredAdminSession | null {
       idleExpiresAt
     };
   } catch {
-    localStorage.removeItem(adminStorageKey);
     return null;
   }
+}
+
+function readStoredAdminSession(): StoredAdminSession | null {
+  for (const storageKey of [adminStorageKey, legacyAdminStorageKey]) {
+    const rawValue = localStorage.getItem(storageKey);
+
+    if (!rawValue) {
+      continue;
+    }
+
+    const session = parseStoredAdminSession(rawValue);
+
+    if (!session) {
+      localStorage.removeItem(storageKey);
+      continue;
+    }
+
+    if (storageKey === legacyAdminStorageKey) {
+      localStorage.setItem(adminStorageKey, JSON.stringify(session));
+      localStorage.removeItem(legacyAdminStorageKey);
+    }
+
+    return session;
+  }
+
+  return null;
 }
 
 function writeStoredAdminSession(token: string, tokenExpiresAt: number, idleExpiresAt: number) {
@@ -252,10 +271,12 @@ function writeStoredAdminSession(token: string, tokenExpiresAt: number, idleExpi
       idleExpiresAt
     } satisfies StoredAdminSession)
   );
+  localStorage.removeItem(legacyAdminStorageKey);
 }
 
 function clearStoredAdminSession() {
   localStorage.removeItem(adminStorageKey);
+  localStorage.removeItem(legacyAdminStorageKey);
 }
 
 function formatSessionHint(isAdminUnlocked: boolean, remainingMs: number | null) {
