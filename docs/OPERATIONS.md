@@ -215,6 +215,23 @@ psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingsho
 
 New writes require both fields to be JSON arrays. Partner filters and statistics defensively ignore a malformed legacy `partner_names` value instead of failing the API request.
 
+Check the top-level shape of other shared JSONB documents:
+
+```bash
+psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings" -c "
+SELECT 'weekly_archives' AS source, COUNT(*) FROM weekly_archives
+WHERE jsonb_typeof(manual_stats) <> 'array' OR jsonb_typeof(registrations) <> 'array'
+UNION ALL
+SELECT 'app_settings', COUNT(*) FROM app_settings WHERE jsonb_typeof(value) <> 'object'
+UNION ALL
+SELECT 'troop_formation_presets', COUNT(*) FROM troop_formation_presets
+WHERE jsonb_typeof(available_troops) <> 'object' OR jsonb_typeof(slots) <> 'array'
+UNION ALL
+SELECT 'audit_logs', COUNT(*) FROM audit_logs WHERE jsonb_typeof(metadata) <> 'object';"
+```
+
+The progressive constraints preserve malformed historical documents but reject new writes with the wrong top-level JSON type. Backend normalizers safely ignore invalid archive entries and formation fields.
+
 The production backend also creates the `troop_formation_presets` table idempotently on startup and seeds the default Bear Trap, Vikings, and Battle presets when missing.
 
 Troop Formations player edits are not stored in PostgreSQL.

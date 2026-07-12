@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   target_type VARCHAR(50) NOT NULL,
   target_id UUID,
   summary TEXT NOT NULL,
-  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb
+    CONSTRAINT audit_logs_metadata_object_check CHECK (jsonb_typeof(metadata) = 'object'),
   request_id UUID,
   ip_address INET,
   user_agent TEXT,
@@ -47,21 +48,27 @@ CREATE TABLE IF NOT EXISTS weekly_archives (
   difficulty_level VARCHAR(40),
   difficulty_note TEXT,
   event_log TEXT,
-  manual_stats JSONB NOT NULL DEFAULT '[]'::jsonb,
+  manual_stats JSONB NOT NULL DEFAULT '[]'::jsonb
+    CONSTRAINT weekly_archives_manual_stats_array_check CHECK (jsonb_typeof(manual_stats) = 'array'),
   registrations JSONB NOT NULL DEFAULT '[]'::jsonb
+    CONSTRAINT weekly_archives_registrations_array_check CHECK (jsonb_typeof(registrations) = 'array')
 );
 
 CREATE TABLE IF NOT EXISTS app_settings (
   key VARCHAR(80) PRIMARY KEY,
-  value JSONB NOT NULL DEFAULT '{}'::jsonb,
+  value JSONB NOT NULL DEFAULT '{}'::jsonb
+    CONSTRAINT app_settings_value_object_check CHECK (jsonb_typeof(value) = 'object'),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS troop_formation_presets (
   event_key VARCHAR(40) PRIMARY KEY,
   event_name VARCHAR(80) NOT NULL,
-  available_troops JSONB NOT NULL DEFAULT '{"infantry":0,"lancer":0,"marksman":0}'::jsonb,
-  slots JSONB NOT NULL DEFAULT '[]'::jsonb,
+  available_troops JSONB NOT NULL DEFAULT '{"infantry":0,"lancer":0,"marksman":0}'::jsonb
+    CONSTRAINT troop_formation_presets_available_troops_object_check
+      CHECK (jsonb_typeof(available_troops) = 'object'),
+  slots JSONB NOT NULL DEFAULT '[]'::jsonb
+    CONSTRAINT troop_formation_presets_slots_array_check CHECK (jsonb_typeof(slots) = 'array'),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

@@ -48,8 +48,10 @@ export async function ensureRegistrationSchema() {
       difficulty_level VARCHAR(40),
       difficulty_note TEXT,
       event_log TEXT,
-      manual_stats JSONB NOT NULL DEFAULT '[]'::jsonb,
+      manual_stats JSONB NOT NULL DEFAULT '[]'::jsonb
+        CONSTRAINT weekly_archives_manual_stats_array_check CHECK (jsonb_typeof(manual_stats) = 'array'),
       registrations JSONB NOT NULL DEFAULT '[]'::jsonb
+        CONSTRAINT weekly_archives_registrations_array_check CHECK (jsonb_typeof(registrations) = 'array')
     )
   `);
 
@@ -61,7 +63,8 @@ export async function ensureRegistrationSchema() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS app_settings (
       key VARCHAR(80) PRIMARY KEY,
-      value JSONB NOT NULL DEFAULT '{}'::jsonb,
+      value JSONB NOT NULL DEFAULT '{}'::jsonb
+        CONSTRAINT app_settings_value_object_check CHECK (jsonb_typeof(value) = 'object'),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
@@ -75,8 +78,11 @@ export async function ensureRegistrationSchema() {
     CREATE TABLE IF NOT EXISTS troop_formation_presets (
       event_key VARCHAR(40) PRIMARY KEY,
       event_name VARCHAR(80) NOT NULL,
-      available_troops JSONB NOT NULL DEFAULT '{"infantry":0,"lancer":0,"marksman":0}'::jsonb,
-      slots JSONB NOT NULL DEFAULT '[]'::jsonb,
+      available_troops JSONB NOT NULL DEFAULT '{"infantry":0,"lancer":0,"marksman":0}'::jsonb
+        CONSTRAINT troop_formation_presets_available_troops_object_check
+          CHECK (jsonb_typeof(available_troops) = 'object'),
+      slots JSONB NOT NULL DEFAULT '[]'::jsonb
+        CONSTRAINT troop_formation_presets_slots_array_check CHECK (jsonb_typeof(slots) = 'array'),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
@@ -115,6 +121,81 @@ export async function ensureRegistrationSchema() {
     UPDATE weekly_archives
     SET manual_stats = '[]'::jsonb
     WHERE manual_stats IS NULL
+  `);
+
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'weekly_archives_manual_stats_array_check'
+          AND conrelid = 'weekly_archives'::regclass
+      ) THEN
+        ALTER TABLE weekly_archives ADD CONSTRAINT weekly_archives_manual_stats_array_check
+          CHECK (jsonb_typeof(manual_stats) = 'array') NOT VALID;
+      END IF;
+
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'weekly_archives_registrations_array_check'
+          AND conrelid = 'weekly_archives'::regclass
+      ) THEN
+        ALTER TABLE weekly_archives ADD CONSTRAINT weekly_archives_registrations_array_check
+          CHECK (jsonb_typeof(registrations) = 'array') NOT VALID;
+      END IF;
+
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'app_settings_value_object_check'
+          AND conrelid = 'app_settings'::regclass
+      ) THEN
+        ALTER TABLE app_settings ADD CONSTRAINT app_settings_value_object_check
+          CHECK (jsonb_typeof(value) = 'object') NOT VALID;
+      END IF;
+
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'troop_formation_presets_available_troops_object_check'
+          AND conrelid = 'troop_formation_presets'::regclass
+      ) THEN
+        ALTER TABLE troop_formation_presets
+          ADD CONSTRAINT troop_formation_presets_available_troops_object_check
+          CHECK (jsonb_typeof(available_troops) = 'object') NOT VALID;
+      END IF;
+
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'troop_formation_presets_slots_array_check'
+          AND conrelid = 'troop_formation_presets'::regclass
+      ) THEN
+        ALTER TABLE troop_formation_presets ADD CONSTRAINT troop_formation_presets_slots_array_check
+          CHECK (jsonb_typeof(slots) = 'array') NOT VALID;
+      END IF;
+    END;
+    $$;
+
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM weekly_archives WHERE jsonb_typeof(manual_stats) <> 'array') THEN
+        ALTER TABLE weekly_archives VALIDATE CONSTRAINT weekly_archives_manual_stats_array_check;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM weekly_archives WHERE jsonb_typeof(registrations) <> 'array') THEN
+        ALTER TABLE weekly_archives VALIDATE CONSTRAINT weekly_archives_registrations_array_check;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM app_settings WHERE jsonb_typeof(value) <> 'object') THEN
+        ALTER TABLE app_settings VALIDATE CONSTRAINT app_settings_value_object_check;
+      END IF;
+      IF NOT EXISTS (
+        SELECT 1 FROM troop_formation_presets WHERE jsonb_typeof(available_troops) <> 'object'
+      ) THEN
+        ALTER TABLE troop_formation_presets
+          VALIDATE CONSTRAINT troop_formation_presets_available_troops_object_check;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM troop_formation_presets WHERE jsonb_typeof(slots) <> 'array') THEN
+        ALTER TABLE troop_formation_presets VALIDATE CONSTRAINT troop_formation_presets_slots_array_check;
+      END IF;
+    END;
+    $$;
   `);
 
   await pool.query(`

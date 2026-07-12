@@ -60,8 +60,8 @@ const defaultFormationPresets: Record<FormationEventKey, Omit<FormationPreset, "
 interface FormationPresetRow {
   eventKey: FormationEventKey;
   eventName: string;
-  availableTroops: FormationTroopCounts;
-  slots: FormationSlot[];
+  availableTroops: unknown;
+  slots: unknown;
   updatedAt: Date;
 }
 
@@ -273,33 +273,45 @@ function mapPresetRow(row: FormationPresetRow): FormationPreset {
   };
 }
 
-function normalizeTroopCounts(counts: FormationTroopCounts): FormationTroopCounts {
+function normalizeTroopCounts(counts: unknown): FormationTroopCounts {
+  const candidate = isRecord(counts) ? counts : {};
+
   return {
-    infantry: normalizeCount(counts.infantry),
-    lancer: normalizeCount(counts.lancer),
-    marksman: normalizeCount(counts.marksman)
+    infantry: normalizeCount(candidate.infantry),
+    lancer: normalizeCount(candidate.lancer),
+    marksman: normalizeCount(candidate.marksman)
   };
 }
 
-function normalizeSlots(slots: FormationSlot[]) {
+function normalizeSlots(slots: unknown) {
+  if (!Array.isArray(slots)) {
+    return [];
+  }
+
   return slots
     .map(normalizeSlot)
     .sort((left, right) => left.sortOrder - right.sortOrder || left.name.localeCompare(right.name));
 }
 
-function normalizeSlot(slot: FormationSlot): FormationSlot {
+function normalizeSlot(value: unknown): FormationSlot {
+  const slot = isRecord(value) ? value : {};
+
   return {
-    id: slot.id || randomUUID(),
-    name: slot.name.trim() || "Formation",
-    hero: slot.hero.trim() || "No hero",
+    id: typeof slot.id === "string" && slot.id ? slot.id : randomUUID(),
+    name: typeof slot.name === "string" && slot.name.trim() ? slot.name.trim() : "Formation",
+    hero: typeof slot.hero === "string" && slot.hero.trim() ? slot.hero.trim() : "No hero",
     infantry: normalizeCount(slot.infantry),
     lancer: normalizeCount(slot.lancer),
     marksman: normalizeCount(slot.marksman),
-    notes: slot.notes.trim(),
+    notes: typeof slot.notes === "string" ? slot.notes.trim() : "",
     sortOrder: normalizeCount(slot.sortOrder)
   };
 }
 
-function normalizeCount(value: number) {
-  return Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : 0;
+function normalizeCount(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : 0;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

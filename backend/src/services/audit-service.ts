@@ -10,7 +10,8 @@ const createAuditTableSql = `
     target_type VARCHAR(50) NOT NULL,
     target_id UUID,
     summary TEXT NOT NULL,
-    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb
+      CONSTRAINT audit_logs_metadata_object_check CHECK (jsonb_typeof(metadata) = 'object'),
     request_id UUID,
     ip_address INET,
     user_agent TEXT,
@@ -26,6 +27,28 @@ const createAuditTableSql = `
 
 export async function ensureAuditTable() {
   await pool.query(createAuditTableSql);
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'audit_logs_metadata_object_check'
+          AND conrelid = 'audit_logs'::regclass
+      ) THEN
+        ALTER TABLE audit_logs ADD CONSTRAINT audit_logs_metadata_object_check
+          CHECK (jsonb_typeof(metadata) = 'object') NOT VALID;
+      END IF;
+    END;
+    $$;
+
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM audit_logs WHERE jsonb_typeof(metadata) <> 'object') THEN
+        ALTER TABLE audit_logs VALIDATE CONSTRAINT audit_logs_metadata_object_check;
+      END IF;
+    END;
+    $$;
+  `);
 }
 
 export function buildAuditContext(req: Request, res: Response): AuditContext {

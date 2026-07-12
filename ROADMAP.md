@@ -106,6 +106,7 @@ Focus: strengthen admin tools, history, and reporting around Viking Vengeance.
 - [x] Separate troop tiers from troop types in the data model and UI
 - [x] Align PostgreSQL troop-level validation with the supported T7-T16 range
 - [x] Enforce registration JSON array shapes and tolerate malformed legacy partner data
+- [x] Enforce top-level JSON shapes for archives, settings, formation presets, and audit metadata
 - [x] Add available-only totals in stats
 - [x] Add per-partner troop totals
 - [x] Improve CSV export formatting
