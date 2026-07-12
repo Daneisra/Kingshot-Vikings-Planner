@@ -161,6 +161,7 @@ Focus: evolve from a Viking-only planner into a broader alliance coordination hu
 - [x] Store player Troop Formations edits locally per browser and per event preset to avoid shared template conflicts
 - [x] Add tier-based available troop inventory and automatic strongest-first allocation for Troop Formations slots
 - [x] Improve Troop Formations UX with readable allocation badges, compact actions, and mobile-first slot cards
+- [x] Version shared formation templates while preserving admin-customized presets
 - [x] Simplify Available Troops entry with sparse tier rows, automatic sorting, and duplicate prevention
 - [ ] Add a global event navigation model:
   Home, Viking Vengeance, Auto Groups, Guide, Admin, future events

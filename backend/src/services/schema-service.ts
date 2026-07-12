@@ -83,6 +83,8 @@ export async function ensureRegistrationSchema() {
           CHECK (jsonb_typeof(available_troops) = 'object'),
       slots JSONB NOT NULL DEFAULT '[]'::jsonb
         CONSTRAINT troop_formation_presets_slots_array_check CHECK (jsonb_typeof(slots) = 'array'),
+      template_version INTEGER NOT NULL DEFAULT 1 CHECK (template_version >= 1),
+      is_customized BOOLEAN NOT NULL DEFAULT FALSE,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
@@ -90,6 +92,13 @@ export async function ensureRegistrationSchema() {
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_troop_formation_presets_updated_at
       ON troop_formation_presets (updated_at DESC)
+  `);
+
+  await pool.query(`
+    ALTER TABLE troop_formation_presets
+      ADD COLUMN IF NOT EXISTS template_version INTEGER NOT NULL DEFAULT 1
+        CHECK (template_version >= 1),
+      ADD COLUMN IF NOT EXISTS is_customized BOOLEAN
   `);
 
   await pool.query(`
@@ -333,4 +342,14 @@ export async function ensureRegistrationSchema() {
   `);
 
   await seedDefaultFormationPresets();
+
+  await pool.query(`
+    UPDATE troop_formation_presets
+    SET is_customized = TRUE
+    WHERE is_customized IS NULL;
+
+    ALTER TABLE troop_formation_presets
+      ALTER COLUMN is_customized SET DEFAULT FALSE,
+      ALTER COLUMN is_customized SET NOT NULL;
+  `);
 }

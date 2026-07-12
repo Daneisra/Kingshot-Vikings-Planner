@@ -4,14 +4,14 @@
 
 Dernière vérification complète du dépôt : **2026-07-12**.
 
-Ce document décrit l’état observé du dépôt à la version **0.7.13**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
+Ce document décrit l’état observé du dépôt à la version **0.7.14**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
 
 ## 1. Résumé du projet
 
 **Kingshot Vikings Planner** est une application web auto-hébergée destinée à la coordination de l’événement **Viking Vengeance** de Kingshot et, progressivement, à d’autres outils d’alliance.
 
 - URL de production publiquement documentée : `https://vikings.dannytech.fr`.
-- Version détectée : `0.7.13` dans `frontend/package.json` et `backend/package.json`.
+- Version détectée : `0.7.14` dans `frontend/package.json` et `backend/package.json`.
 - État : application fonctionnelle, déployée nativement sur Debian 12, avec CI/CD SSH opérationnelle et plusieurs espaces fonctionnels.
 - Langue de l’interface : anglais.
 - Dépôt public : `https://github.com/Daneisra/Kingshot-Vikings-Planner`.
@@ -365,7 +365,7 @@ Il n’existe pas de table `scores`. Le score personnel est une colonne de `regi
 - crée les six tables ;
 - crée la fonction et les triggers `set_updated_at` pour `registrations`, `app_settings` et `troop_formation_presets` ;
 - crée les index de pseudo, partenaire principal, disponibilité, audit, date d’archive, settings et formations ;
-- insère les trois presets de formations avec `ON CONFLICT DO NOTHING`.
+- laisse le backend créer et versionner les presets de formations lors de son démarrage.
 
 Contraintes importantes :
 
@@ -384,6 +384,7 @@ Contraintes importantes :
 - `db/migrations/2026-07-12_registration_troop_level.sql` ajoute progressivement la contrainte T7-T16 sans altérer les lignes historiques.
 - `db/migrations/2026-07-12_z_registration_json_shapes.sql` impose progressivement les formes tableau de `partner_names` et `troop_loadout`.
 - `db/migrations/2026-07-12_zz_shared_json_shapes.sql` impose progressivement les formes top-level des autres documents JSONB partagés.
+- `db/migrations/2026-07-13_formation_template_state.sql` ajoute la version et l’état de personnalisation des presets partagés.
 - `backend/src/scripts/migrate.ts` applique les fichiers `.sql` par ordre de nom, sous verrou PostgreSQL, avec une transaction par fichier.
 - `schema_migrations` enregistre le nom, le checksum SHA-256 et la date d’application. Un checksum différent pour un fichier déjà appliqué bloque le déploiement.
 - Au démarrage, `backend/src/services/schema-service.ts` peut créer le schéma applicatif complet sur une base vide, assure les index et triggers principaux, ajoute plusieurs colonnes manquantes et seed les presets.
@@ -393,15 +394,16 @@ Le contrôle de démarrage est idempotent et autonome sur une base vide. `db/ini
 
 Le script de déploiement exécute `npm run migrate` après le build backend et avant le redémarrage PM2. Pour tout nouveau changement de schéma, ajouter un nouveau fichier de migration, mettre à jour `db/init.sql`, décider explicitement si le bootstrap backend doit aussi l’appliquer, et ne jamais modifier une migration déjà enregistrée.
 
-### 8.4 Seeds Troop Formations
+### 8.4 Templates Troop Formations
 
-Les presets sont dupliqués dans :
+`backend/src/services/formation-service.ts` est l’unique source active des presets par défaut. `db/migrations/2026-07-09_troop_formations.sql` conserve seulement le snapshot historique v1 et ne doit jamais être modifié.
 
-- `backend/src/services/formation-service.ts` ;
-- `db/init.sql` ;
-- `db/migrations/2026-07-09_troop_formations.sql`.
-
-Le service backend est la source runtime pour les seeds manquants et le reset global. Ces trois emplacements doivent rester alignés. `ON CONFLICT DO NOTHING` préserve les presets déjà présents en base.
+- `formationTemplateVersion` identifie la version courante des defaults.
+- `template_version` mémorise la version appliquée à chaque preset partagé.
+- `is_customized = true` protège un preset modifié par une route admin contre les mises à niveau automatiques.
+- Un reset global restaure le default courant, met `is_customized = false` et réactive les futures mises à niveau.
+- La première classification compare une empreinte SHA-256 du contenu normalisé avec les empreintes connues de la version enregistrée.
+- Avant de modifier un default, conserver les empreintes de l’ancienne version dans `knownDefaultPresetFingerprints`, modifier le preset puis incrémenter `formationTemplateVersion`.
 
 ## 9. Règles métier principales
 
@@ -539,7 +541,7 @@ Sources canoniques particulières :
 
 - Version frontend : `frontend/package.json`.
 - Version API : `backend/package.json`.
-- Presets runtime/reset : `backend/src/services/formation-service.ts`, à synchroniser avec le SQL.
+- Presets runtime/reset : `backend/src/services/formation-service.ts` ; les anciennes migrations sont des snapshots immuables, pas des sources à resynchroniser.
 - Déploiement : `deploy/scripts/deploy.sh`.
 - Schéma neuf : `db/init.sql`.
 - Détail des projets futurs : `ROADMAP.md`.
@@ -747,21 +749,20 @@ Il n’existe pas de fichier de licence. Le README précise que le code n’est 
 
 ## 17. Pièges connus et divergences observées
 
-1. **Presets dupliqués** : les presets formations existent dans le service backend, l’init SQL et la migration. Une modification partielle crée une divergence reset/install.
-2. **Presets partagés** : les brouillons joueurs doivent rester locaux. Écrire chaque frappe dans `troop_formation_presets` ferait s’écraser les utilisateurs.
-3. **DATABASE_URL** : percent-encoder les caractères réservés du mot de passe.
-4. **SSH non interactif** : `npm` et `pm2` peuvent manquer du PATH. `deploy.sh` et le preflight chargent profils et NVM ; conserver cette logique.
-5. **Deux clés SSH** : GitHub Actions -> VPS n’est pas VPS -> GitHub. Diagnostiquer séparément.
-6. **Git destructif en production** : `git reset --hard origin/main` et `git clean -fd` suppriment tout changement suivi/non suivi non ignoré sur le VPS.
-7. **Identité PM2** : le deploy user doit être le même que le propriétaire du daemon PM2.
-8. **Démarrage PM2** : le health check possède un retry 15 x 2 secondes ; ne pas le remplacer par un curl unique après restart.
-9. **Édition publique** : toute personne connaissant un UUID d’inscription peut actuellement appeler le `PUT` public. Ne pas décrire l’édition comme protégée.
-10. **Contenu JSONB interne** : PostgreSQL protège les types top-level, mais les propriétés internes des snapshots, stats, settings et presets restent validées et normalisées principalement par l’application.
-11. **iPhone Chrome** : un crash/reload écran noir lors de la saisie des troupes a été corrigé mais reste à confirmer avec la joueuse concernée en production selon `ROADMAP.md`.
-12. **Overflow responsive** : Score, header et navigation ont déjà subi des correctifs. Toute nouvelle table, nombre long ou rangée d’actions doit être testée sur mobile réel.
-13. **HTTPS hors template** : la production publique est HTTPS, mais le certificat et les blocs TLS actifs ne sont pas dans le template Nginx du repo.
-14. **Pas de service worker** : ne pas attribuer un problème de cache à un service worker sans nouvelle preuve ; aucun PWA/service worker n’est implémenté.
-15. **Pas de rollback automatique** : sauvegarder la DB avant une migration et préparer la restauration manuelle.
+1. **Presets partagés** : les brouillons joueurs doivent rester locaux. Écrire chaque frappe dans `troop_formation_presets` ferait s’écraser les utilisateurs.
+2. **DATABASE_URL** : percent-encoder les caractères réservés du mot de passe.
+3. **SSH non interactif** : `npm` et `pm2` peuvent manquer du PATH. `deploy.sh` et le preflight chargent profils et NVM ; conserver cette logique.
+4. **Deux clés SSH** : GitHub Actions -> VPS n’est pas VPS -> GitHub. Diagnostiquer séparément.
+5. **Git destructif en production** : `git reset --hard origin/main` et `git clean -fd` suppriment tout changement suivi/non suivi non ignoré sur le VPS.
+6. **Identité PM2** : le deploy user doit être le même que le propriétaire du daemon PM2.
+7. **Démarrage PM2** : le health check possède un retry 15 x 2 secondes ; ne pas le remplacer par un curl unique après restart.
+8. **Édition publique** : toute personne connaissant un UUID d’inscription peut actuellement appeler le `PUT` public. Ne pas décrire l’édition comme protégée.
+9. **Contenu JSONB interne** : PostgreSQL protège les types top-level, mais les propriétés internes des snapshots, stats, settings et presets restent validées et normalisées principalement par l’application.
+10. **iPhone Chrome** : un crash/reload écran noir lors de la saisie des troupes a été corrigé mais reste à confirmer avec la joueuse concernée en production selon `ROADMAP.md`.
+11. **Overflow responsive** : Score, header et navigation ont déjà subi des correctifs. Toute nouvelle table, nombre long ou rangée d’actions doit être testée sur mobile réel.
+12. **HTTPS hors template** : la production publique est HTTPS, mais le certificat et les blocs TLS actifs ne sont pas dans le template Nginx du repo.
+13. **Pas de service worker** : ne pas attribuer un problème de cache à un service worker sans nouvelle preuve ; aucun PWA/service worker n’est implémenté.
+14. **Pas de rollback automatique** : sauvegarder la DB avant une migration et préparer la restauration manuelle.
 
 ## 18. Roadmap actuelle
 

@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import { pool } from "../db/pool";
 import type {
   FormationEventKey,
@@ -13,6 +13,8 @@ const defaultAvailableTroops: FormationTroopCounts = {
   lancer: 0,
   marksman: 0
 };
+
+const formationTemplateVersion = 1;
 
 const defaultFormationPresets: Record<FormationEventKey, Omit<FormationPreset, "updatedAt">> = {
   "bear-trap": {
@@ -62,8 +64,18 @@ interface FormationPresetRow {
   eventName: string;
   availableTroops: unknown;
   slots: unknown;
+  templateVersion: number;
+  isCustomized: boolean | null;
   updatedAt: Date;
 }
+
+const knownDefaultPresetFingerprints: Record<FormationEventKey, Map<number, string>> = {
+  "bear-trap": new Map([[1, "60e05adef130299fc5dad5c38ebac2d89e08f740d987d515528e3483ec7820fa"]]),
+  vikings: new Map([[1, "a4a184bdc7aab0adac973e93da8dee9e2980810aef4dc7db8744ab757132cd2a"]]),
+  battle: new Map([[1, "595a4effec6dfa02f84a39860beebe92c039b66a266bc6bd6ac0195e7c5f8201"]])
+};
+
+let seedPromise: Promise<void> | null = null;
 
 export function getFormationEventKeys() {
   return Object.keys(defaultFormationPresets) as FormationEventKey[];
@@ -73,22 +85,94 @@ export function isFormationEventKey(value: string): value is FormationEventKey {
   return value in defaultFormationPresets;
 }
 
-export async function seedDefaultFormationPresets() {
+export function seedDefaultFormationPresets() {
+  if (!seedPromise) {
+    seedPromise = seedDefaultFormationPresetsOnce().catch((error: unknown) => {
+      seedPromise = null;
+      throw error;
+    });
+  }
+
+  return seedPromise;
+}
+
+async function seedDefaultFormationPresetsOnce() {
   for (const preset of Object.values(defaultFormationPresets)) {
     await pool.query(
       `
-        INSERT INTO troop_formation_presets (event_key, event_name, available_troops, slots)
-        VALUES ($1, $2, $3::jsonb, $4::jsonb)
+        INSERT INTO troop_formation_presets (
+          event_key,
+          event_name,
+          available_troops,
+          slots,
+          template_version,
+          is_customized
+        )
+        VALUES ($1, $2, $3::jsonb, $4::jsonb, $5, FALSE)
         ON CONFLICT (event_key) DO NOTHING
       `,
       [
         preset.eventKey,
         preset.eventName,
         JSON.stringify(preset.availableTroops),
-        JSON.stringify(preset.slots)
+        JSON.stringify(preset.slots),
+        formationTemplateVersion
+      ]
+    );
+
+    const unclassifiedResult = await pool.query<FormationPresetRow>(
+      `
+        SELECT
+          event_key AS "eventKey",
+          event_name AS "eventName",
+          available_troops AS "availableTroops",
+          slots,
+          template_version AS "templateVersion",
+          is_customized AS "isCustomized",
+          updated_at AS "updatedAt"
+        FROM troop_formation_presets
+        WHERE event_key = $1
+          AND is_customized IS NULL
+      `,
+      [preset.eventKey]
+    );
+    const unclassifiedPreset = unclassifiedResult.rows[0];
+
+    if (unclassifiedPreset) {
+      const knownFingerprint = knownDefaultPresetFingerprints[preset.eventKey].get(
+        unclassifiedPreset.templateVersion
+      );
+      const isCustomized = knownFingerprint !== fingerprintPreset(unclassifiedPreset);
+
+      await pool.query(
+        `UPDATE troop_formation_presets SET is_customized = $2 WHERE event_key = $1`,
+        [preset.eventKey, isCustomized]
+      );
+    }
+
+    await pool.query(
+      `
+        UPDATE troop_formation_presets
+        SET event_name = $2,
+            available_troops = $3::jsonb,
+            slots = $4::jsonb,
+            template_version = $5,
+            updated_at = NOW()
+        WHERE event_key = $1
+          AND is_customized = FALSE
+          AND template_version < $5
+      `,
+      [
+        preset.eventKey,
+        preset.eventName,
+        JSON.stringify(preset.availableTroops),
+        JSON.stringify(preset.slots),
+        formationTemplateVersion
       ]
     );
   }
+
+  await pool.query(`UPDATE troop_formation_presets SET is_customized = TRUE WHERE is_customized IS NULL`);
 }
 
 export async function listFormationPresets(): Promise<FormationPresetSummary[]> {
@@ -146,6 +230,7 @@ export async function updateFormationTotals(eventKey: FormationEventKey, totals:
     `
       UPDATE troop_formation_presets
       SET available_troops = $2::jsonb,
+          is_customized = TRUE,
           updated_at = NOW()
       WHERE event_key = $1
       RETURNING
@@ -201,12 +286,22 @@ export async function resetFormationPreset(eventKey: FormationEventKey) {
   const defaultPreset = defaultFormationPresets[eventKey];
   const result = await pool.query<FormationPresetRow>(
     `
-      INSERT INTO troop_formation_presets (event_key, event_name, available_troops, slots, updated_at)
-      VALUES ($1, $2, $3::jsonb, $4::jsonb, NOW())
+      INSERT INTO troop_formation_presets (
+        event_key,
+        event_name,
+        available_troops,
+        slots,
+        template_version,
+        is_customized,
+        updated_at
+      )
+      VALUES ($1, $2, $3::jsonb, $4::jsonb, $5, FALSE, NOW())
       ON CONFLICT (event_key) DO UPDATE
       SET event_name = EXCLUDED.event_name,
           available_troops = EXCLUDED.available_troops,
           slots = EXCLUDED.slots,
+          template_version = EXCLUDED.template_version,
+          is_customized = FALSE,
           updated_at = NOW()
       RETURNING
         event_key AS "eventKey",
@@ -219,7 +314,8 @@ export async function resetFormationPreset(eventKey: FormationEventKey) {
       defaultPreset.eventKey,
       defaultPreset.eventName,
       JSON.stringify(defaultPreset.availableTroops),
-      JSON.stringify(defaultPreset.slots)
+      JSON.stringify(defaultPreset.slots),
+      formationTemplateVersion
     ]
   );
 
@@ -235,6 +331,7 @@ async function saveFormationSlots(eventKey: FormationEventKey, slots: FormationS
     `
       UPDATE troop_formation_presets
       SET slots = $2::jsonb,
+          is_customized = TRUE,
           updated_at = NOW()
       WHERE event_key = $1
       RETURNING
@@ -271,6 +368,20 @@ function mapPresetRow(row: FormationPresetRow): FormationPreset {
     slots: normalizeSlots(row.slots),
     updatedAt: row.updatedAt.toISOString()
   };
+}
+
+function fingerprintPreset(preset: {
+  eventName: string;
+  availableTroops: unknown;
+  slots: unknown;
+}) {
+  const canonicalPreset = {
+    eventName: preset.eventName,
+    availableTroops: normalizeTroopCounts(preset.availableTroops),
+    slots: normalizeSlots(preset.slots)
+  };
+
+  return createHash("sha256").update(JSON.stringify(canonicalPreset), "utf8").digest("hex");
 }
 
 function normalizeTroopCounts(counts: unknown): FormationTroopCounts {

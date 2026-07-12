@@ -232,7 +232,7 @@ SELECT 'audit_logs', COUNT(*) FROM audit_logs WHERE jsonb_typeof(metadata) <> 'o
 
 The progressive constraints preserve malformed historical documents but reject new writes with the wrong top-level JSON type. Backend normalizers safely ignore invalid archive entries and formation fields.
 
-The production backend also creates the `troop_formation_presets` table idempotently on startup and seeds the default Bear Trap, Vikings, and Battle presets when missing.
+The production backend also creates the `troop_formation_presets` table idempotently on startup and seeds the default Bear Trap, Vikings, and Battle presets when missing. It tracks `template_version` and `is_customized`, so future default upgrades preserve templates changed through protected admin routes.
 
 Troop Formations player edits are not stored in PostgreSQL.
 They are browser-local drafts saved under keys such as `troop-formations:vikings`, `troop-formations:bear-trap`, and `troop-formations:battle`.
@@ -243,7 +243,7 @@ Check Troop Formations data:
 
 ```bash
 psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings" \
-  -c "SELECT event_key, event_name, jsonb_array_length(slots) AS slots, updated_at FROM troop_formation_presets ORDER BY event_key;"
+  -c "SELECT event_key, event_name, template_version, is_customized, jsonb_array_length(slots) AS slots, updated_at FROM troop_formation_presets ORDER BY event_key;"
 ```
 
 ### Manual Backup

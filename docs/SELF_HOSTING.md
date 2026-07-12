@@ -51,6 +51,7 @@ For existing deployments, feature migrations live in `db/migrations/`.
 The backend also runs an idempotent schema check on startup. It can initialize the complete application schema on an empty database and apply the compatibility checks required by existing deployments. Running `db/init.sql` explicitly remains recommended for a new installation because it makes the initialization step visible and reproducible.
 Player edits on the Troop Formations page are saved in each browser with `localStorage` keys such as `troop-formations:vikings`.
 PostgreSQL stores only the shared default templates used when a player opens or resets a local draft.
+Shared templates carry a template version and customization flag. Backend default upgrades only update templates that have not been customized through the protected API.
 
 Optional manual migration command after building the backend:
 
@@ -141,6 +142,7 @@ npm run migrate
 ```
 
 The shared templates are not used as live collaborative documents.
+Admin edits mark a shared template as customized; resetting it restores the current backend default and re-enables future template upgrades.
 Each player can edit formations freely without admin access because normal edits stay local to that device/browser.
 The local Troop Formations draft stores available troops by type and tier from T7 to T16, then calculates strongest-first slot allocation in the frontend.
 
