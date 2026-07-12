@@ -143,6 +143,7 @@ Focus: strengthen admin tools, history, and reporting around Viking Vengeance.
 - [x] Bind the production API explicitly to loopback with a configurable `HOST`
 - [x] Make the runtime database bootstrap initialize a complete empty application schema
 - [x] Run tracked PostgreSQL migrations automatically during deployment with checksum validation
+- [x] Stop tracking generated TypeScript and Vite configuration artifacts
 
 ## Later
 

@@ -2,16 +2,16 @@
 
 > Référence destinée aux agents IA intervenant sur ce dépôt. Lire ce fichier avant toute modification. En cas de divergence, la version déclarée dans le code, les fichiers de configuration, le schéma PostgreSQL et l’implémentation actuelle priment sur ce document.
 
-Dernière vérification complète du dépôt : **2026-07-11**.
+Dernière vérification complète du dépôt : **2026-07-12**.
 
-Ce document décrit l’état observé du dépôt à la version **0.7.9**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
+Ce document décrit l’état observé du dépôt à la version **0.7.10**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
 
 ## 1. Résumé du projet
 
 **Kingshot Vikings Planner** est une application web auto-hébergée destinée à la coordination de l’événement **Viking Vengeance** de Kingshot et, progressivement, à d’autres outils d’alliance.
 
 - URL de production publiquement documentée : `https://vikings.dannytech.fr`.
-- Version détectée : `0.7.9` dans `frontend/package.json` et `backend/package.json`.
+- Version détectée : `0.7.10` dans `frontend/package.json` et `backend/package.json`.
 - État : application fonctionnelle, déployée nativement sur Debian 12, avec CI/CD SSH opérationnelle et plusieurs espaces fonctionnels.
 - Langue de l’interface : anglais.
 - Dépôt public : `https://github.com/Daneisra/Kingshot-Vikings-Planner`.
@@ -81,8 +81,8 @@ Il n’existe **aucun `package.json` à la racine**.
 | --- | --- | --- |
 | `dev` | `vite` | Serveur local sur le port 5173 |
 | `lint` | `eslint src vite.config.ts` | Lint frontend |
-| `typecheck` | `tsc -b --pretty false` | Vérification TypeScript |
-| `build` | `tsc -b && vite build` | Build de production dans `frontend/dist/` |
+| `typecheck` | `tsc --noEmit` séparément sur `tsconfig.app.json` et `tsconfig.node.json` | Vérification TypeScript sans artefact généré |
+| `build` | `npm run typecheck && vite build` | Build de production dans `frontend/dist/` |
 | `preview` | `vite preview` | Prévisualisation du build |
 
 `backend/package.json` :
@@ -755,10 +755,9 @@ Il n’existe pas de fichier de licence. Le README précise que le code n’est 
 11. **Données JSONB** : les formes de `partner_names`, `troop_loadout`, `registrations`, `manual_stats` et presets sont protégées principalement par l’application, pas par PostgreSQL.
 12. **iPhone Chrome** : un crash/reload écran noir lors de la saisie des troupes a été corrigé mais reste à confirmer avec la joueuse concernée en production selon `ROADMAP.md`.
 13. **Overflow responsive** : Score, header et navigation ont déjà subi des correctifs. Toute nouvelle table, nombre long ou rangée d’actions doit être testée sur mobile réel.
-14. **Build TypeScript suivi** : `frontend/tsconfig.app.tsbuildinfo`, `frontend/vite.config.js` et `frontend/vite.config.d.ts` sont suivis par Git. Un build peut créer des diffs d’artefacts ; vérifier qu’ils sont intentionnels avant commit.
-15. **HTTPS hors template** : la production publique est HTTPS, mais le certificat et les blocs TLS actifs ne sont pas dans le template Nginx du repo.
-16. **Pas de service worker** : ne pas attribuer un problème de cache à un service worker sans nouvelle preuve ; aucun PWA/service worker n’est implémenté.
-17. **Pas de rollback automatique** : sauvegarder la DB avant une migration et préparer la restauration manuelle.
+14. **HTTPS hors template** : la production publique est HTTPS, mais le certificat et les blocs TLS actifs ne sont pas dans le template Nginx du repo.
+15. **Pas de service worker** : ne pas attribuer un problème de cache à un service worker sans nouvelle preuve ; aucun PWA/service worker n’est implémenté.
+16. **Pas de rollback automatique** : sauvegarder la DB avant une migration et préparer la restauration manuelle.
 
 ## 18. Roadmap actuelle
 

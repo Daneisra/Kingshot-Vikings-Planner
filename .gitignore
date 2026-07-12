@@ -13,3 +13,6 @@ frontend/.env.production
 *.log
 logs/
 .deploy-state/
+*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
