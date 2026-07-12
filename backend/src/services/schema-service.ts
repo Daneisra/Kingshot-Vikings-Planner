@@ -7,11 +7,13 @@ export async function ensureRegistrationSchema() {
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       nickname VARCHAR(40) NOT NULL,
       partner_name VARCHAR(40) NOT NULL,
-      partner_names JSONB NOT NULL DEFAULT '[]'::jsonb,
+      partner_names JSONB NOT NULL DEFAULT '[]'::jsonb
+        CONSTRAINT registrations_partner_names_array_check CHECK (jsonb_typeof(partner_names) = 'array'),
       troop_count INTEGER NOT NULL CHECK (troop_count >= 0),
       troop_level INTEGER NOT NULL CONSTRAINT registrations_troop_level_supported_check
         CHECK (troop_level >= 7 AND troop_level <= 16),
-      troop_loadout JSONB NOT NULL DEFAULT '[]'::jsonb,
+      troop_loadout JSONB NOT NULL DEFAULT '[]'::jsonb
+        CONSTRAINT registrations_troop_loadout_array_check CHECK (jsonb_typeof(troop_loadout) = 'array'),
       personal_score INTEGER CHECK (personal_score IS NULL OR personal_score >= 0),
       comment TEXT,
       is_available BOOLEAN NOT NULL DEFAULT TRUE,
@@ -156,6 +158,52 @@ export async function ensureRegistrationSchema() {
       ) THEN
         ALTER TABLE registrations
           VALIDATE CONSTRAINT registrations_troop_level_supported_check;
+      END IF;
+    END;
+    $$;
+  `);
+
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'registrations_partner_names_array_check'
+          AND conrelid = 'registrations'::regclass
+      ) THEN
+        ALTER TABLE registrations
+          ADD CONSTRAINT registrations_partner_names_array_check
+          CHECK (jsonb_typeof(partner_names) = 'array')
+          NOT VALID;
+      END IF;
+
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'registrations_troop_loadout_array_check'
+          AND conrelid = 'registrations'::regclass
+      ) THEN
+        ALTER TABLE registrations
+          ADD CONSTRAINT registrations_troop_loadout_array_check
+          CHECK (jsonb_typeof(troop_loadout) = 'array')
+          NOT VALID;
+      END IF;
+    END;
+    $$;
+
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM registrations WHERE jsonb_typeof(partner_names) <> 'array'
+      ) THEN
+        ALTER TABLE registrations VALIDATE CONSTRAINT registrations_partner_names_array_check;
+      END IF;
+
+      IF NOT EXISTS (
+        SELECT 1 FROM registrations WHERE jsonb_typeof(troop_loadout) <> 'array'
+      ) THEN
+        ALTER TABLE registrations VALIDATE CONSTRAINT registrations_troop_loadout_array_check;
       END IF;
     END;
     $$;

@@ -26,6 +26,13 @@ const selectColumns = `
   updated_at AS "updatedAt"
 `;
 
+const safePartnerNamesSql = `
+  CASE
+    WHEN jsonb_typeof(partner_names) = 'array' THEN partner_names
+    ELSE '[]'::jsonb
+  END
+`;
+
 function buildWhereClause(filters: RegistrationFilters) {
   const conditions: string[] = [];
   const values: Array<string | boolean> = [];
@@ -40,7 +47,7 @@ function buildWhereClause(filters: RegistrationFilters) {
     conditions.push(`
       EXISTS (
         SELECT 1
-        FROM jsonb_array_elements_text(partner_names) AS partner_name_values(partner_name_value)
+        FROM jsonb_array_elements_text(${safePartnerNamesSql}) AS partner_name_values(partner_name_value)
         WHERE LOWER(partner_name_value) = $${values.length}
       )
     `);
@@ -163,7 +170,7 @@ export async function listPartners() {
     `
       SELECT partner_name_value AS "partnerName"
       FROM registrations
-      CROSS JOIN LATERAL jsonb_array_elements_text(partner_names) AS partner_name_values(partner_name_value)
+      CROSS JOIN LATERAL jsonb_array_elements_text(${safePartnerNamesSql}) AS partner_name_values(partner_name_value)
       GROUP BY partner_name_value
       ORDER BY LOWER(partner_name_value) ASC
     `
@@ -207,7 +214,7 @@ export async function getRegistrationStats(filters: RegistrationFilters): Promis
         COALESCE(SUM(troop_count), 0)::text AS "totalTroops",
         COALESCE(SUM(troop_count) FILTER (WHERE is_available = TRUE), 0)::text AS "availableTroops"
       FROM registrations
-      CROSS JOIN LATERAL jsonb_array_elements_text(partner_names) AS partner_name_values(partner_name_value)
+      CROSS JOIN LATERAL jsonb_array_elements_text(${safePartnerNamesSql}) AS partner_name_values(partner_name_value)
       ${whereClause}
       GROUP BY partner_name_value
       ORDER BY COUNT(*) DESC, COALESCE(SUM(troop_count), 0) DESC, LOWER(partner_name_value) ASC

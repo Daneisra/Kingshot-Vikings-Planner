@@ -206,6 +206,15 @@ psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingsho
 
 The T7-T16 constraint applies immediately to new writes. It is validated for the full table automatically when no legacy row is outside the supported range; historical rows are never changed automatically.
 
+Check for malformed historical registration arrays:
+
+```bash
+psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings" \
+  -c "SELECT id, nickname, jsonb_typeof(partner_names) AS partner_names_type, jsonb_typeof(troop_loadout) AS troop_loadout_type FROM registrations WHERE jsonb_typeof(partner_names) <> 'array' OR jsonb_typeof(troop_loadout) <> 'array';"
+```
+
+New writes require both fields to be JSON arrays. Partner filters and statistics defensively ignore a malformed legacy `partner_names` value instead of failing the API request.
+
 The production backend also creates the `troop_formation_presets` table idempotently on startup and seeds the default Bear Trap, Vikings, and Battle presets when missing.
 
 Troop Formations player edits are not stored in PostgreSQL.
