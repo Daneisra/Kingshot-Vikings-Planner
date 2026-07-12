@@ -4,14 +4,14 @@
 
 Dernière vérification complète du dépôt : **2026-07-12**.
 
-Ce document décrit l’état observé du dépôt à la version **0.7.10**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
+Ce document décrit l’état observé du dépôt à la version **0.7.11**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
 
 ## 1. Résumé du projet
 
 **Kingshot Vikings Planner** est une application web auto-hébergée destinée à la coordination de l’événement **Viking Vengeance** de Kingshot et, progressivement, à d’autres outils d’alliance.
 
 - URL de production publiquement documentée : `https://vikings.dannytech.fr`.
-- Version détectée : `0.7.10` dans `frontend/package.json` et `backend/package.json`.
+- Version détectée : `0.7.11` dans `frontend/package.json` et `backend/package.json`.
 - État : application fonctionnelle, déployée nativement sur Debian 12, avec CI/CD SSH opérationnelle et plusieurs espaces fonctionnels.
 - Langue de l’interface : anglais.
 - Dépôt public : `https://github.com/Daneisra/Kingshot-Vikings-Planner`.
@@ -370,7 +370,7 @@ Il n’existe pas de table `scores`. Le score personnel est une colonne de `regi
 Contraintes importantes :
 
 - `registrations.troop_count >= 0` ;
-- `registrations.troop_level` est borné en SQL entre 7 et 100 pour compatibilité historique, alors que l’API actuelle borne les tiers entre 7 et 16 ;
+- `registrations.troop_level` est borné entre 7 et 16 pour les nouvelles écritures ; la migration conserve sans modification d’éventuelles lignes historiques hors plage via une contrainte initialement `NOT VALID` ;
 - `personal_score` est positif ou nul ; l’API ajoute une borne à 1 milliard ;
 - aucun identifiant externe ou nom de joueur n’est unique en base ;
 - les tableaux JSONB ne possèdent pas de contrainte structurelle SQL.
@@ -378,7 +378,8 @@ Contraintes importantes :
 ### 8.3 Initialisation, migrations et démarrage
 
 - Nouvelle installation : appliquer de préférence `db/init.sql` pour une initialisation explicite et reproductible.
-- Migration existante : `db/migrations/2026-07-09_troop_formations.sql` crée et seed `troop_formation_presets` de manière idempotente.
+- `db/migrations/2026-07-09_troop_formations.sql` crée et seed `troop_formation_presets` de manière idempotente.
+- `db/migrations/2026-07-12_registration_troop_level.sql` ajoute progressivement la contrainte T7-T16 sans altérer les lignes historiques.
 - `backend/src/scripts/migrate.ts` applique les fichiers `.sql` par ordre de nom, sous verrou PostgreSQL, avec une transaction par fichier.
 - `schema_migrations` enregistre le nom, le checksum SHA-256 et la date d’application. Un checksum différent pour un fichier déjà appliqué bloque le déploiement.
 - Au démarrage, `backend/src/services/schema-service.ts` peut créer le schéma applicatif complet sur une base vide, assure les index et triggers principaux, ajoute plusieurs colonnes manquantes et seed les presets.
@@ -750,14 +751,13 @@ Il n’existe pas de fichier de licence. Le README précise que le code n’est 
 6. **Git destructif en production** : `git reset --hard origin/main` et `git clean -fd` suppriment tout changement suivi/non suivi non ignoré sur le VPS.
 7. **Identité PM2** : le deploy user doit être le même que le propriétaire du daemon PM2.
 8. **Démarrage PM2** : le health check possède un retry 15 x 2 secondes ; ne pas le remplacer par un curl unique après restart.
-9. **Troop level SQL** : la DB accepte jusqu’à 100 pour héritage, mais l’API/UI actuelle accepte T16 maximum. L’API est la règle métier courante.
-10. **Édition publique** : toute personne connaissant un UUID d’inscription peut actuellement appeler le `PUT` public. Ne pas décrire l’édition comme protégée.
-11. **Données JSONB** : les formes de `partner_names`, `troop_loadout`, `registrations`, `manual_stats` et presets sont protégées principalement par l’application, pas par PostgreSQL.
-12. **iPhone Chrome** : un crash/reload écran noir lors de la saisie des troupes a été corrigé mais reste à confirmer avec la joueuse concernée en production selon `ROADMAP.md`.
-13. **Overflow responsive** : Score, header et navigation ont déjà subi des correctifs. Toute nouvelle table, nombre long ou rangée d’actions doit être testée sur mobile réel.
-14. **HTTPS hors template** : la production publique est HTTPS, mais le certificat et les blocs TLS actifs ne sont pas dans le template Nginx du repo.
-15. **Pas de service worker** : ne pas attribuer un problème de cache à un service worker sans nouvelle preuve ; aucun PWA/service worker n’est implémenté.
-16. **Pas de rollback automatique** : sauvegarder la DB avant une migration et préparer la restauration manuelle.
+9. **Édition publique** : toute personne connaissant un UUID d’inscription peut actuellement appeler le `PUT` public. Ne pas décrire l’édition comme protégée.
+10. **Données JSONB** : les formes de `partner_names`, `troop_loadout`, `registrations`, `manual_stats` et presets sont protégées principalement par l’application, pas par PostgreSQL.
+11. **iPhone Chrome** : un crash/reload écran noir lors de la saisie des troupes a été corrigé mais reste à confirmer avec la joueuse concernée en production selon `ROADMAP.md`.
+12. **Overflow responsive** : Score, header et navigation ont déjà subi des correctifs. Toute nouvelle table, nombre long ou rangée d’actions doit être testée sur mobile réel.
+13. **HTTPS hors template** : la production publique est HTTPS, mais le certificat et les blocs TLS actifs ne sont pas dans le template Nginx du repo.
+14. **Pas de service worker** : ne pas attribuer un problème de cache à un service worker sans nouvelle preuve ; aucun PWA/service worker n’est implémenté.
+15. **Pas de rollback automatique** : sauvegarder la DB avant une migration et préparer la restauration manuelle.
 
 ## 18. Roadmap actuelle
 

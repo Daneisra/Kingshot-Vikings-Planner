@@ -197,6 +197,15 @@ psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingsho
   -c "SELECT name, checksum, applied_at FROM schema_migrations ORDER BY name;"
 ```
 
+Check whether historical registrations still contain a legacy troop level outside T7-T16:
+
+```bash
+psql "postgresql://kingshot:change-this-postgres-password@127.0.0.1:5432/kingshot_vikings" \
+  -c "SELECT id, nickname, troop_level FROM registrations WHERE troop_level < 7 OR troop_level > 16 ORDER BY troop_level DESC;"
+```
+
+The T7-T16 constraint applies immediately to new writes. It is validated for the full table automatically when no legacy row is outside the supported range; historical rows are never changed automatically.
+
 The production backend also creates the `troop_formation_presets` table idempotently on startup and seeds the default Bear Trap, Vikings, and Battle presets when missing.
 
 Troop Formations player edits are not stored in PostgreSQL.

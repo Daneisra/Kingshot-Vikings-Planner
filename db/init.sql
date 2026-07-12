@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS registrations (
   partner_name VARCHAR(40) NOT NULL,
   partner_names JSONB NOT NULL DEFAULT '[]'::jsonb,
   troop_count INTEGER NOT NULL CHECK (troop_count >= 0),
-  troop_level INTEGER NOT NULL CHECK (troop_level >= 7 AND troop_level <= 100),
+  troop_level INTEGER NOT NULL CONSTRAINT registrations_troop_level_supported_check
+    CHECK (troop_level >= 7 AND troop_level <= 16),
   troop_loadout JSONB NOT NULL DEFAULT '[]'::jsonb,
   personal_score INTEGER CHECK (personal_score IS NULL OR personal_score >= 0),
   comment TEXT,
