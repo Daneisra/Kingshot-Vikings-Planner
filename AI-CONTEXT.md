@@ -4,14 +4,14 @@
 
 Dernière vérification complète du dépôt : **2026-07-12**.
 
-Ce document décrit l’état observé du dépôt à la version **0.7.15**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
+Ce document décrit l’état observé du dépôt à la version **0.7.16**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
 
 ## 1. Résumé du projet
 
 **Kingshot Vikings Planner** est une application web auto-hébergée destinée à la coordination de l’événement **Viking Vengeance** de Kingshot et, progressivement, à d’autres outils d’alliance.
 
 - URL de production publiquement documentée : `https://vikings.dannytech.fr`.
-- Version détectée : `0.7.15` dans `frontend/package.json` et `backend/package.json`.
+- Version détectée : `0.7.16` dans `frontend/package.json` et `backend/package.json`.
 - État : application fonctionnelle, déployée nativement sur Debian 12, avec CI/CD SSH opérationnelle et plusieurs espaces fonctionnels.
 - Langue de l’interface : anglais.
 - Dépôt public : `https://github.com/Daneisra/Kingshot-Vikings-Planner`.
@@ -659,6 +659,8 @@ Smoke tests de `deploy.sh` :
 Le job `verify` exécute sur Ubuntu et Node 22 :
 
 ```bash
+bash -n deploy/scripts/*.sh
+
 cd backend
 npm ci
 npm run lint
@@ -671,6 +673,8 @@ npm run lint
 npm run typecheck
 npm run build
 ```
+
+Le contrôle `bash -n` valide la syntaxe de `deploy.sh`, `backup-postgres.sh` et `bootstrap-server-files.sh` avant toute connexion au VPS.
 
 Le job `deploy` ne démarre qu’après succès de `verify`. Il valide les secrets, configure SSH, effectue un preflight distant, puis exécute `deploy/scripts/deploy.sh`.
 
