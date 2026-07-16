@@ -44,10 +44,10 @@ Vikings coordination often ends up scattered across chat messages and screenshot
 - Automatic 7-player reinforcement cell suggestions based on availability, partner preferences, troop strength, personal score, and role hints
 - HQ defense planner for Viking Vengeance waves 10 and 20
 - Public Troop Formations page for Bear Trap, Vikings, and Battle march planning with available, assigned, and remaining troop totals
-- Tier-based Troop Formations inventory from T7 to T16 with automatic strongest-first allocation into slots
+- Tier-based Troop Formations inventory from T6 to T16 with automatic strongest-first allocation into slots
 - Compact Troop Formations cards with dynamic tier rows, duplicate prevention, readable allocation badges, and mobile-first slot editing
 - Browser-local formation drafts with slot duplication, ordering, local reset, Discord summary copy, and CSV export
-- Track up to 2 strongest troop tiers, from T7 to T16, with separate Infantry, Lancer, and Marksman counts
+- Track up to 2 strongest troop tiers, from T6 to T16, with separate Infantry, Lancer, and Marksman counts
 - Select up to 5 regular partners, with an optional 6 marches mode for a 6th reinforcement partner slot
 - Visible app version in the UI for easier support and deployment checks
 - Admin health panel for API status, database status, uptime, and deploy metadata

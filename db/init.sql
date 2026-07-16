@@ -7,8 +7,8 @@ CREATE TABLE IF NOT EXISTS registrations (
   partner_names JSONB NOT NULL DEFAULT '[]'::jsonb
     CONSTRAINT registrations_partner_names_array_check CHECK (jsonb_typeof(partner_names) = 'array'),
   troop_count INTEGER NOT NULL CHECK (troop_count >= 0),
-  troop_level INTEGER NOT NULL CONSTRAINT registrations_troop_level_supported_check
-    CHECK (troop_level >= 7 AND troop_level <= 16),
+  troop_level INTEGER NOT NULL CONSTRAINT registrations_troop_level_t6_t16_check
+    CHECK (troop_level >= 6 AND troop_level <= 16),
   troop_loadout JSONB NOT NULL DEFAULT '[]'::jsonb
     CONSTRAINT registrations_troop_loadout_array_check CHECK (jsonb_typeof(troop_loadout) = 'array'),
   personal_score INTEGER CHECK (personal_score IS NULL OR personal_score >= 0),

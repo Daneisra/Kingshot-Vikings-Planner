@@ -35,8 +35,8 @@ Focus: finish the Viking Vengeance planner without overloading the casual player
 
 ### Viking Planner UX
 
-- [x] Prevent troop level selection below 7
-- [x] Support troop tiers from T7 to T16
+- [x] Prevent troop level selection below 6
+- [x] Support troop tiers from T6 to T16
 - [x] Add helper copy near troop inputs:
   `Only count your strongest 2 troop tiers.`
 - [x] Improve inline validation before submit
@@ -104,7 +104,7 @@ Focus: strengthen admin tools, history, and reporting around Viking Vengeance.
 ### Data / Reporting
 
 - [x] Separate troop tiers from troop types in the data model and UI
-- [x] Align PostgreSQL troop-level validation with the supported T7-T16 range
+- [x] Align PostgreSQL troop-level validation with the supported T6-T16 range
 - [x] Enforce registration JSON array shapes and tolerate malformed legacy partner data
 - [x] Enforce top-level JSON shapes for archives, settings, formation presets, and audit metadata
 - [x] Add available-only totals in stats

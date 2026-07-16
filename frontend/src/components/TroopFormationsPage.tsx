@@ -16,7 +16,7 @@ interface TroopFormationsPageProps {
 }
 
 type TroopType = keyof FormationTroopCounts;
-type TroopTier = 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
+type TroopTier = 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
 type TierInventory = Partial<Record<TroopTier, number>>;
 type FormationTierInventory = Record<TroopType, TierInventory>;
 
@@ -40,7 +40,7 @@ const troopTypes: Array<{ key: TroopType; label: string }> = [
   { key: "marksman", label: "Marksman" }
 ];
 
-const troopTiers: TroopTier[] = [16, 15, 14, 13, 12, 11, 10, 9, 8, 7];
+const troopTiers: TroopTier[] = [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6];
 
 const defaultSlotDraft: Omit<FormationSlot, "id" | "sortOrder"> = {
   name: "New formation",
@@ -483,7 +483,7 @@ function AvailableTroopsPanel({
     <section className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-panel">
       <p className="text-sm uppercase tracking-[0.2em] text-amber-300">Available troops</p>
       <p className="mt-2 text-sm leading-6 text-slate-400">
-        Enter your troops by tier. The formation planner consumes the strongest tiers first, from T16 down to T7.
+        Enter your troops by tier. The formation planner consumes the strongest tiers first, from T16 down to T6.
       </p>
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         {troopTypes.map(({ key, label }) => (

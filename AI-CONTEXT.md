@@ -4,14 +4,14 @@
 
 Dernière vérification complète du dépôt : **2026-07-12**.
 
-Ce document décrit l’état observé du dépôt à la version **0.7.14**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
+Ce document décrit l’état observé du dépôt à la version **0.7.15**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
 
 ## 1. Résumé du projet
 
 **Kingshot Vikings Planner** est une application web auto-hébergée destinée à la coordination de l’événement **Viking Vengeance** de Kingshot et, progressivement, à d’autres outils d’alliance.
 
 - URL de production publiquement documentée : `https://vikings.dannytech.fr`.
-- Version détectée : `0.7.14` dans `frontend/package.json` et `backend/package.json`.
+- Version détectée : `0.7.15` dans `frontend/package.json` et `backend/package.json`.
 - État : application fonctionnelle, déployée nativement sur Debian 12, avec CI/CD SSH opérationnelle et plusieurs espaces fonctionnels.
 - Langue de l’interface : anglais.
 - Dépôt public : `https://github.com/Daneisra/Kingshot-Vikings-Planner`.
@@ -370,7 +370,7 @@ Il n’existe pas de table `scores`. Le score personnel est une colonne de `regi
 Contraintes importantes :
 
 - `registrations.troop_count >= 0` ;
-- `registrations.troop_level` est borné entre 7 et 16 pour les nouvelles écritures ; la migration conserve sans modification d’éventuelles lignes historiques hors plage via une contrainte initialement `NOT VALID` ;
+- `registrations.troop_level` est borné entre 6 et 16 pour les nouvelles écritures ; la migration conserve sans modification d’éventuelles lignes historiques hors plage via une contrainte initialement `NOT VALID` ;
 - `registrations.partner_names` et `registrations.troop_loadout` doivent être des tableaux JSONB pour les nouvelles écritures ; les lectures de partenaires remplacent défensivement une ancienne forme invalide par `[]` ;
 - PostgreSQL impose aussi les formes top-level attendues pour les snapshots et stats d’archives, settings, presets de formations et métadonnées d’audit ; les normaliseurs backend restent la protection des contenus internes ;
 - `personal_score` est positif ou nul ; l’API ajoute une borne à 1 milliard ;
@@ -381,7 +381,8 @@ Contraintes importantes :
 
 - Nouvelle installation : appliquer de préférence `db/init.sql` pour une initialisation explicite et reproductible.
 - `db/migrations/2026-07-09_troop_formations.sql` crée et seed `troop_formation_presets` de manière idempotente.
-- `db/migrations/2026-07-12_registration_troop_level.sql` ajoute progressivement la contrainte T7-T16 sans altérer les lignes historiques.
+- `db/migrations/2026-07-12_registration_troop_level.sql` conserve le changement historique qui avait introduit la contrainte T7-T16.
+- `db/migrations/2026-07-16_registration_troop_t6.sql` remplace cette contrainte par la plage T6-T16 sans altérer les lignes historiques.
 - `db/migrations/2026-07-12_z_registration_json_shapes.sql` impose progressivement les formes tableau de `partner_names` et `troop_loadout`.
 - `db/migrations/2026-07-12_zz_shared_json_shapes.sql` impose progressivement les formes top-level des autres documents JSONB partagés.
 - `db/migrations/2026-07-13_formation_template_state.sql` ajoute la version et l’état de personnalisation des presets partagés.
@@ -410,7 +411,7 @@ Le script de déploiement exécute `npm run migrate` après le build backend et 
 ### 9.1 Inscriptions Viking Vengeance
 
 - Types : `infantry`, `lancer`, `marksman`.
-- Tiers API et UI : T7 à T16 inclus.
+- Tiers API et UI : T6 à T16 inclus.
 - Un joueur saisit un ou deux tiers distincts, avec jusqu’à trois types par tier, soit six lignes de loadout maximum.
 - Chaque ligne doit avoir un compteur entre 1 et 100 000 000.
 - `troopCount` et `troopLevel` sont dérivés côté backend : somme des lignes et tier maximum.
@@ -447,13 +448,13 @@ Implémentation principale : `frontend/src/components/TroopFormationsPage.tsx`.
 - Chaque joueur travaille sur une copie personnelle sans admin.
 - Les brouillons sont séparés par événement et par navigateur.
 - Types : Infantry, Lancer, Marksman.
-- Tiers : T16 à T7, traités dans cet ordre.
+- Tiers : T16 à T6, traités dans cet ordre.
 - Available Troops utilise une structure **sparse** : le joueur ajoute uniquement les tiers nécessaires avec `Add tier`.
 - Un même type ne peut pas contenir deux fois le même tier ; les options déjà utilisées sont retirées du select.
 - Les lignes sont toujours affichées du meilleur tier au plus faible.
 - Chaque slot contient nom, héros, besoins par type, notes et `sortOrder`.
 - Les slots sont consommés dans leur ordre actuel.
-- Pour chaque slot et chaque type, l’algorithme consomme T16 vers T7 jusqu’à satisfaire le besoin.
+- Pour chaque slot et chaque type, l’algorithme consomme T16 vers T6 jusqu’à satisfaire le besoin.
 - Le reliquat demandé devient `shortage`.
 - Les stocks non consommés composent le `remainder`, calculé automatiquement.
 - Les ratios sont calculés sans division par zéro.
@@ -770,7 +771,7 @@ Il n’existe pas de fichier de licence. Le README précise que le code n’est 
 
 ### Terminé
 
-- Planner Viking avec validation T7-T16, deux tiers, plusieurs partenaires et option six marches.
+- Planner Viking avec validation T6-T16, deux tiers, plusieurs partenaires et option six marches.
 - Pages Home, Prep, Auto Groups, Formations, Score, Guide et Admin.
 - Groupes automatiques de sept, rôles et HQ waves 10/20.
 - Archives, scores, analytics, exports, settings et audit partiel.

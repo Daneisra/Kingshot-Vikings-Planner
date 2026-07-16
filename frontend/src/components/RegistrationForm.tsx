@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { Registration, RegistrationPayload, TroopLoadoutEntry, TroopType } from "../types/registration";
 
-const MIN_TROOP_TIER = 7;
+const MIN_TROOP_TIER = 6;
 const MAX_TROOP_TIER = 16;
 const MAX_TEXT_LENGTH = 40;
 const MAX_COMMENT_LENGTH = 300;
@@ -416,7 +416,7 @@ export function RegistrationForm({
                       ))}
                     </select>
                     <p className="mt-2 text-xs text-slate-500">
-                      T7+ only. Use your real in-game troop tier, up to T16.
+                      T6+ only. Use your real in-game troop tier, up to T16.
                     </p>
                     {renderFieldError(tierField)}
                   </label>

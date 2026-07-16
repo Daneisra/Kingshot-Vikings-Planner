@@ -7,7 +7,7 @@ Ragnar,Lagertha|Bjorn,10,120000,90000,85000,9,50000,30000,20000,yes,42000000,Mai
 Lagertha,Ragnar,9,100000,80000,75000,,,,,yes,,`;
 
 const troopTypes: TroopType[] = ["infantry", "lancer", "marksman"];
-const MIN_TROOP_TIER = 7;
+const MIN_TROOP_TIER = 6;
 const MAX_TROOP_TIER = 16;
 
 const headerAliases: Record<string, string> = {
