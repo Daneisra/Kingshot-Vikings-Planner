@@ -4,14 +4,14 @@
 
 Dernière vérification complète du dépôt : **2026-07-12**.
 
-Ce document décrit l’état observé du dépôt à la version **0.7.19**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
+Ce document décrit l’état observé du dépôt à la version **0.7.20**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
 
 ## 1. Résumé du projet
 
 **Kingshot Vikings Planner** est une application web auto-hébergée destinée à la coordination de l’événement **Viking Vengeance** de Kingshot et, progressivement, à d’autres outils d’alliance.
 
 - URL de production publiquement documentée : `https://vikings.dannytech.fr`.
-- Version détectée : `0.7.19` dans `frontend/package.json` et `backend/package.json`.
+- Version détectée : `0.7.20` dans `frontend/package.json` et `backend/package.json`.
 - État : application fonctionnelle, déployée nativement sur Debian 12, avec CI/CD SSH opérationnelle et plusieurs espaces fonctionnels.
 - Langue de l’interface : anglais.
 - Dépôt public : `https://github.com/Daneisra/Kingshot-Vikings-Planner`.
@@ -35,12 +35,12 @@ Les versions ci-dessous sont celles résolues dans `frontend/package-lock.json`;
 | React | 18.3.1 | UI et état applicatif |
 | React DOM | 18.3.1 | Rendu navigateur |
 | TypeScript | 5.7.3 | Typage strict |
-| Vite | 6.4.2 | Développement et build |
+| Vite | 6.4.3 | Développement et build |
 | Tailwind CSS | 3.4.19 | Styles utilitaires |
 | Lucide React | 0.469.0 | Icônes |
-| ESLint | 9.18.0 | Lint |
+| ESLint | 9.39.5 | Lint |
 | typescript-eslint | 8.19.0 | Règles TypeScript |
-| PostCSS | 8.5.8 | Pipeline CSS |
+| PostCSS | 8.5.21 | Pipeline CSS |
 | Autoprefixer | 10.4.27 | Préfixes CSS |
 
 Le style global est défini dans `frontend/src/index.css`. Le thème Tailwind est dans `frontend/tailwind.config.ts`. Il n’y a pas de React Router, de bibliothèque d’état globale, de bibliothèque de graphiques, ni de service worker.
@@ -50,15 +50,15 @@ Le style global est défini dans `frontend/src/index.css`. Le thème Tailwind es
 | Outil | Version résolue | Rôle |
 | --- | ---: | --- |
 | Node.js | 22 en CI et dans les guides | Runtime ; aucun champ `engines` n’est déclaré |
-| Express | 4.22.1 | API REST |
+| Express | 4.22.2 | API REST |
 | TypeScript | 5.7.3 | Typage et compilation CommonJS |
 | PostgreSQL client `pg` | 8.20.0 | Pool et requêtes SQL |
 | Zod | 3.25.76 | Validation des entrées et de l’environnement |
 | Helmet | 8.1.0 | En-têtes HTTP de sécurité |
 | CORS | 2.8.6 | Politique cross-origin |
-| Morgan | 1.10.1 | Logs HTTP |
+| Morgan | 1.11.0 | Logs HTTP |
 | dotenv | 16.6.1 | Chargement de `backend/.env` |
-| ESLint | 9.18.0 | Lint |
+| ESLint | 9.39.5 | Lint |
 | tsx | 4.21.0 | Serveur de développement |
 
 ### 2.3 Production et automatisation
@@ -667,6 +667,7 @@ bash -n deploy/scripts/*.sh
 
 cd backend
 npm ci
+npm audit --omit=dev --audit-level=moderate
 npm run lint
 npm run typecheck
 npm run test
@@ -674,6 +675,7 @@ npm run build
 
 cd ../frontend
 npm ci
+npm audit --omit=dev --audit-level=moderate
 npm run lint
 npm run typecheck
 npm run test
@@ -681,6 +683,8 @@ npm run build
 ```
 
 Le contrôle `bash -n` valide la syntaxe de `deploy.sh`, `backup-postgres.sh` et `bootstrap-server-files.sh` avant toute connexion au VPS.
+
+Les deux audits CI bloquent les alertes `moderate`, `high` ou `critical` dans les dépendances de production. Au dernier contrôle, les arbres de production sont à zéro alerte. L’audit complet conserve une alerte `low` de développement dans `tsx -> esbuild 0.27.7`; aucun `--force` ou override fragile n’est appliqué.
 
 Le job `deploy` ne démarre qu’après succès de `verify`. Il valide les secrets, configure SSH, effectue un preflight distant, puis exécute `deploy/scripts/deploy.sh`.
 

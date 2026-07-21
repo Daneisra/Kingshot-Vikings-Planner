@@ -151,6 +151,7 @@ Focus: strengthen admin tools, history, and reporting around Viking Vengeance.
 - [x] Add automated backend tests for critical registration validation rules
 - [x] Reject malformed admin tokens with extra segments and cover token signing and expiry with tests
 - [x] Extract and test the Troop Formations strongest-first allocation engine
+- [x] Patch compatible npm vulnerabilities and audit production dependencies in CI
 
 ## Later
 
