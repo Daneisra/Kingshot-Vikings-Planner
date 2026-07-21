@@ -1,6 +1,6 @@
 {
   "name": "kingshot-vikings-planner-backend",
-  "version": "0.7.17",
+  "version": "0.7.18",
   "private": true,
   "main": "dist/index.js",
   "scripts": {
@@ -9,7 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "migrate": "node dist/scripts/migrate.js",
     "start": "node dist/index.js",
-    "test": "tsx --test src/schemas/registration-schema.test.ts",
+    "test": "tsx --test src/schemas/registration-schema.test.ts src/services/admin-token-service.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "pm2:start": "pm2 start ../ecosystem.config.js --env production",
     "pm2:restart": "pm2 restart kingshot-vikings-planner-api"

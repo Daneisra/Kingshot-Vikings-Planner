@@ -4,14 +4,14 @@
 
 Dernière vérification complète du dépôt : **2026-07-12**.
 
-Ce document décrit l’état observé du dépôt à la version **0.7.17**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
+Ce document décrit l’état observé du dépôt à la version **0.7.18**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
 
 ## 1. Résumé du projet
 
 **Kingshot Vikings Planner** est une application web auto-hébergée destinée à la coordination de l’événement **Viking Vengeance** de Kingshot et, progressivement, à d’autres outils d’alliance.
 
 - URL de production publiquement documentée : `https://vikings.dannytech.fr`.
-- Version détectée : `0.7.17` dans `frontend/package.json` et `backend/package.json`.
+- Version détectée : `0.7.18` dans `frontend/package.json` et `backend/package.json`.
 - État : application fonctionnelle, déployée nativement sur Debian 12, avec CI/CD SSH opérationnelle et plusieurs espaces fonctionnels.
 - Langue de l’interface : anglais.
 - Dépôt public : `https://github.com/Daneisra/Kingshot-Vikings-Planner`.
@@ -95,7 +95,7 @@ Il n’existe **aucun `package.json` à la racine**.
 | `build` | `tsc -p tsconfig.json` | Compilation dans `backend/dist/` |
 | `migrate` | `node dist/scripts/migrate.js` | Applique les migrations PostgreSQL en attente |
 | `start` | `node dist/index.js` | Lancement du build |
-| `test` | `tsx --test src/schemas/registration-schema.test.ts` | Tests des règles critiques de validation des inscriptions |
+| `test` | `tsx --test` sur les fichiers de test explicitement listés | Tests des inscriptions et des tokens admin |
 | `pm2:start` | `pm2 start ../ecosystem.config.js --env production` | Démarrage PM2 depuis `backend/` |
 | `pm2:restart` | `pm2 restart kingshot-vikings-planner-api` | Redémarrage PM2 |
 
@@ -317,6 +317,7 @@ Dans l’interface actuelle, seule la réinitialisation du preset global Troop F
 - `ADMIN_TOKEN_SECRET` : optionnel dans le code, 16 caractères minimum s’il est présent ; fallback technique sur `ADMIN_PASSWORD`.
 - `ADMIN_TOKEN_TTL_MINUTES` : expiration absolue du token serveur, 120 minutes par défaut.
 - Le frontend impose séparément `ADMIN_SESSION_TIMEOUT_MINUTES = 20` comme délai d’inactivité glissant dans `App.tsx`.
+- Le token serveur contient exactement deux segments `payload.signature` encodés en base64url ; tout segment supplémentaire, signature altérée ou token expiré est rejeté avec une comparaison HMAC résistante au timing.
 
 Seul `requireAdminVerification`, utilisé par `/api/admin/verify`, accepte `x-admin-password`. Toutes les actions protégées utilisent `requireAdmin` et exigent ensuite un `x-admin-token` valide.
 
@@ -697,7 +698,7 @@ npm run build
 
 Sous PowerShell avec une policy bloquant `npm.ps1`, utiliser `npm.cmd run ...`.
 
-`backend/src/schemas/registration-schema.test.ts` couvre les bornes T6-T16, la limite de deux tiers, les doublons type/tier et la déduplication des partenaires. Aucun test frontend ou E2E n’est encore versionné ; les comportements non couverts doivent donc rester validés explicitement.
+`backend/src/schemas/registration-schema.test.ts` couvre les bornes T6-T16, la limite de deux tiers, les doublons type/tier et la déduplication des partenaires. `backend/src/services/admin-token-service.test.ts` couvre création, signature, format strict à deux segments et expiration des tokens admin. Aucun test frontend ou E2E n’est encore versionné ; les comportements non couverts doivent donc rester validés explicitement.
 
 ## 14. Versionnement
 

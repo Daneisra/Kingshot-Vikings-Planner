@@ -34,7 +34,13 @@ export function isValidAdminToken(token: string | undefined) {
     return false;
   }
 
-  const [encodedPayload, signature] = token.split(".");
+  const tokenParts = token.split(".");
+
+  if (tokenParts.length !== 2) {
+    return false;
+  }
+
+  const [encodedPayload, signature] = tokenParts;
 
   if (!encodedPayload || !signature) {
     return false;

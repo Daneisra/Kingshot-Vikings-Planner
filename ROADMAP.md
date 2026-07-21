@@ -149,6 +149,7 @@ Focus: strengthen admin tools, history, and reporting around Viking Vengeance.
 - [x] Stop tracking generated TypeScript and Vite configuration artifacts
 - [x] Validate deployment and backup shell script syntax in CI before connecting to production
 - [x] Add automated backend tests for critical registration validation rules
+- [x] Reject malformed admin tokens with extra segments and cover token signing and expiry with tests
 
 ## Later
 
