@@ -1,6 +1,24 @@
 import { Copy, Download, Plus, RefreshCw, RotateCcw, Save, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api";
+import {
+  allocateSlotsByTier,
+  cloneTierInventory,
+  createEmptyTierInventory,
+  normalizeCount,
+  sumTierInventory,
+  troopTiers
+} from "../lib/formation-allocation";
+import type {
+  AllocationResult,
+  FormationTierInventory,
+  SlotShortage,
+  SlotTroopAllocation,
+  TierInventory,
+  TroopAllocationEntry,
+  TroopTier,
+  TroopType
+} from "../lib/formation-allocation";
 import type {
   FormationEventKey,
   FormationPreset,
@@ -15,32 +33,11 @@ interface TroopFormationsPageProps {
   onNotify: (tone: "success" | "error", message: string) => void;
 }
 
-type TroopType = keyof FormationTroopCounts;
-type TroopTier = 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
-type TierInventory = Partial<Record<TroopTier, number>>;
-type FormationTierInventory = Record<TroopType, TierInventory>;
-
-interface TroopAllocationEntry {
-  tier: TroopTier;
-  count: number;
-}
-
-type SlotTroopAllocation = Record<TroopType, TroopAllocationEntry[]>;
-type SlotShortage = Record<TroopType, number>;
-
-interface AllocationResult {
-  slots: Record<string, SlotTroopAllocation>;
-  shortages: Record<string, SlotShortage>;
-  remainingByTier: FormationTierInventory;
-}
-
 const troopTypes: Array<{ key: TroopType; label: string }> = [
   { key: "infantry", label: "Infantry" },
   { key: "lancer", label: "Lancer" },
   { key: "marksman", label: "Marksman" }
 ];
-
-const troopTiers: TroopTier[] = [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6];
 
 const defaultSlotDraft: Omit<FormationSlot, "id" | "sortOrder"> = {
   name: "New formation",
@@ -888,14 +885,6 @@ function sumSlots(slots: FormationSlot[]): FormationTroopCounts {
   );
 }
 
-function createEmptyTierInventory(): FormationTierInventory {
-  return {
-    infantry: {},
-    lancer: {},
-    marksman: {}
-  };
-}
-
 function convertTotalsToTierInventory(totals: FormationTroopCounts): FormationTierInventory {
   const inventory = createEmptyTierInventory();
 
@@ -910,32 +899,6 @@ function convertTotalsToTierInventory(totals: FormationTroopCounts): FormationTi
   return inventory;
 }
 
-function cloneTierInventory(inventory: FormationTierInventory): FormationTierInventory {
-  return troopTypes.reduce((nextInventory, { key }) => {
-    nextInventory[key] = {};
-
-    for (const tier of troopTiers) {
-      const count = normalizeCount(inventory[key]?.[tier] ?? 0);
-
-      if (count > 0) {
-        nextInventory[key][tier] = count;
-      }
-    }
-
-    return nextInventory;
-  }, {} as FormationTierInventory);
-}
-
-function sumTierInventory(inventory: FormationTierInventory): FormationTroopCounts {
-  return troopTypes.reduce(
-    (totals, { key }) => {
-      totals[key] = troopTiers.reduce((total, tier) => total + normalizeCount(inventory[key]?.[tier] ?? 0), 0);
-      return totals;
-    },
-    { infantry: 0, lancer: 0, marksman: 0 } as FormationTroopCounts
-  );
-}
-
 function sumSlotShortages(shortages: Record<string, SlotShortage>): FormationTroopCounts {
   return Object.values(shortages).reduce(
     (totals, shortage) => {
@@ -947,68 +910,6 @@ function sumSlotShortages(shortages: Record<string, SlotShortage>): FormationTro
     },
     { infantry: 0, lancer: 0, marksman: 0 } as FormationTroopCounts
   );
-}
-
-function allocateSlotsByTier(availableByTier: FormationTierInventory, slots: FormationSlot[]): AllocationResult {
-  const remainingByTier = cloneTierInventory(availableByTier);
-  const slotAllocations: Record<string, SlotTroopAllocation> = {};
-  const slotShortages: Record<string, SlotShortage> = {};
-
-  for (const slot of slots) {
-    const allocation = createEmptySlotAllocation();
-    const shortage = createEmptySlotShortage();
-
-    for (const { key } of troopTypes) {
-      let requestedCount = normalizeCount(slot[key]);
-
-      for (const tier of troopTiers) {
-        if (requestedCount <= 0) {
-          break;
-        }
-
-        const availableCount = normalizeCount(remainingByTier[key][tier] ?? 0);
-        const allocatedCount = Math.min(availableCount, requestedCount);
-
-        if (allocatedCount > 0) {
-          allocation[key].push({ tier, count: allocatedCount });
-          const nextCount = availableCount - allocatedCount;
-
-          if (nextCount > 0) {
-            remainingByTier[key][tier] = nextCount;
-          } else {
-            delete remainingByTier[key][tier];
-          }
-
-          requestedCount -= allocatedCount;
-        }
-      }
-
-      shortage[key] = requestedCount;
-    }
-
-    slotAllocations[slot.id] = allocation;
-    slotShortages[slot.id] = shortage;
-  }
-
-  return {
-    slots: slotAllocations,
-    shortages: slotShortages,
-    remainingByTier
-  };
-}
-
-function createEmptySlotAllocation(): SlotTroopAllocation {
-  return troopTypes.reduce((allocation, { key }) => {
-    allocation[key] = [];
-    return allocation;
-  }, {} as SlotTroopAllocation);
-}
-
-function createEmptySlotShortage(): SlotShortage {
-  return troopTypes.reduce((shortage, { key }) => {
-    shortage[key] = 0;
-    return shortage;
-  }, {} as SlotShortage);
 }
 
 function getTotal(counts: FormationTroopCounts) {
@@ -1173,10 +1074,6 @@ function isValidTierInventory(value: unknown): value is FormationTierInventory {
       return troopTiers.includes(Number(tier) as TroopTier) && Number.isFinite(count);
     });
   });
-}
-
-function normalizeCount(value: number) {
-  return Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : 0;
 }
 
 function createLocalSlotId() {

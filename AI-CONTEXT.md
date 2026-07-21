@@ -4,14 +4,14 @@
 
 Dernière vérification complète du dépôt : **2026-07-12**.
 
-Ce document décrit l’état observé du dépôt à la version **0.7.18**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
+Ce document décrit l’état observé du dépôt à la version **0.7.19**. Il doit être mis à jour lorsqu’une modification importante change l’architecture, les contrats API, la persistance, les règles métier, le déploiement ou les conventions ci-dessous.
 
 ## 1. Résumé du projet
 
 **Kingshot Vikings Planner** est une application web auto-hébergée destinée à la coordination de l’événement **Viking Vengeance** de Kingshot et, progressivement, à d’autres outils d’alliance.
 
 - URL de production publiquement documentée : `https://vikings.dannytech.fr`.
-- Version détectée : `0.7.18` dans `frontend/package.json` et `backend/package.json`.
+- Version détectée : `0.7.19` dans `frontend/package.json` et `backend/package.json`.
 - État : application fonctionnelle, déployée nativement sur Debian 12, avec CI/CD SSH opérationnelle et plusieurs espaces fonctionnels.
 - Langue de l’interface : anglais.
 - Dépôt public : `https://github.com/Daneisra/Kingshot-Vikings-Planner`.
@@ -84,6 +84,7 @@ Il n’existe **aucun `package.json` à la racine**.
 | `typecheck` | `tsc --noEmit` séparément sur `tsconfig.app.json` et `tsconfig.node.json` | Vérification TypeScript sans artefact généré |
 | `build` | `npm run typecheck && vite build` | Build de production dans `frontend/dist/` |
 | `preview` | `vite preview` | Prévisualisation du build |
+| `test` | `tsx --test src/lib/formation-allocation.test.ts` | Tests du moteur d’allocation Troop Formations |
 
 `backend/package.json` :
 
@@ -99,7 +100,7 @@ Il n’existe **aucun `package.json` à la racine**.
 | `pm2:start` | `pm2 start ../ecosystem.config.js --env production` | Démarrage PM2 depuis `backend/` |
 | `pm2:restart` | `pm2 restart kingshot-vikings-planner-api` | Redémarrage PM2 |
 
-Le backend possède une première suite `node:test` exécutée via `tsx`. Aucun test frontend ou end-to-end n’est encore présent.
+Le backend et le frontend possèdent des suites `node:test` exécutées via `tsx`. Aucun test end-to-end n’est encore présent.
 
 ## 3. Architecture générale
 
@@ -176,7 +177,8 @@ La recherche de pseudo utilise `frontend/src/hooks/useDebouncedValue.ts` avec un
 - `frontend/src/components/RegistrationList.tsx` : liste responsive, édition et suppression.
 - `frontend/src/components/ReinforcementGroupsPanel.tsx` : calcul frontend des cellules de sept joueurs.
 - `frontend/src/components/HqDefensePlannerPanel.tsx` : propositions waves 10 et 20.
-- `frontend/src/components/TroopFormationsPage.tsx` : brouillons locaux, inventaire sparse par tier et allocation.
+- `frontend/src/components/TroopFormationsPage.tsx` : brouillons locaux, inventaire sparse par tier et interface des formations.
+- `frontend/src/lib/formation-allocation.ts` : moteur pur strongest-first, remainder et shortages partagé par l’UI et les tests.
 - `frontend/src/components/ScorePage.tsx` : agrège les vues d’archives, tendances et profils publics.
 - `frontend/src/components/AdminPanel.tsx` : déverrouillage et actions principales.
 - `frontend/src/components/ArchivesPanel.tsx` : édition et export des archives.
@@ -674,6 +676,7 @@ cd ../frontend
 npm ci
 npm run lint
 npm run typecheck
+npm run test
 npm run build
 ```
 
@@ -693,12 +696,13 @@ npm run build
 cd ../frontend
 npm run typecheck
 npm run lint
+npm run test
 npm run build
 ```
 
 Sous PowerShell avec une policy bloquant `npm.ps1`, utiliser `npm.cmd run ...`.
 
-`backend/src/schemas/registration-schema.test.ts` couvre les bornes T6-T16, la limite de deux tiers, les doublons type/tier et la déduplication des partenaires. `backend/src/services/admin-token-service.test.ts` couvre création, signature, format strict à deux segments et expiration des tokens admin. Aucun test frontend ou E2E n’est encore versionné ; les comportements non couverts doivent donc rester validés explicitement.
+`backend/src/schemas/registration-schema.test.ts` couvre les bornes T6-T16, la limite de deux tiers, les doublons type/tier et la déduplication des partenaires. `backend/src/services/admin-token-service.test.ts` couvre création, signature, format strict à deux segments et expiration des tokens admin. `frontend/src/lib/formation-allocation.test.ts` couvre l’ordre strongest-first, la consommation multi-tier, le remainder et les shortages. Aucun test E2E n’est encore versionné ; les comportements non couverts doivent donc rester validés explicitement.
 
 ## 14. Versionnement
 

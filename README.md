@@ -174,7 +174,7 @@ Start here:
 
 The repository includes an SSH-based GitHub Actions production deployment flow that:
 
-- runs CI linting, backend tests, typechecks, and builds before deployment
+- runs CI linting, backend and frontend tests, typechecks, and builds before deployment
 - updates the server checkout to `origin/main`
 - rebuilds the backend, applies pending PostgreSQL migrations, and rebuilds the frontend
 - syncs `frontend/dist` to the Nginx web root
